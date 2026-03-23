@@ -39,7 +39,7 @@ export class LeadService {
 
     let status: number | undefined;
     if (!result.success) {
-      if (result.message?.includes("not configured")) {
+      if (result.code === "NOT_CONFIGURED") {
         status = 503;
       } else {
         status = 500;
