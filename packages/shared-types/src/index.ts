@@ -135,8 +135,6 @@ export type CRMType =
   | 'null'
   | 'webhook'
   | 'hubspot'
-  | 'gohighlevel'
-  | 'followupboss'
   | 'email';
 
 export type CRMConfig = {
@@ -197,3 +195,4 @@ export function computePreviewSide(
 }
 
 export * from './tour';
+export * from './brand';
