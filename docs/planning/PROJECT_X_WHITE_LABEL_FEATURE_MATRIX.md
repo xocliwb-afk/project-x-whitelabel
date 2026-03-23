@@ -35,7 +35,7 @@
 | SimplyRETS listing provider | ✅ Built | NOW | Full normalization, bbox, filters |
 | Mock listing provider | ✅ Built | NOW | Dev-safe fallback |
 | Listing caching | ✅ Built | NOW | TTL-based, configurable |
-| Compliance/attribution | ⚠️ Stub | NOW | BLOCKER: `applyListingCompliance` is a stub passthrough — must be hardened before any live/production deployment. Tracked in Epic 3. |
+| Compliance/attribution | ✅ Built | NOW | Hardened in Epic 3: compensation stripping, attribution enforcement |
 | Mapbox geocoding | ✅ Built | NOW | Server-side, cached, rate-limited |
 
 ## Lead / Contact
@@ -43,10 +43,10 @@
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
 | Lead capture form | ✅ Built | NOW | Modal-based, intent-driven |
-| HubSpot integration | ✅ Built | NOW | Contact create/update via API |
-| Captcha verification | ✅ Built | NOW | reCAPTCHA |
+| HubSpot integration | ✅ Built | NOW | Contact create/update via API, retry with exponential backoff, classified error handling |
+| Captcha verification | ✅ Built | NOW | reCAPTCHA v3 |
 | Rate limiting | ✅ Built | NOW | Per-IP RPM + daily limits |
-| Lead validation/normalization | ✅ Built | NOW | In LeadService |
+| Lead validation/normalization | ✅ Built | NOW | In LeadService, tested |
 | GoHighLevel integration | ❌ Removed | REMOVE in Epic 1 | Dead — removed, not deprecated |
 
 ## White-Label / Brand
@@ -104,7 +104,7 @@
 | Monorepo (pnpm + Turborepo) | ✅ Built | NOW | Working |
 | CI pipeline | ✅ Built | NOW | GitHub Actions |
 | E2E tests | ✅ Built | NOW | 8 Playwright specs |
-| API unit tests | ✅ Built | NOW | 77 tests, all passing |
+| API unit tests | ✅ Built | NOW | 83 tests, all passing |
 | Security headers | ✅ Built | NOW | CORS, CSP, XFO |
 | Bundle analysis | ✅ Built | NOW | @next/bundle-analyzer |
 | Lighthouse CI | ✅ Built | NOW | Non-blocking workflow |
