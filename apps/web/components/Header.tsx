@@ -28,14 +28,12 @@ export default function Header() {
     href: `/${n.slug}`,
   }));
 
-  const navItems = [
+  const defaultNavItems = [
     { label: "Home", href: "/" },
     { label: "Search", href: "/search" },
-    { label: "Buy Smarter", href: "/buy" },
-    { label: "Sell with Clarity", href: "/sell" },
-    { label: "Build", href: "/build" },
     { label: "About", href: "/about" },
   ];
+  const navItems = (brand.navItems ?? defaultNavItems);
 
   const isNeighborhoodPath = (path?: string | null) => {
     if (!path) return false;

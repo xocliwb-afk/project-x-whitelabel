@@ -13,6 +13,7 @@ class BrandConfig {
   final BrandLogo logo;
   final String? favicon;
   final ThemeConfig theme;
+  final List<NavItem>? navItems;
   final List<Neighborhood>? neighborhoods;
   final SearchConfig? search;
   final ComplianceConfig? compliance;
@@ -26,6 +27,7 @@ class BrandConfig {
     required this.logo,
     this.favicon,
     required this.theme,
+    this.navItems,
     this.neighborhoods,
     this.search,
     this.compliance,
@@ -168,6 +170,19 @@ class ThemeRadius {
       _$ThemeRadiusFromJson(json);
 
   Map<String, dynamic> toJson() => _$ThemeRadiusToJson(this);
+}
+
+@JsonSerializable()
+class NavItem {
+  final String label;
+  final String href;
+
+  const NavItem({required this.label, required this.href});
+
+  factory NavItem.fromJson(Map<String, dynamic> json) =>
+      _$NavItemFromJson(json);
+
+  Map<String, dynamic> toJson() => _$NavItemToJson(this);
 }
 
 @JsonSerializable()
