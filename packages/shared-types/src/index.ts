@@ -196,3 +196,4 @@ export function computePreviewSide(
 
 export * from './tour';
 export * from './brand';
+export * from './narration';
