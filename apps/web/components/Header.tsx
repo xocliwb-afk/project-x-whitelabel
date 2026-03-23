@@ -23,18 +23,10 @@ export default function Header() {
   const openLeadModal = useLeadModalStore((s) => s.open);
   const neighborhoodsMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const neighborhoods = [
-    { label: "Grand Rapids", href: "/grand-rapids" },
-    { label: "Ada", href: "/ada" },
-    { label: "Byron Center", href: "/byron-center" },
-    { label: "Caledonia", href: "/caledonia" },
-    { label: "East Grand Rapids", href: "/east-grand-rapids" },
-    { label: "Grandville", href: "/grandville" },
-    { label: "Kentwood", href: "/kentwood" },
-    { label: "Rockford", href: "/rockford" },
-    { label: "Wyoming", href: "/wyoming" },
-  ];
-  // Keep in sync with apps/web/next.config.js neighborhoodSlugs
+  const neighborhoods = (brand.neighborhoods ?? []).map((n) => ({
+    label: n.label,
+    href: `/${n.slug}`,
+  }));
 
   const navItems = [
     { label: "Home", href: "/" },

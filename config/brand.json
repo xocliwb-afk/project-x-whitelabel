@@ -40,6 +40,17 @@
       "input": 9999
     }
   },
+  "neighborhoods": [
+    { "label": "Grand Rapids", "slug": "grand-rapids" },
+    { "label": "Ada", "slug": "ada" },
+    { "label": "Byron Center", "slug": "byron-center" },
+    { "label": "Caledonia", "slug": "caledonia" },
+    { "label": "East Grand Rapids", "slug": "east-grand-rapids" },
+    { "label": "Grandville", "slug": "grandville" },
+    { "label": "Kentwood", "slug": "kentwood" },
+    { "label": "Rockford", "slug": "rockford" },
+    { "label": "Wyoming", "slug": "wyoming" }
+  ],
   "search": {
     "defaultCenter": { "lat": 42.9634, "lng": -85.6681 },
     "defaultZoom": 12,

@@ -69,6 +69,9 @@ export interface BrandConfig {
   /** Visual theme */
   theme: ThemeConfig;
 
+  /** Neighborhood pages (label + slug used for nav and routing) */
+  neighborhoods?: Array<{ label: string; slug: string }>;
+
   /** Default search viewport */
   search?: {
     defaultCenter?: { lat: number; lng: number };
