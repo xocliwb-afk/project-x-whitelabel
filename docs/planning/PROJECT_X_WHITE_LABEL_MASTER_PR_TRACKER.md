@@ -130,9 +130,9 @@
 
 ---
 
-### Epic 9: HubSpot Hardening ← CURRENT
+### Epic 9: HubSpot Hardening ✅ COMPLETE
 **Branch:** `feature/phase-9-hubspot-hardening`
-**Status:** Complete — awaiting PR
+**PR:** #10 → merged to dev
 **Goal:** Production-quality HubSpot integration
 
 **What was done:**
@@ -148,6 +148,29 @@
 
 ---
 
+### Epic 10: Repo Truth Reconciliation ← CURRENT
+**Branch:** `feature/phase-10-repo-truth-reconciliation`
+**Status:** In progress
+**Goal:** Cross-audit reconciliation — fix all drift between docs, code, and contracts
+
+**What was done:**
+- Deleted stale index.ts API entrypoint (old mock-only server)
+- Aligned Flutter models with shared-types (narrationPayloads on Tour, dynamic IDs, full search params)
+- Updated planning docs (narration architecture, tour engine, PR tracker)
+- Removed hardcoded "Project X" residue from product code
+- Fixed compliance comment to match actual implementation
+- Fixed stale contract drift comments in web api-client
+- Moved hardcoded marketing nav copy to brand config
+- Cleaned up SimplyRETS CDN reference in next.config.js
+- Added API test execution to CI workflow
+- Improved lead service error classification (proper error types vs string matching)
+- Renamed ThemeContext to MapLayoutContext (it controls map layout, not theming)
+- Fixed module resolution in computePreviewSide test
+
+**Dependencies:** Epics 0-9
+
+---
+
 ## Dependency Graph
 
 ```
@@ -158,10 +181,12 @@ Epic 0 (Audit) ✅
       │   └── Epic 4 (Brand Config) ✅
       │       ├── Epic 5 (Web Stabilization) ✅
       │       │   ├── Epic 7 (Tour Engine) ✅
-      │       │   └── Epic 9 (HubSpot) ✅ ← CURRENT
+      │       │   └── Epic 9 (HubSpot) ✅
       │       └── Epic 6 (Mobile Foundation) ✅
       │           └── Epic 8 (Android Auto/Narration) ✅
       └── Epic 7 depends on Epic 5 + 6
+Epic 10 (Repo Truth Reconciliation) ← CURRENT
+  └── depends on all Epics 0-9
 ```
 
 ## Anti-Absorption Rules

@@ -15,9 +15,16 @@ The Tour Engine already has meaningful seeds:
 - `PlanTourRequest` — date, clientName, stops[], timing config
 - `PlannedTour` — alias for Tour (response from planning)
 
-### API (`apps/api`)
-- `services/tour.service.ts` — `planTour()` function that creates a Tour with sequential time slots
-- `routes/tours.route.ts` — `POST /api/tours` (also `/api/v1/tours`) with input validation
+### API (`apps/api`) — built in Epics 7-8
+- `services/tour.service.ts` — In-memory `Map<string, Tour>` store with full CRUD: `planTour()`, `getTourById()`, `updateTour()` (recalculates times), `deleteTour()`, `listTours()`
+- `services/narration.service.ts` — Rich narration generation from listing data (price, beds, baths, sqft, type, year, DOM, highlights), called during `planTour()`
+- `routes/tours.route.ts` — Full REST API:
+  - `GET /api/tours` — list all tours
+  - `POST /api/tours` — plan new tour with scheduled stops
+  - `GET /api/tours/:id` — get tour by ID
+  - `PUT /api/tours/:id` — update tour (reorder stops, change times)
+  - `DELETE /api/tours/:id` — delete tour
+  - `GET /api/tours/:id/narrations` — narration payloads enriched with listing data
 
 ### Web (`apps/web`)
 - `components/TourBuilderClient.tsx` — Tour builder page component
@@ -108,11 +115,13 @@ interface TourRouteSegment {
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
+| `GET /api/tours` | GET | List all tours | ✅ Built (Epic 7) |
 | `POST /api/tours` | POST | Plan a tour (schedule stops) | ✅ Built |
-| `GET /api/tours/:id` | GET | Get tour by ID | ❌ Not built |
-| `PUT /api/tours/:id` | PUT | Update tour | ❌ Not built |
-| `DELETE /api/tours/:id` | DELETE | Delete tour | ❌ Not built |
-| `POST /api/tours/:id/route` | POST | Calculate route between stops | ❌ Not built |
+| `GET /api/tours/:id` | GET | Get tour by ID | ✅ Built (Epic 7) |
+| `PUT /api/tours/:id` | PUT | Update tour | ✅ Built (Epic 7) |
+| `DELETE /api/tours/:id` | DELETE | Delete tour | ✅ Built (Epic 7) |
+| `GET /api/tours/:id/narrations` | GET | Narration payloads for tour | ✅ Built (Epic 8) |
+| `POST /api/tours/:id/route` | POST | Calculate route between stops | ❌ Not built (needs directions API) |
 
 ## 7. Web / Mobile Touchpoints
 
