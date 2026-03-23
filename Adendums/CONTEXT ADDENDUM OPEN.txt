@@ -1,0 +1,152 @@
+CONTEXT ADDENDUM – OPEN INTERPRETER USAGE
+White-Label Zillow-Style Search Project
+Last updated: 2025-12-04
+
+PURPOSE
+Open Interpreter (OI) is allowed in this project ONLY as a controlled assistant for:
+- Running terminal commands
+- Creating basic folder/file scaffolding
+- Installing dependencies
+- Running dev servers, tests, and linters
+- Automating repetitive shell tasks
+
+OI is NOT the main code architect or repo owner. It does not decide project structure or freely edit large parts of the codebase.
+
+PRIMARY SOURCE OF TRUTH
+- Code lives in a single Git repo (white-label-search).
+- All edits are ultimately reviewed and committed via VS Code + Git.
+- Gemini Code Assist and Codex handle most code editing.
+- Open Interpreter is a helper for shell-level tasks.
+
+SCOPE OF OPEN INTERPRETER
+
+ALLOWED USES (OK)
+1. PROJECT SETUP & SCAFFOLDING
+   - Running commands like:
+     - git clone <repo-url>
+     - mkdir web backend mobile docs
+     - npx create-next-app@latest web --typescript ...
+     - npm init -y
+     - npm install <packages>
+     - flutter create mobile
+   - Creating boilerplate files with simple content (README stubs, basic config files) WHEN instructed.
+
+2. DEV SERVER & TOOLING COMMANDS
+   - Starting dev servers:
+     - cd web && npm run dev
+     - cd backend && npm run dev
+   - Running tests and linters:
+     - npm test
+     - npm run lint
+     - npx tsc
+   - Reporting output and summarizing errors.
+
+3. REPETITIVE SHELL TASKS
+   - Moving or copying files and folders as explicitly instructed.
+   - Generating zip archives for backup/snapshots.
+   - Simple file inspection:
+     - ls, tree, cat, head/tail on specific files.
+
+RESTRICTED / NOT ALLOWED (NO)
+1. NO GIT DECISIONS
+   - Do NOT let OI:
+     - run git commit
+     - run git push
+     - run git pull
+     - create or switch branches
+   - Git operations remain manual so that I stay in control of history and merging.
+
+2. NO DESTRUCTIVE COMMANDS
+   - Do NOT allow:
+     - rm -rf (or any variant)
+     - bulk deletions or mass renames
+     - “cleanup” operations OI invents on its own
+   - Any deletion or heavy change is done manually or with extreme supervision.
+
+3. NO FREEFORM CODE REWRITES
+   - OI should NOT:
+     - Refactor large parts of the codebase
+     - Search and replace across many files
+     - Decide project architecture
+   - All code-level logic and structure changes are done via:
+     - Gemini Code Assist
+     - Codex
+     - Or manually in VS Code
+
+4. NO CONFIG OR SECRET MANAGEMENT
+   - Environment variables (.env) and secrets are NOT edited by OI.
+   - Those are set and managed manually.
+
+OPEN INTERPRETER SESSION CONTRACT
+
+Every time Open Interpreter is used for this project, start by telling it something equivalent to:
+
+- You are operating inside my "white-label-search" project.
+- You are ONLY allowed to:
+  - Run shell commands I specifically describe.
+  - Create or modify files/folders I explicitly name.
+- You are NOT allowed to:
+  - Run git commit/push/pull.
+  - Delete large folders or files unless I spell out the exact paths.
+  - Refactor or rewrite code files unless I paste instructions from ChatGPT.
+- Before running any command that changes files or installs packages, you must ECHO the command and wait for my confirmation.
+
+WORKFLOW WITH OPEN INTERPRETER
+
+Typical safe workflow:
+
+1) PLANNING IN CHATGPT (MAIN HUB)
+   - Define what we need:
+     - Example: “Create Next.js app in /web with TypeScript and Tailwind.”
+     - Example: “Set up Node+Express+TS backend in /backend.”
+   - ChatGPT will:
+     - Provide the exact commands.
+     - Indicate if Open Interpreter is a good fit for the task.
+
+2) EXECUTE WITH OPEN INTERPRETER (CONTROLLED)
+   - Start OI in the project root folder.
+   - Paste the high-level instructions + safety rules.
+   - Approve commands one by one:
+     - OI echoes: `npx create-next-app@latest web --typescript ...`
+     - I confirm “yes” before it runs.
+
+3) VERIFY IN VS CODE
+   - Open or refresh VS Code.
+   - Check generated folders/files.
+   - Run app manually if needed (npm run dev).
+   - Make any code-level changes via Gemini/Codex or manual edits.
+
+4) COMMIT VIA GIT (MANUAL)
+   - Back in terminal (outside OI control, or with OI restricted from git):
+     - git status
+     - git add .
+     - git commit -m "chore: scaffold web and backend"
+     - git push
+
+ROLE OF OPEN INTERPRETER IN THIS PROJECT
+
+- Open Interpreter is essentially a “smart terminal assistant.”
+- It speeds up:
+  - Project scaffolding
+  - Dependency installation
+  - Running dev servers & tools
+- It does NOT:
+  - Own the repo
+  - Make architectural decisions
+  - Replace Gemini/Codex for code editing
+
+DECISION RULE
+
+If a task is:
+- Mostly shell commands, setup, or repetitive terminal work -> Open Interpreter is an option.
+- Mostly code logic, architecture, or UI/UX implementation -> Use Gemini/Codex in VS Code, guided by ChatGPT.
+
+REMINDER
+
+At any point in this project, ChatGPT (main hub) may say:
+- “This is a good job for Open Interpreter.”
+   or
+- “Do NOT use Open Interpreter for this; stay in VS Code with Gemini/Codex.”
+
+Those recommendations are to minimize risk and keep the project stable and predictable.
+

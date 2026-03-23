@@ -1,0 +1,146 @@
+CONTEXT ADDENDUM – WHITE-LABEL SEARCH PROJECT
+
+Last major update: 2025-12-04
+
+1. CURRENT STATE (HIGH LEVEL)
+
+- Project goal:
+  - Build a white-label, Zillow-style real estate search platform (web + mobile) that starts as a single-tenant MVP for Brandon Wilcox Home Group and can later be sold/white-labeled to other agents/brokerages/MLS orgs.
+
+- Implementation status:
+  - GitHub repo:
+    - NOT CREATED YET
+  - Local clone:
+    - NOT CREATED YET
+  - VS Code environment:
+    - Planned: VS Code with Gemini Code Assist + OpenAI/Codex extensions
+    - Not yet attached to a real repo
+
+- Web (Next.js app – planned):
+  - Tech stack (planned):
+    - Next.js 14 (App Router), TypeScript, Tailwind CSS
+    - Mapbox (or similar) for interactive map + clustering
+  - Core routes (planned):
+    - /search: Map + list search UI (Zillow-style)
+    - /listing/[id]: Listing detail page with photos, description, and lead form
+  - State management (planned):
+    - Zustand slices for map, filters, listings, hover/selection state
+  - UX principles (planned):
+    - Bold minimalism
+    - Fast interactions (skeleton loaders, no janky spinners)
+    - Mobile-first, with list/map toggle and FAB contact bar
+
+- Backend (Node/TypeScript BFF – planned):
+  - Tech stack (planned):
+    - Node.js + Express + TypeScript
+  - Responsibilities:
+    - Provide BFF endpoints for the web app
+    - Normalize MLS/IDX data into an internal Listing shape
+    - Manage IDX authentication and API calls server-side
+  - Planned endpoints:
+    - GET /api/health
+    - GET /api/listings  (bounds + filters)
+    - GET /api/listing/:id
+
+- Mobile (Flutter app – planned, not started):
+  - Intention:
+    - Mirror the web search experience (map + list + detail + contact) for iOS/Android
+  - Status:
+    - Deferred until web MVP and backend are up and stable
+
+- Data source (IDX / MLS – planned):
+  - MVP approach:
+    - Single MLS/IDX provider for initial build (SimplyRETS is the leading candidate)
+  - Status:
+    - No live integration yet
+    - Normalized Listing schema is defined at a high level but not implemented
+
+- Documentation:
+  - PRD skeleton:
+    - Exists as a text/markdown definition specifying MVP scope, data model, structure
+  - AI workflow:
+    - Defined rules for:
+      - Single repo, single local folder
+      - All edits via VS Code
+      - GitHub as source of truth
+      - AI tools (Gemini, Codex, ChatGPT) acting as advisors, not file owners
+  - Research:
+    - Combined research file summarizing UX patterns, competitive analysis, and technical ideas
+
+
+2. RECENT CHANGES / DECISIONS
+
+- 2025-12-04:
+  - Locked in that this chat is the MAIN HUB for strategy, architecture, and planning.
+  - Decided that implementation work will often use dedicated task-specific chats (e.g., “WEB – Map & List Layout,” “BACKEND – SimplyRETS Integration”) inside the same project, when appropriate.
+  - Established that I (ChatGPT) will:
+    - Help decide when to create new focused chats.
+    - Provide clear instructions and separate, easy copy/paste prompts for Gemini Code Assist and Codex when actions are needed.
+    - Default to normal prose unless you’re clearly about to run commands or AI-based edits.
+  - Clarified that AI output should be:
+    - Explicit about which files are touched.
+    - Kept minimal and non-freelance (no unsolicited repo-wide refactors).
+
+- 2025-12-04:
+  - Defined:
+    - AI Workflow document (rules for Git, VS Code, and AI tools).
+    - PRD skeleton for the MVP (single tenant, single MLS, web-only to start).
+  - Agreed on monorepo structure:
+    - white-label-search/
+      - web/
+      - backend/
+      - mobile/
+      - docs/
+
+
+3. TODO / NEXT TASKS (HIGH PRIORITY)
+
+Short-term (pre-code):
+- Create GitHub repo:
+  - Name: white-label-search (or equivalent)
+  - Empty repo (no auto-added README/.gitignore from GitHub)
+- Clone repo locally:
+  - Create base folder structure:
+    - web/
+    - backend/
+    - mobile/
+    - docs/
+  - Add initial docs:
+    - PRD skeleton (prd-skeleton.txt or .md)
+    - AI workflow (workflow-ai.txt or .md)
+    - context-addendum.txt (this file)
+    - Combined research file (e.g., research-raw.txt)
+- Open the cloned repo in VS Code:
+  - Ensure:
+    - Gemini Code Assist is installed and enabled
+    - OpenAI/Codex extension is installed and enabled
+    - Git is working (git status clean after first commit)
+
+Short-term (early coding milestones, once repo is ready):
+- Web:
+  - Scaffold Next.js app inside /web (with TypeScript and Tailwind)
+  - Create placeholder /search and /listing/[id] routes
+- Backend:
+  - Scaffold Node+Express+TS app inside /backend
+  - Implement /api/health as a sanity check
+- Integration:
+  - Configure web app to call backend (e.g., NEXT_PUBLIC_API_BASE_URL)
+  - Verify end-to-end: web → backend → JSON response (stubbed listings)
+
+Medium-term:
+- Design and implement the normalized Listing type in backend.
+- Implement GET /api/listings with fake/mock data.
+- Replace mock data with live IDX integration (likely SimplyRETS).
+- Implement first-pass Zillow-style UI: map/list layout, cards, basic filters.
+- Add compliant MLS/IDX attribution and a functional “Contact Agent” lead form.
+
+4. WORKING AGREEMENT / REMINDERS
+
+- GitHub repo + local clone in VS Code will be the ONLY source of truth for code.
+- No multi-folder working copies.
+- AI tools (Gemini, Codex, ChatGPT, Gemini web) only suggest or edit code that you then commit via Git.
+- This context-addendum should be updated whenever:
+  - The repo is created.
+  - The first Next.js/Express scaffolding is done.
+  - A major design or architectural decision changes the plan.
+

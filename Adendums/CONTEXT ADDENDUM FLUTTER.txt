@@ -1,0 +1,286 @@
+CONTEXT ADDENDUM – FLUTTER APP ARCHITECTURE (PROJECT X)
+
+SCOPE
+
+This addendum defines how the MOBILE APP for Project X will be designed and built.
+
+Web: Next.js + TypeScript app (separate, but conceptually aligned).
+Mobile: Single Flutter codebase targeting iOS + Android.
+
+This document is binding for ANY AI assistant (ChatGPT, Gemini, VS Code extensions, Open Interpreter, etc.) when generating or modifying Flutter code.
+
+PRIMARY GOAL
+
+Build a SELLABLE, PRODUCTION-QUALITY Flutter app that:
+
+1. Mirrors the web experience (map + list search, cards, filters).
+2. Uses a clean, modern architecture that another engineering team would respect, not laugh at.
+3. Is easy to hand off, rebrand, and extend by a buyer.
+4. Minimizes tech debt and avoids “tutorial project” patterns.
+
+----------------------------------------------------------------
+1. FLUTTER TECH STACK & CORE DECISIONS
+----------------------------------------------------------------
+
+1.1 Framework & Language
+
+- Flutter (latest stable channel).
+- Dart (null-safe, strongly typed).
+
+1.2 State Management (MANDATORY CHOICE)
+
+- Use Riverpod (preferred) OR Bloc for state management.
+- Do NOT mix a bunch of patterns (no half Riverpod, half Provider, half setState).
+- Use immutable state patterns where practical.
+
+If Riverpod:
+- Use `flutter_riverpod` for app-wide state.
+- Expose async operations via `AsyncValue<>` where sensible.
+- Use providers for:
+  - Auth state
+  - Search query state
+  - Map state
+  - Listing results
+  - Favorites/saved homes
+
+If Bloc:
+- Use `flutter_bloc` with:
+  - Feature-specific blocs (SearchBloc, AuthBloc, ListingsBloc).
+  - Clearly defined events & states.
+
+1.3 Navigation
+
+- Use `go_router` (preferred) OR `auto_route`.
+- No ad-hoc Navigator spaghetti with push/pop chains everywhere.
+- All major screens defined as typed routes with clear path structure:
+  - `/` – splash/auth check
+  - `/home` – main home/search tab
+  - `/search` – map + list
+  - `/listing/:id` – listing details screen
+  - `/favorites`
+  - `/profile`
+
+1.4 Networking & API
+
+- Use `dio` or `http` with a clean abstraction layer:
+  - `api_client.dart` – low-level client
+  - `listings_api.dart` – listing-specific calls
+  - `auth_api.dart` – auth-specific calls (if/when needed)
+
+- All network models in `lib/features/<feature>/data/models/`.
+- JSON mapping done via `json_serializable` or `freezed` (preferred for immutability + unions).
+
+1.5 Dependency Injection
+
+- Use `Riverpod`’s provider system OR `get_it` (only if needed).
+- No global singletons except where absolutely necessary.
+
+1.6 Design System & Theming
+
+- One global `ThemeData` builder that mirrors web brand:
+  - Colors, typography, spacing tokens.
+- Define:
+  - `AppColors`
+  - `AppTypography`
+  - `AppSpacing`
+  - `AppRadius`
+- Put them in `lib/core/theme/` and use consistently.
+
+----------------------------------------------------------------
+2. PROJECT STRUCTURE
+----------------------------------------------------------------
+
+Baseline structure (subject to refinement, but must stay organized):
+
+/lib
+  /core
+    /theme
+      app_theme.dart
+      app_colors.dart
+      app_typography.dart
+      app_spacing.dart
+    /widgets
+      app_button.dart
+      app_text_field.dart
+      app_chip.dart
+      ...
+    /utils
+      debouncer.dart
+      validators.dart
+    /routing
+      app_router.dart
+  /features
+    /auth
+      /data
+        models/
+        auth_api.dart
+      /presentation
+        login_screen.dart
+        register_screen.dart
+        widgets/
+    /search
+      /data
+        models/
+        search_api.dart
+      /presentation
+        search_screen.dart
+        search_filters_sheet.dart
+        widgets/
+    /listings
+      /data
+        models/
+        listings_api.dart
+      /presentation
+        listing_detail_screen.dart
+        listing_card.dart
+        widgets/
+    /favorites
+      ...
+    /profile
+      ...
+  main.dart
+
+Rules:
+- Features live under `/features/<feature-name>/`.
+- Shared generic widgets → `/core/widgets/`.
+- No dumping everything into `lib/` root or single giant files.
+- Separate DATA, DOMAIN (if used), and PRESENTATION layers.
+
+----------------------------------------------------------------
+3. UX & UI PRINCIPLES (MOBILE)
+----------------------------------------------------------------
+
+3.1 Overall Experience
+
+- UI must feel like a modern, polished consumer app (Zillow/Redfin class).
+- Animations: subtle but present (screen transitions, card elevation, bottom sheet slide-ups).
+- No janky scroll performance or nested scroll chaos.
+
+3.2 Key Screens
+
+1) Onboarding / Auth (Phase 2+)
+   - Simple, minimal, brand-aligned.
+   - Optional in early POC, but architecture should allow easy addition.
+
+2) Main Search Screen
+   - Top: Search bar (location, city, neighborhood, MLS #).
+   - Body: Map + list split:
+     - Map on top half or as a toggle ("Map" / "List" / "Split").
+     - List synchronized with map viewport.
+   - Filters: open from a bottom sheet or drawer:
+     - Price, beds, baths, property type, HOA, etc.
+   - Property cards: image, price, address, badges (New, Open House, Reduced), top-level stats.
+
+3) Listing Detail Screen
+   - Image carousel (swipe).
+   - Above-the-fold essentials:
+     - Price, status, address, key specs, CTA (Schedule, Save, Share).
+   - Sections:
+     - Overview / Description
+     - Features (beds, baths, sq ft, year, basement type, lot size, HOA info)
+     - Map & neighborhood
+     - Agent info / brokerage branding
+
+4) Favorites / Saved Homes
+   - Simple list of saved properties.
+   - Must support syncing later when backend is ready.
+
+3.3 Design / Brand
+
+- Follow web design direction (cards, padding, radius, color usage).
+- Use consistent spacing and typography tokens.
+- Avoid scaling fonts wildly; aim for clean readability on phones.
+
+----------------------------------------------------------------
+4. API LAYER & IDX/MLS CONSTRAINTS (MOBILE)
+----------------------------------------------------------------
+
+4.1 Contract-parity with Web
+
+- The mobile app should consume the SAME logical API contract as the web app.
+- A listing object MUST have consistent shape across web and mobile.
+- If mobile-specific fields are added, they must be clearly documented.
+
+4.2 Placeholder Services
+
+- If real IDX/RESO/SimplyRETS endpoints are not wired yet, build:
+  - `FakeListingsApi` implementing the same interface as the real one.
+  - This allows easy swapping to real endpoints without UI rewrites.
+
+4.3 Compliance Awareness (High-Level)
+
+- Respect IDX rules:
+  - Display brokerage attribution where required.
+  - Handle disclaimer text.
+  - Do NOT implement features that violate “no scraping / no redistribution” principles.
+- For now, keep mobile app as a client of the backend; do NOT directly call MLS APIs from the app without going through an agreed backend contract.
+
+----------------------------------------------------------------
+5. PERFORMANCE & QUALITY
+----------------------------------------------------------------
+
+5.1 Performance
+
+- Use `const` widgets where possible.
+- Avoid rebuilding the entire tree when only small portions change.
+- Use `ListView.builder` / `SliverList` for lists, not giant Column with all children.
+- Keep map interactions smooth:
+  - Debounce search when map is panned.
+  - Only refresh listings after the user stops moving map for a short period.
+
+5.2 Testing / Maintainability
+
+- At minimum:
+  - Unit tests for core utilities and models.
+  - Basic widget tests for key screens (Search, Listing Detail).
+- Structure tests under `/test/features/...` mirroring `/lib/features/...`.
+
+5.3 Code Style
+
+- Follow Dart/Flutter style guidelines.
+- No massive God-classes.
+- No business logic inside UI widgets when it should live in state management or services.
+
+----------------------------------------------------------------
+6. TOOLING & AI ASSISTANT RULES
+----------------------------------------------------------------
+
+6.1 For AI (ChatGPT, Gemini, VS Code extensions) when generating Flutter code:
+
+- Respect the structure above; do NOT invent random directories.
+- When modifying code:
+  - Touch ONLY the files explicitly mentioned in the user request.
+  - Do NOT refactor unrelated areas “for cleanliness” unless asked.
+- Always provide COMPLETE, DROP-IN snippets for new files.
+- When updating existing files, prefer:
+  - “Replace this function/class with the following”
+  - Or, “Insert this widget HERE” with clear comments.
+
+6.2 For Open Interpreter / CLI automation:
+
+- Allowed:
+  - Running `flutter create` with specific flags.
+  - Running `flutter pub get`, `flutter test`, `flutter build`.
+  - Applying straightforward file operations (create/move/rename) as explicitly instructed.
+- Not allowed:
+  - Arbitrary mass search-and-replace across the project without explicit pattern and confirmation.
+  - Deleting files or directories not explicitly requested.
+
+----------------------------------------------------------------
+7. DELIVERABLE EXPECTATIONS (FOR A FUTURE BUYER)
+----------------------------------------------------------------
+
+By the time Project X is “sell-ready,” the Flutter app should include:
+
+- Clean folder structure as defined above.
+- Working navigation flow (search → listing → favorites → profile).
+- Functional map + list sync with mock or real data.
+- Theming consistent with the web version.
+- Basic tests for critical pieces.
+- A short `MOBILE_DEVELOPER.md` explaining:
+  - How to run the app.
+  - How to point it to a different backend.
+  - How to customize branding (colors, logos, typography).
+
+This addendum is binding. All future Flutter-related code and architecture decisions must align with these standards unless a newer addendum explicitly supersedes it.
+

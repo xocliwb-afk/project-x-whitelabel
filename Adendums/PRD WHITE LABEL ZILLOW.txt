@@ -1,0 +1,93 @@
+PRD – WHITE-LABEL ZILLOW-STYLE PROPERTY SEARCH PLATFORM (MVP)
+
+1. GOAL
+Build a Zillow-style property search experience for a single tenant (Brandon Wilcox Home Group at 616 Realty) using live MLS/IDX data. This MVP will serve as:
+- A fully usable agent-facing tool
+- A foundation that can later expand into a white-label SaaS product
+
+2. MVP SCOPE
+
+2.1 Tenant & MLS
+- Single tenant (Brandon Wilcox Home Group)
+- One MLS/IDX data source for MVP (SimplyRETS recommended for fastest integration)
+
+2.2 Web Application (Next.js)
+Core features:
+- Map + list search experience (Zillow-style)
+- Smooth pan/zoom → fetch new listings in real time
+- Filter bar (price, beds, baths, property type)
+- Listing cards with images, badges, and summary info
+- Listing detail page:
+  - Photos
+  - Price, beds, baths, sqft, status
+  - Full description
+  - Required MLS/IDX compliance attribution
+  - “Contact Agent” lead form
+
+2.3 Backend (Node/TypeScript BFF)
+- A small API layer between the web app and MLS/IDX API
+- Endpoints:
+  - GET /api/listings (bounds + filters)
+  - GET /api/listing/:id (single listing details)
+- Normalizes MLS data into a consistent internal structure
+- Handles authentication to IDX/MLS provider
+
+2.4 Lead Form
+- Sends an email or logs the lead
+- Simple, minimal friction
+- No login required
+
+3. OUT OF SCOPE (FOR MVP)
+- User accounts / saved searches
+- Push notifications
+- Multi-tenant branding
+- Mobile app (Flutter) – starts after web is stable
+- CRM dashboard
+- Mortgage calculator
+- Saved favorites
+
+4. FUTURE PHASES (NOT MVP)
+- Flutter mobile app (mirrors web experience)
+- Multi-tenant architecture (white-label SaaS)
+- Saved searches and accounts
+- Notification system
+- Admin/CRM tools
+- AI search (“Show me homes near downtown with modern kitchens”)
+- Multi-MLS federation
+
+5. DESIGN PRINCIPLES
+- Bold minimalism
+- Speed-first UX (skeleton loaders, instant map updates)
+- Clear trust signals (“Verified MLS Data”)
+- Mobile-first layout with map/list toggle
+- High clarity hierarchy and readable typography
+
+6. DATA MODEL (MVP VERSION)
+Listing {
+  id: string
+  address: string
+  lat: number
+  lng: number
+  price: number
+  beds: number
+  baths: number
+  sqft: number
+  images: string[]
+  status: string
+  description: string
+  brokerageName: string
+}
+
+7. PROJECT STRUCTURE (MONOREPO)
+white-label-search/
+  web/        (Next.js 14)
+  backend/    (Node + TS Express API)
+  mobile/     (Flutter – future)
+  docs/       (PRD, research, workflow)
+
+8. DEVELOPMENT FLOW
+- All edits occur in VS Code
+- AI tools assist but do NOT own files
+- GitHub is the source of truth
+- Feature branches → dev → main
+

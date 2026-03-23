@@ -1,0 +1,187 @@
+CONTEXT ADDENDUM – ACQUISITION FEATURE SET
+White-Label Zillow-Style Search Platform
+Last updated: 2025-12-04
+
+PURPOSE
+This addendum defines the EXACT feature set required to position the project for a $250k–$3M acquisition by IDX vendors (Path B) or Proptech platforms (Path C). This document overrides previous assumptions and is the authoritative guide for what MUST be built, what SHOULD be built, and what MUST NOT be built.
+
+The goal: Build a polished, modern, working web + mobile consumer search experience that solves a major weakness in existing proptech/IDX solutions.
+
+—————————————————————————————
+PILLAR 1 — WORLD-CLASS UI/UX (CORE)
+These features are REQUIRED for acquisition readiness.
+
+1. MAP + LIST SEARCH EXPERIENCE
+- Interactive map (Mapbox)
+- Smooth pan/zoom with “auto-search on move”
+- Listing cards updated in real time
+- Pin + card sync (hover + click)
+- Clusters + dynamic pin styling
+- Mobile list/map toggle with clean transitions
+
+2. LISTING CARDS
+- Fast image loading (first image or carousel)
+- Essential stats (price, beds, baths, sqft)
+- Status badges (active, pending, sold)
+- Small MLS-required attribution
+- Clean, modern spacing and typography
+
+3. LISTING DETAIL PAGE (PDP)
+- Full photo gallery with smooth interactions
+- Key facts (price, beds, baths, sqft, lot size, HOA, year built, basement type)
+- Description block with clean formatting
+- Map section showing location
+- Simple “Contact Agent” form (no CRM logic behind it)
+- Fast transitions and polished mobile layout
+
+4. POLISH / UX DETAILS
+- Skeleton loaders
+- Smooth fade/slide transitions
+- Sticky header on web
+- Sticky lead form on mobile PDP
+- Optional dark mode
+- Minimalistic, modern “Zillow-like” aesthetic
+
+—————————————————————————————
+PILLAR 2 — CLEAN, MODERN ARCHITECTURE (CORE)
+These architectural choices increase acquisition value.
+
+1. TECHNOLOGY STACK
+- Web: Next.js 14 (App Router) + TypeScript + Tailwind
+- Backend: Node + Express + TypeScript
+- Mobile: Flutter (iOS + Android)
+
+2. ARCHITECTURE REQUIREMENTS
+- Component-driven UI
+- Meaningful folder structure (components, hooks, services, etc.)
+- Clear state slices (Zustand preferred)
+- Data normalization layer in backend
+- Decoupled UI from data source
+- Strict TypeScript everywhere
+
+3. NORMALIZED LISTING MODEL
+A single Listing type consumed by both web + mobile:
+- id
+- address
+- price
+- beds
+- baths
+- sqft
+- lot_size
+- property_type
+- lat, lng
+- photos[]
+- description
+- status
+- hoa
+- year_built
+- basement
+
+4. TESTABILITY SIGNALS
+- At least minimal Jest tests on:
+  - /api/listings endpoint
+  - Listing normalization function
+
+—————————————————————————————
+PILLAR 3 — IDX INTEGRATION (CORE)
+The acquisition depends on having a working IDX pipeline.
+
+1. SIMPLYRETS OR EQUIVALENT INTEGRATION
+- Search endpoint (bounds + filters)
+- Listing detail endpoint
+- Photo handling
+- Pagination handling
+
+2. CLEAN NORMALIZATION LAYER
+Backend must:
+- Fetch MLS data
+- Transform/normalize into internal Listing model
+- Return consistent JSON
+
+3. CONFIGURATION BY ENV VARS
+- API keys
+- Base URLs
+- Branding configuration (optional)
+
+4. ERROR HANDLING + BASIC RATE LIMIT AWARENESS
+This signals enterprise readiness and raises perceived quality.
+
+—————————————————————————————
+PILLAR 4 — CROSS-PLATFORM DELIVERY (CORE)
+Having both Web + Mobile MVPs dramatically increases acquisition price.
+
+1. FLUTTER MOBILE APP MVP
+- List view
+- Map view
+- Listing detail page
+- Contact form
+- Clean, modern styling
+- Fast load time
+- Works on iOS and Android
+
+2. DEEP LINK SUPPORT (OPTIONAL BUT HIGH VALUE)
+Example: app://listing/12345
+
+—————————————————————————————
+OPTIONAL BUT HIGH-VALUE FEATURES (+$100k–$500k VALUE BOOST)
+These are NOT required, but greatly increase desirability:
+
+1. Saved Searches (basic)
+- Save filters + map bounds
+- Simple backend storage (no CRM logic)
+
+2. Basic Analytics Dashboard
+- Searches
+- Listing views
+- Leads
+- Simple charts
+
+3. Theme/Brand Configuration System
+- Change colors
+- Upload logos
+- Adjust layout spacing
+This reinforces the white-label positioning.
+
+—————————————————————————————
+FEATURES THAT MUST *NOT* BE BUILT
+To avoid competing with the buyers’ core products:
+
+Do NOT build:
+- CRM
+- Lead routing automation
+- Email drips / marketing campaigns
+- Agent dashboards beyond simple analytics
+- Transaction management
+- Team management features
+- Social media integrations
+- Appointment scheduling
+
+These REDUCE acquisition likelihood by creating overlap with buyers’ main products.
+
+—————————————————————————————
+NON-NEGOTIABLE CONDITION FOR SALE-READINESS
+To qualify for a $250k–$3M valuation:
+
+MUST HAVE:
+- Polished web app
+- Polished mobile app
+- IDX-connected backend
+- Clean, modern codebase
+- Documentation:
+  - READ ME
+  - DEV SETUP GUIDE
+  - ARCHITECTURE OVERVIEW
+  - API docs
+  - Branding/config instructions
+- Demo script for buyer presentations
+
+—————————————————————————————
+SUMMARY
+This addendum defines the acquisition-focused deliverables. Every build decision should ladder back to these four pillars and avoid unnecessary complexity.
+
+The north star:
+Build the best Zillow-like consumer search UI on the market, powered by a clean backend and supported by a simple, slick mobile app. Package it, demo it, sell it.
+
+—————————————————————————————
+END OF DOCUMENT
+

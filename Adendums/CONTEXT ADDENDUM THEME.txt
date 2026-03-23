@@ -1,0 +1,218 @@
+CONTEXT ADDENDUM – THEME CONFIG & WHITE-LABEL BRANDING
+White-Label Zillow-Style Search Platform
+Last updated: 2025-12-04
+
+PURPOSE
+Define a simple, JSON-based theming system that:
+- Allows the platform to be rebranded for different brokerages/IDX vendors
+- Keeps web and mobile visually aligned
+- Does NOT rely on ingesting arbitrary CSS from host websites
+- Is safe, predictable, and attractive to acquirers
+
+This is the “white-label” theming layer.
+
+========================================================
+OVERVIEW
+========================================================
+The platform will support a single source of truth for branding:
+
+- A JSON file named “theme.json”
+- Served by the backend via /api/theme
+- Consumed by:
+  - Next.js web app to set CSS variables and Tailwind theme overrides
+  - Flutter mobile app to build ThemeData
+
+Goal:
+A buyer (or their customers) can change colors, typography, and key UI feel by editing theme.json, without touching code.
+
+========================================================
+THEME.JSON SCHEMA (INITIAL VERSION)
+========================================================
+Example:
+
+{
+  "brandName": "Brandon Wilcox Home Group",
+  "colors": {
+    "primary": "#234E70",
+    "primaryAccent": "#F18F01",
+    "background": "#FFFFFF",
+    "surface": "#F6F7FB",
+    "textMain": "#111827",
+    "textMuted": "#6B7280",
+    "border": "#E5E7EB",
+    "danger": "#DC2626",
+    "success": "#16A34A"
+  },
+  "typography": {
+    "fontFamily": "Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    "baseSizePx": 16,
+    "headingWeight": 600,
+    "bodyWeight": 400
+  },
+  "radius": {
+    "card": 16,
+    "button": 9999,
+    "input": 9999
+  },
+  "logo": {
+    "url": "https://example.com/logo.png",
+    "height": 32
+  }
+}
+
+Fields:
+
+- brandName
+  - Used in document title, meta tags, and UI text where appropriate.
+
+- colors.primary
+  - Main accent: primary buttons, key highlights.
+
+- colors.primaryAccent
+  - Secondary accent: chips, subtle highlights, map pins.
+
+- colors.background
+  - App background (body).
+
+- colors.surface
+  - Card backgrounds and surfaces.
+
+- colors.textMain, textMuted
+  - Primary and secondary text.
+
+- colors.border
+  - Divider lines and component borders.
+
+- colors.danger, colors.success
+  - For feedback states.
+
+- typography.fontFamily
+  - Used in root CSS and Flutter font config.
+
+- typography.baseSizePx
+  - Sets base font size; can adjust global scale.
+
+- typography.headingWeight, bodyWeight
+  - Used to define font weights for headings vs body text.
+
+- radius.card, radius.button, radius.input
+  - Drives rounding of components.
+
+- logo.url, logo.height
+  - For header and app chrome.
+
+========================================================
+WEB IMPLEMENTATION (NEXT.JS + TAILWIND)
+========================================================
+1) Fetch theme.json
+- At build time (for default) and/or runtime (for dynamic theming).
+- Exposed at /api/theme from backend.
+
+2) CSS Variables
+- Map theme.json to CSS variables in :root, e.g.:
+
+  :root {
+    --color-primary: <from theme.colors.primary>;
+    --color-bg: <from theme.colors.background>;
+    --radius-card: 16px;
+    ...
+  }
+
+3) Tailwind Integration
+- Tailwind config uses CSS variables for colors & radii:
+  - bg-primary = var(--color-primary)
+  - bg-surface = var(--color-surface)
+  - text-main = var(--color-text-main)
+  - rounded-card = var(--radius-card)
+
+4) Font Family
+- Inject typography.fontFamily into global styles (body font).
+
+Result:
+- Changing theme.json automatically updates main brand aspects.
+
+========================================================
+MOBILE IMPLEMENTATION (FLUTTER)
+========================================================
+1) Fetch theme.json
+- On app startup, call BFF /api/theme.
+- Cache result locally (simple in-memory or local storage if needed).
+
+2) Build ThemeData
+- Map colors to ColorScheme:
+  - primary, secondary, background, surface, error, etc.
+- Map typography to TextTheme:
+  - base font family
+  - sizes based on typography.baseSizePx
+- Map radius values into custom theme extensions or reusable BorderRadius constants.
+
+3) Apply ThemeData
+- MaterialApp(
+    theme: appThemeFrom(themeJson),
+    home: ...
+  )
+
+Result:
+- Web and mobile share brand feel using the same theme.json.
+
+========================================================
+WHITE-LABEL WORKFLOW
+========================================================
+For a brokerage or IDX partner:
+
+1) They provide:
+   - Primary brand color
+   - Accent color
+   - Background color
+   - Logo file
+   - Font preference (optional; can default to Montserrat)
+
+2) We (or a configuration UI) generate a theme.json.
+
+3) theme.json is stored in:
+   - The backend config (per deployment or per tenant)
+   - Or a database table keyed by tenant (future multi-tenant extension)
+
+4) The platform:
+   - Uses that theme.json for both web + mobile apps.
+
+Outcome:
+- Fast brand customization without rewriting UI.
+
+========================================================
+FUTURE EXTENSIONS (NOT MVP)
+========================================================
+- Multi-tenant themes:
+  - /api/theme/:tenantId
+- Admin UI for editing theme.json:
+  - Color pickers
+  - Logo upload
+  - Live preview of web UI
+- Dark mode toggle:
+  - theme.json can define a “dark” variant
+- Custom map styles:
+  - Mapbox style URL per brand
+
+These are optional and can be added if needed to increase acquisition value.
+
+========================================================
+WHY THIS MATTERS FOR ACQUISITION
+========================================================
+- Buyers see a true “white-label engine,” not just a hard-coded UI.
+- Reduces integration friction (they can apply their own brand quickly).
+- Enables re-use across multiple brokerages or markets.
+
+This is a strong selling point for IDX vendors and CRM platforms.
+
+========================================================
+SUMMARY
+========================================================
+This addendum defines:
+- A simple theme.json format
+- How web and mobile consume it
+- How this supports white-label branding
+
+We do NOT parse arbitrary CSS from host sites. Instead, we rely on a clean, controlled theme config, which is more reliable and easier for acquirers to maintain.
+
+END OF DOCUMENT
+

@@ -1,0 +1,387 @@
+CONTEXT ADDENDUM – COMPLIANCE, DATA GOVERNANCE & MLS SAFETY
+
+Version: 1.0
+Project: White-Label Zillow-Style Real Estate Search & App Platform
+Owner: Product (Brandon)
+Audience: Engineers, designers, legal/compliance reviewers, potential acquirers
+
+1. Purpose
+
+This addendum defines how the platform must handle:
+
+MLS / IDX / RESO / vendor data (e.g., SimplyRETS, Spark, RESO Web API, direct MLS feeds)
+
+Legal and compliance constraints (NAR rules, MLS rules, local board rules, vendor terms)
+
+Data security, privacy, and logging
+
+Goal:
+
+Keep the product compliant and “safe by design.”
+
+Make it obvious to any potential buyer that compliance has been accounted for at the architecture level.
+
+Avoid domain logic being scattered in a way that makes audits and changes risky.
+
+This is not legal advice; it is a technical and product implementation standard that assumes MLS counsel and broker counsel will provide jurisdiction-specific interpretation.
+
+2. High-Level Compliance Principles
+
+The platform must adhere to the following baseline principles:
+
+Configurable by MLS / Market / Vendor
+
+No hard-coded assumptions about what can be shown, how compensation is displayed, or what statuses are visible.
+
+All of this must be configurable per “data source profile” (per MLS or per feed).
+
+Field “Allowlist” (Whitelist) Only
+
+We explicitly define which fields the UI is allowed to use per MLS profile.
+
+We do NOT simply render “everything that comes from the vendor.”
+
+Attribution and Branding Correctness
+
+MLS-required attribution and disclaimers are always visible where required.
+
+Brokerage/agent branding follows local rules (e.g., broker name prominence, logo size requirements, etc.).
+
+Safe Default Behavior
+
+If a data source / MLS does not specify explicit configuration, the platform should:
+
+Hide compensation info.
+
+Hide fields with known sensitivity (e.g., owner name, private remarks, showing instructions).
+
+Use generic, safe labeling and limited statuses until a configuration is defined.
+
+Auditable Data Flow
+
+There must be a clear transformation from:
+
+Raw MLS/vendor payload → internal normalized DTO → UI-safe model.
+
+That transformation is where compliance and field filtering are enforced.
+
+No Unauthorized Data Reuse
+
+No exporting or repurposing MLS data outside the allowed use cases (e.g., no data resale, no training ML models on private remarks, etc.), unless explicitly permitted by MLS/vendor agreement and legal review.
+
+3. Data Source Abstraction & Compliance Layers
+
+The platform must implement data handling using three distinct layers:
+
+3.1 Source Adapter Layer
+
+Per data source (SimplyRETS, Spark, RESO, Direct MLS, etc.), we have a dedicated adapter implementing a shared interface, for example:
+
+interface ListingSearchProvider {
+  searchListings(params: SearchParams): Promise<RawListingSearchResult>;
+  getListingById(id: string): Promise<RawListingDetail>;
+  getAutocompleteSuggestions(query: string): Promise<RawSuggestionResult>;
+}
+
+
+These adapters know:
+
+How to call the vendor’s API.
+
+The raw payload shapes.
+
+Any vendor-specific pagination, throttling, or error patterns.
+
+They do not handle:
+
+Compliance filtering.
+
+UI field selection.
+
+Per-MLS visibility rules.
+
+Those are applied downstream.
+
+3.2 Normalization & Compliance Layer
+
+All raw payloads must pass through a normalization + compliance module to produce:
+
+interface ListingDTO {
+  // strictly defined, UI-safe internal representation
+  id: string;
+  mlsId: string;
+  address: AddressDTO;
+  price: number | null;
+  photos: PhotoDTO[];
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  lotSize: number | null;
+  yearBuilt: number | null;
+  // ... other normalized fields
+  status: ListingStatus;
+  attribution: AttributionData;
+  complianceFlags: ComplianceFlags;
+}
+
+
+This module:
+
+Maps raw fields → normalized types.
+
+Applies per-MLS configuration rules (see 3.3).
+
+Drops or masks disallowed fields.
+
+Sets complianceFlags (e.g., “compensation_hidden”, “address_partial”, “field_redacted”).
+
+Implementation requirement:
+
+No UI component may read raw vendor payloads directly.
+
+UI gets only ListingDTO and related DTOs.
+
+3.3 MLS / Market Configuration Layer
+
+There must be a central configuration per MLS / data source, for example:
+
+interface MLSComplianceConfig {
+  id: string; // e.g., "MICHRIC", "CRMLS", etc.
+  displayName: string;
+
+  allowedFields: {
+    // explicit allowlist
+    price: boolean;
+    beds: boolean;
+    baths: boolean;
+    sqft: boolean;
+    lotSize: boolean;
+    yearBuilt: boolean;
+    hoaFees: boolean;
+    taxes: boolean;
+    basementType: boolean;
+    // ...
+  };
+
+  compensationRules: {
+    showBuyerComp: boolean;
+    showSellerComp: boolean;
+    labelFormat: "text" | "icon" | "hidden";
+    // additional flags tied to local interpretation of post-settlement rules
+  };
+
+  addressRules: {
+    showFullAddressFor: ListingStatus[];
+    showPartialAddressFor: ListingStatus[];
+    hideAddressFor: ListingStatus[];
+  };
+
+  disclaimer: {
+    shortText: string;  // for cards
+    fullText: string;   // for detail page/footer
+    logoUrl?: string;   // MLS-provided logo if required
+  };
+
+  brandingRules: {
+    // e.g., required broker logo placement, minimum size, etc., if needed
+  };
+}
+
+
+This configuration is stored in code or config files and is:
+
+Versioned.
+
+Documented.
+
+Override-able per deployment.
+
+Product/legal flow:
+
+Real MLS rules are interpreted by legal / broker.
+
+A specific MLSComplianceConfig is created and approved.
+
+Only then is that MLS “enabled” in production.
+
+4. UI & UX Compliance Rules
+
+The front-end must respect the compliance layer in visible ways:
+
+Attribution Always Present
+
+Listing cards and detail pages include:
+
+“Listing courtesy of [Brokerage]” or the MLS-required phrasing.
+
+MLS disclaimer text (short form on card, full on detail/footer).
+
+Compensation Display Defaults
+
+Default behavior: do not show buyer-agent compensation at all.
+
+If local rules and legal counsel approve:
+
+Only display compensation using allowed labels and formats from MLSComplianceConfig.
+
+No “creative” interpretations of comp display in the UI on your own.
+
+Status & Address Rules
+
+Respect addressRules from configuration:
+
+For certain statuses, show full address.
+
+For others, show partial or generic location.
+
+Never hardcode “always show full address.”
+
+Sensitive Fields
+
+The UI must never display:
+
+Owner names.
+
+Private remarks.
+
+Lockbox codes, alarm codes, or anything related to access details.
+
+These fields should not even exist in the DTOs passed to UI components.
+
+Search & Filter Behavior
+
+Filters should use:
+
+Fields that exist in the DTO and are allowed in allowedFields.
+
+No filters based on disallowed or private data (e.g., seller personal info, private remarks).
+
+5. Logging, Auditing & Data Retention
+
+To support audits and debugging without storing more than necessary:
+
+API Logs
+
+Log:
+
+API endpoint called.
+
+Data source.
+
+Query parameters (minus secrets).
+
+Response status and timing.
+
+Do not log full raw payloads in production unless specifically needed for short-term debugging and then scrubbed.
+
+Error Logs
+
+Error logs may include:
+
+Listing IDs.
+
+MLS IDs.
+
+High-level error messages.
+
+They should not include full raw record dumps of private data in persistent logs.
+
+Retention
+
+Use conservative retention for logs containing MLS identifiers.
+
+Any deliberate caching or storage of listing data beyond session caching must be evaluated against MLS/vendor agreements.
+
+6. Security & Credentials
+
+API Keys & Secrets
+
+No API keys or secrets in the repo.
+
+All secrets supplied via:
+
+Environment variables
+
+Deployment platform secret stores
+
+Document required env vars in DEVELOPER.md.
+
+HTTPS Everywhere
+
+All production deployments must require HTTPS.
+
+No transmitting MLS/IDX data over plain HTTP.
+
+Role Separation (Future-Safe)
+
+Plan for the ability to:
+
+Limit access to internal or admin-only features.
+
+Support different user roles (agent, broker, admin) if needed later.
+
+7. Testing & Verification Expectations
+
+The following areas must have at least minimal automated tests and/or checklists:
+
+Mapper Tests
+
+Unit tests for raw → ListingDTO mapping.
+
+Confirm disallowed fields are dropped.
+
+Confirm complianceFlags are set correctly.
+
+Config-Driven Behavior Tests
+
+Snapshot tests or functional tests for:
+
+How UI renders when showBuyerComp = false.
+
+How address is displayed under different ListingStatus configs.
+
+Manual Compliance Checklist
+
+For each MLS integration:
+
+Confirm all required disclaimers/attributions appear.
+
+Confirm restricted fields do not show up.
+
+Confirm branding rules are respected.
+
+Keep this as a simple markdown checklist in the repo per MLS.
+
+8. Acquisition & “Sell-Ready” Positioning
+
+This addendum exists partly to show potential buyers that:
+
+Compliance is a first-class concern, not an afterthought.
+
+There is:
+
+A clean separation between source adapters, normalization, and UI.
+
+A documented and configurable MLS compliance layer.
+
+A clear path for their in-house counsel to review how data is handled.
+
+Any buyer’s due diligence team should be able to:
+
+Read this addendum.
+
+Open the MLSComplianceConfig files and the normalization/mapping layer.
+
+Confirm that behavior matches expectations and can be adapted to their rules without rewriting the entire app.
+
+9. Non-Negotiables
+
+No UI component may use raw vendor payloads. All UI goes through DTOs shaped by this compliance layer.
+
+No new field is displayed in the UI without being added to:
+
+The DTO.
+
+The MLSComplianceConfig for relevant markets.
+
+No feature that exposes or manipulates MLS data beyond display/use authorized in the MLS/vendor agreements goes live without legal review.

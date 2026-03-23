@@ -1,0 +1,33 @@
+Addendum D: Multi-Surface & Future Native App Awareness
+
+Goal: Build web first, but keep it easy to support PWA/native wrappers and eventually Android Auto without rewriting everything.
+
+Rules
+
+Web is the primary surface.
+
+Next.js app is the canonical UX.
+
+Everything else (PWA, native shell) wraps it.
+
+Surface-specific logic must be thin.
+
+Core business logic lives in:
+
+providers (ListingProvider, future CRMProvider)
+
+Tour Engine
+
+shared types
+
+Surfaces (web, PWA, native shell) just call into those.
+
+Android Auto integration must use routing links / APIs, not UI hacks.
+
+App generates routes.
+
+Google Maps (or the car) handles navigation.
+
+No auto-specific logic in your backend; it just exposes routes/tours.
+
+No surface may introduce a new “secret data model” that conflicts with shared types. Shared contract rules everything.

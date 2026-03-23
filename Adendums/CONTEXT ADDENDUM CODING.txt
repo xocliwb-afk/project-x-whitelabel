@@ -1,0 +1,250 @@
+CONTEXT ADDENDUM – CODING STANDARDS & FOLDER STRUCTURE
+White-Label Zillow-Style Search Platform
+Last updated: 2025-12-04
+
+PURPOSE
+Define repo-level coding standards and folder structure for:
+- Web app (Next.js 14 + TypeScript + Tailwind)
+- Backend BFF (Node + Express + TypeScript)
+- Mobile app (Flutter)
+So that:
+- AI tools (ChatGPT, Gemini, Codex, Open Interpreter) behave consistently
+- The codebase looks professional to acquirers
+- Onboarding for buyer engineering teams is fast and low-friction
+
+This addendum is authoritative for how we structure code and organize files.
+
+========================================================
+GLOBAL PRINCIPLES
+========================================================
+1) TypeScript everywhere (web + backend)
+2) Strict typing (no implicit any)
+3) Small, composable components and modules
+4) One responsibility per file where possible
+5) No “god components” or 1000+ line files
+6) Prefer declarative, readable code over clever hacks
+7) Avoid unnecessary dependencies
+
+========================================================
+REPO STRUCTURE (MONOREPO)
+========================================================
+Top-level structure:
+
+/white-label-zillow/
+  /apps/
+    /web/          # Next.js 14 app (frontend)
+    /api/          # Node/Express BFF (backend)
+    /mobile/       # Flutter app
+  /packages/
+    /shared-types/ # Shared TS types/interfaces
+    /shared-utils/ # Shared utilities (helpers, formatting, etc.)
+  /docs/           # PRD, addendums, architecture docs
+  /config/         # CI/CD, lint, prettier, tsconfig base
+  package.json
+  turbo.json or nx.json (if we use a monorepo tool)
+  README.md
+
+If monorepo tooling becomes unnecessary, apps can still follow this structure logically.
+
+========================================================
+WEB APP FOLDER STRUCTURE (apps/web)
+========================================================
+/apps/web/
+  app/
+    (route folders using Next.js App Router)
+    layout.tsx
+    page.tsx
+    /search/
+      page.tsx          # main map + list search
+    /listing/
+      [id]/
+        page.tsx        # listing detail page
+  components/
+    layout/             # header, footer, shell, container
+    search/             # search bar, filters, chips, sort controls
+    map/                # map component, pins, clusters, overlays
+    listings/           # listing cards, skeletons, grids
+    listing-detail/     # PDP sections: hero, facts, description, map, CTA
+    ui/                 # buttons, inputs, modals, toasts, generic components
+  hooks/
+    useListings.ts
+    useMapState.ts
+    useFilters.ts
+    useTheme.ts
+  lib/
+    api-client.ts       # wrappers for calling backend BFF
+    config.ts           # environment-configured constants
+    logger.ts           # simple logging utilities
+  styles/
+    globals.css
+    tailwind.css
+  public/
+    logos/
+    icons/
+  types/
+    listing.ts          # Listing interface
+    filters.ts
+  tests/                # Jest/Playwright tests (if used)
+
+CONVENTIONS:
+- Components are PascalCase (ListingCard.tsx)
+- Hooks are camelCase and start with “use” (useListings.ts)
+- Files that export a single React component use same name as component
+- Avoid deeply nested component trees beyond 3 levels
+
+========================================================
+BACKEND BFF FOLDER STRUCTURE (apps/api)
+========================================================
+/apps/api/
+  src/
+    index.ts            # app bootstrap
+    server.ts           # Express server setup
+    routes/
+      listings.ts       # /api/listings, /api/listing/:id
+      health.ts         # /api/health
+      theme.ts          # /api/theme (for theme.json)
+    controllers/
+      listingsController.ts
+    services/
+      listingsService.ts   # calls SimplyRETS / IDX provider
+      themeService.ts
+    adapters/
+      simplyRetsAdapter.ts # maps SimplyRETS -> internal Listing model
+    models/
+      Listing.ts           # internal TS type/interface
+      Filters.ts
+    config/
+      env.ts               # env var loading/validation
+    utils/
+      logger.ts
+      errorHandling.ts
+      pagination.ts
+  tests/
+    listings.test.ts
+
+CONVENTIONS:
+- “routes” define endpoints and HTTP shape.
+- “controllers” orchestrate: validate input, call services, return responses.
+- “services” hold business logic (search, filters, calling adapters).
+- “adapters” handle external API integration and normalization.
+- “models” define internal TS interfaces/types.
+
+========================================================
+MOBILE APP FOLDER STRUCTURE (apps/mobile)
+========================================================
+/apps/mobile/
+  lib/
+    main.dart
+    app.dart
+    theme/
+      theme.dart          # builds ThemeData from theme.json
+      colors.dart
+      typography.dart
+    api/
+      api_client.dart     # HTTP client for BFF
+      listings_api.dart   # fetch listings, listing by id
+      theme_api.dart      # fetch theme.json
+    models/
+      listing.dart
+      filters.dart
+    screens/
+      search/
+        search_screen.dart
+        search_map_view.dart
+        search_list_view.dart
+      listing_detail/
+        listing_detail_screen.dart
+    widgets/
+      listing_card.dart
+      listing_list_item.dart
+      map_pin.dart
+      bottom_sheet_listing.dart
+      filter_bar.dart
+      primary_button.dart
+  test/
+
+CONVENTIONS:
+- Screens = full pages / routes.
+- Widgets = reusable UI building blocks.
+- Models = classes or freezed types for data.
+- Theme is centralized under /theme.
+
+========================================================
+CODING STANDARDS – WEB (NEXT.JS + TS + TAILWIND)
+========================================================
+1) TypeScript
+- "strict": true in tsconfig
+- No “any” unless explicitly justified with comment
+- Use interfaces/types for all core domain objects (Listing, Filters, ThemeConfig)
+
+2) React/Next.js
+- Use functional components with hooks only
+- Avoid React context for everything; prefer hooks + Zustand for shared state
+- No heavy logic in components; push data logic to hooks/lib
+
+3) Tailwind
+- Use semantic class combinations, not random one-off inline chaos
+- Prefer design tokens (spacing scale, radii, colors from Tailwind config)
+- Avoid custom CSS except for global base styles and rare layout issues
+
+4) State Management
+- Zustand slices per concern (mapSlice, listingsSlice, filtersSlice, uiSlice)
+- No sprawling global stores that mix concerns
+
+5) API Calls
+- All calls go through /lib/api-client.ts and typed helper functions
+- No direct fetch calls in deep components
+
+========================================================
+CODING STANDARDS – BACKEND (NODE + EXPRESS + TS)
+========================================================
+1) Type Safety
+- Use TypeScript for all files
+- Validate env vars and input using a small schema (Zod or similar, optional)
+
+2) Error Handling
+- Use centralized error middleware
+- Never leak raw internal errors to clients
+- Log errors with enough context to debug
+
+3) External APIs
+- All IDX calls go through adapters (e.g., simplyRetsAdapter)
+- Never return raw IDX data directly; always normalize to internal Listing model
+
+4) Logging
+- Minimal console logging in production paths
+- Structured logs if needed later
+
+========================================================
+CODING STANDARDS – MOBILE (FLUTTER)
+========================================================
+1) Structure
+- Separate “screens” from “widgets”
+- Keep business logic out of UI widgets when possible
+- Data fetching through dedicated API service files
+
+2) Styling
+- Use ThemeData consistently
+- No hard-coded colors/fonts in widgets; use theme only
+- Prefer composition over massive StatefulWidgets
+
+========================================================
+AI TOOL BEHAVIOR BOUNDARIES
+========================================================
+- AI may only modify files within their respective app folders when explicitly instructed.
+- No AI tool should auto-refactor the entire repo.
+- When asking AI to modify code, always specify:
+  - Which file(s)
+  - What kind of change (add component, refactor hook, adjust styling)
+- AI must respect folder structure; no new top-level folders without human approval.
+
+========================================================
+SUMMARY
+========================================================
+This addendum defines the shape of the repo and coding style so that:
+- The project feels cohesive and professional
+- Buyer engineering teams can quickly understand and extend the codebase
+- AI tools operate within predictable boundaries
+
+END OF DOCUMENT
+

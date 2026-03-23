@@ -1,0 +1,72 @@
+Addendum C: Tour Engine & Route Planner (Phase 7 Core)
+
+Goal: Define a clean domain model for showings/routes that works with dummy times now and calendar/ShowingTime later.
+
+Domain Models
+interface Tour {
+  id: string;
+  date: string; // ISO yyyy-mm-dd
+  clientName?: string;
+  stops: TourStop[];
+}
+
+interface TourStop {
+  listingId: string;
+  address: string;
+  lat: number;
+  lng: number;
+
+  // Optional scheduling data
+  startTime?: string; // ISO time or datetime
+  endTime?: string;
+
+  // Where this stop’s time came from
+  source?: "dummy" | "manual" | "calendar" | "showingtime";
+  sourceId?: string;
+}
+
+Behavior (V1 “Dummy Time Edition”)
+
+Inputs:
+
+Selected listings (ids/coords)
+
+Tour date
+
+Start time
+
+Per-showing duration (e.g. 30 min)
+
+Buffer (e.g. 10 min)
+
+Optional global window (e.g. 10:00–18:00)
+
+Engine responsibilities:
+
+Choose an order (start with user-selected or simple heuristic).
+
+Compute start/end times per stop using duration + buffer + travel time.
+
+Validate against the global window.
+
+Emit Tour with fully computed times.
+
+Generate a Google Maps route URL from the ordered stops.
+
+Rules
+
+Tour Engine operates on domain models only (Tour, TourStop), not raw listings or UI components.
+
+No ShowingTime/calendar-specific logic baked into the engine.
+
+Those systems become sources of TourStop data later.
+
+UI can:
+
+“Add to Tour” from a listing card
+
+Open a “Tour Builder” panel
+
+Display a computed schedule
+
+Send user to Google Maps for actual navigation

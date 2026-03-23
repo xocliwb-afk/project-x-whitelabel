@@ -1,0 +1,72 @@
+ADDENDUM 4: CRM Integration Strategy Document
+Objective
+
+Create a flexible, CRM-agnostic integration layer allowing Project X to work with any brokerage regardless of their CRM choice.
+
+Core Principles
+
+Single Lead Endpoint
+All lead capture events flow through POST /api/leads.
+
+Configuration-Driven
+CRM integration is controlled by per-broker configs:
+
+{
+  crmType: "hubspot",
+  apiKey: "...",
+  endpointUrl: "...",
+  pipelineId: "...",
+  tags: [...]
+}
+
+
+Multiple CRM Types Supported
+
+HubSpot REST API
+
+GoHighLevel REST API
+
+FollowUpBoss REST API
+
+Generic Webhook for Zapier/Make
+
+Email fallback
+
+Connector Architecture
+Each CRM connector implements a unified interface:
+
+sendLead(lead: Lead, config: CRMConfig): Promise<void>
+
+
+Retry + Logging
+
+If CRM push fails → retry queue
+
+Log event for debugging
+
+If retries fail → send fallback email to agent
+
+No Contact State Management
+
+Project X does not store contact pipelines, tasks, or automation logic
+
+CRM remains the single source-of-truth
+
+Minimal Required Data
+Lead payload includes:
+
+name, email, phone, listingId, listingAddress, message, source
+
+
+Broker/Admin Control Panel (future epic)
+Allows broker to set:
+
+CRM type
+
+API key
+
+Pipeline / stage
+
+Lead tags
+
+Notification emails

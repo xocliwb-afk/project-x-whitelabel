@@ -1,0 +1,220 @@
+CONTEXT ADDENDUM – API CONTRACT & DATA SCHEMA
+White-Label Zillow-Style Search Platform
+Last updated: 2025-12-04
+
+PURPOSE
+Define a stable backend API contract between:
+- Backend BFF (Node + Express)
+- Web App (Next.js)
+- Mobile App (Flutter)
+
+This contract must:
+- Be simple, predictable, and scalable
+- Hide IDX provider differences behind an adapter layer
+- Produce normalized, acquisition-friendly data
+- Ensure minimal friction when switching MLS/IDX feeds
+
+This is a source-of-truth document. No endpoint may deviate from these schemas without updating this addendum.
+
+========================================================
+HIGH-LEVEL ARCHITECTURE
+========================================================
+Frontend (Web + Mobile) → Backend BFF → IDX Provider (SimplyRETS, etc.)
+
+Backend responsibilities:
+- Query IDX provider
+- Normalize fields into a consistent Listing model
+- Apply filter logic
+- Handle pagination, bounding boxes, etc.
+
+Frontend responsibilities:
+- Render UI cleanly
+- Manage map + list sync
+- Request filtered + paginated data
+- Display details page from normalized model
+
+========================================================
+LISTING MODEL (NORMALIZED)
+========================================================
+Internal TypeScript/JSON shape returned to all clients:
+
+{
+  "id": string,
+  "mlsId": string,
+  "listPrice": number,
+  "listPriceFormatted": string,
+  "address": {
+    "full": string,
+    "street": string,
+    "city": string,
+    "state": string,
+    "zip": string,
+    "lat": number,
+    "lng": number
+  },
+  "media": {
+    "photos": string[]
+  },
+  "details": {
+    "beds": number | null,
+    "baths": number | null,
+    "sqft": number | null,
+    "lotSize": number | null,
+    "yearBuilt": number | null,
+    "hoaFees": number | null,
+    "basement": string | null,
+    "propertyType": string | null,
+    "status": string
+  },
+  "meta": {
+    "daysOnMarket": number | null,
+    "mlsName": string | null
+  }
+}
+
+Notes:
+- All IDX fields must be gracefully mapped to this model through adapters.
+- Missing IDX fields must return null, not undefined.
+
+========================================================
+CORE ENDPOINTS
+========================================================
+
+--------------------------------------------------------
+1. GET /api/health
+--------------------------------------------------------
+Purpose:
+- Used by devops + frontend to verify API availability.
+
+Response:
+{
+  "status": "ok",
+  "timestamp": number
+}
+
+--------------------------------------------------------
+2. GET /api/theme
+--------------------------------------------------------
+Purpose:
+- Serve theme.json for white-label branding.
+
+Response:
+{
+  ...theme.json
+}
+
+--------------------------------------------------------
+3. GET /api/listings
+--------------------------------------------------------
+Purpose:
+- Fetch a page of listings based on filters and optional bounding box.
+- Used for map search, list view, and infinite scroll.
+
+Query Parameters:
+- bbox: "minLng,minLat,maxLng,maxLat" (optional)
+- page: number
+- limit: number
+- minPrice: number
+- maxPrice: number
+- beds: number
+- baths: number
+- propertyType: string
+- sort: "price-asc" | "price-desc" | "dom" | "newest"
+
+Response:
+{
+  "results": Listing[],
+  "pagination": {
+    "page": number,
+    "limit": number,
+    "total": number,
+    "hasMore": boolean
+  }
+}
+
+Behavior:
+- If bbox present → map search mode
+- If bbox missing → general list search mode
+
+--------------------------------------------------------
+4. GET /api/listing/:id
+--------------------------------------------------------
+Purpose:
+- Fetch full listing details for PDP.
+
+Response:
+{
+  "listing": Listing
+}
+
+--------------------------------------------------------
+5. POST /api/contact
+--------------------------------------------------------
+Purpose:
+- Submit a contact request for a listing.
+- Must comply with IDX attribution + legal standards.
+
+Body:
+{
+  "listingId": string,
+  "name": string,
+  "email": string,
+  "phone": string | null,
+  "message": string | null
+}
+
+Response:
+{
+  "success": boolean
+}
+
+Backend may email the agent, log to CRM, or store internally.
+
+========================================================
+ERROR RESPONSE SHAPE
+========================================================
+Standardized error format:
+
+{
+  "error": true,
+  "message": string,
+  "code": string,   // e.g. "NOT_FOUND", "INVALID_PARAMS"
+  "status": number
+}
+
+========================================================
+IDX ADAPTER REQUIREMENTS
+========================================================
+The adapter layer (e.g., simplyRetsAdapter.ts) must:
+
+- Accept raw IDX payload
+- Transform all values into the normalized Listing model
+- Fix inconsistent formatting (strings vs numbers)
+- Parse coordinates safely
+- Derive daysOnMarket if needed
+- Format prices for display
+
+IDX provider must NEVER leak raw field names to frontend.
+
+========================================================
+PERFORMANCE & RATE LIMIT NOTES
+========================================================
+Backend must:
+- Cache IDX responses for 30–60s (simple in-memory or Redis)
+- Enforce pagination limit (e.g., max 50)
+- Reject unbounded queries
+- Throttle bounding-box searches to avoid map spam
+
+========================================================
+WHY THIS MATTERS FOR ACQUISITION
+========================================================
+Buyers want:
+- Predictable API structure
+- Normalized MLS data
+- Clean separation of data concerns
+- Easy ability to replace IDX provider
+
+This addendum guarantees that.
+
+END OF DOCUMENT
+

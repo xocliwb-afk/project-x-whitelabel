@@ -1,0 +1,327 @@
+ADDENDUM F – Master Feature Addendum (Project X Feature Roadmap)
+
+Version: V3–V4 Strategic Feature Blueprint
+Purpose: Define all major functional features for Project X, categorize them, prioritize them, and include the latest innovation features (Android Auto integration + Arrival Narration System).
+Status: Approved for Phase 7+ planning.
+
+1. MUST-HAVE CORE FEATURES (NON-NEGOTIABLE)
+
+These are required for Project X to function as a modern real estate search platform.
+
+1.1 Core Search Platform
+
+Map + List synchronized browsing
+
+URL-as-source-of-truth filtering
+
+High-performance data layer with Listing Provider abstraction
+
+Real-time filtering (price, beds, baths, home type, status)
+
+Seamless mobile + desktop experience
+
+Detail Modal (PDP) without page navigation
+
+High-quality theming and UI consistency
+
+1.2 Map Experience
+
+Marker clustering
+
+Map/List sync (hover → highlight, click → detail modal)
+
+Zoom, pan, and bounding-box filtering
+
+Saved searches + favorites (later V2)
+
+1.3 Tour Engine (Core Scheduling + Routing System)
+
+Multi-stop route optimization
+
+Showing-window aware scheduling
+
+Buffers + time constraints
+
+Conflict resolution
+
+Export route to Google Maps
+
+Editable tour order
+
+Re-optimization based on delays
+
+1.4 White Label Architecture
+
+Theme.json integration
+
+Branding, colors, logos, fonts
+
+Configurable homepage + header + nav
+
+Multi-tenant configuration
+
+2. MUST-HAVE ADVANCED FEATURES (YOUR LIST + MY MUST-HAVE LIST)
+
+These take Project X from “good” to “category-defining.”
+
+2.1 Map Lens (Cluster Magnifier)
+
+Dwell-time activation
+
+Local pin de-overlapping
+
+One-click listing selection
+
+Non-intrusive UI overlay
+
+2.2 Natural Language Search
+
+“Homes under 400k with big backyard in Creston”
+
+Entity extraction → filter mapping
+
+AI-enhanced suggestions
+
+2.3 Drive-Time / Commute Filtering
+
+Filter by commute time to work/school
+
+Drive-time polygons (isochrones)
+
+2.4 AI Recommender Engine
+
+“Similar Homes”
+
+“Homes You May Like”
+
+Buyer-profile-driven filtering
+
+2.5 White-Label Mobile App (Flutter recommended)
+
+Shared codebase for iOS + Android
+
+Syncs with Project X backend
+
+Push notifications
+
+Saved searches, alerts, listings
+
+3. IMPORTANT FEATURES THAT “JUST MAKE SENSE” (CURATED LIST)
+
+These aren’t must-have today, but they are extremely valuable and should appear in V3–V4:
+
+3.1 Enhanced Agent Tools
+
+Buyer tour packets (PDF/print)
+
+Agent notes attached to listings
+
+Lead capture on PDP + share flows
+
+Shared tours between buyer + agent
+
+3.2 Consumer Features
+
+Price history visualization
+
+Neighborhood insights (crime, schools, walkability)
+
+Mortgage calculator
+
+Property tax estimator
+
+3.3 Engagement / Growth Tools
+
+Saved search email alerts
+
+“Notify me of price drops”
+
+Recommended neighborhoods
+
+3.4 Multi-Surface Functionality
+
+PWA installer
+
+Offline mode (cached searches + tours)
+
+Tablet-optimized UI
+
+CRM sync (lead forwarding)
+
+4. THE 10 ADDITIONAL FEATURES WE AGREED MUST BE INCLUDED
+
+(Chosen by combining your list + my list)
+
+These are high ROI, medium difficulty, and strongly differentiate Project X:
+
+Smart sorting (“best match,” “most relevant”)
+
+Price history + comps integration
+
+Neighborhood boundary overlays
+
+Drive-time search
+
+AI listing summaries
+
+Recently viewed
+
+Saved homes
+
+Saved searches
+
+Multi-tab browsing inside modal
+
+Consumer/agent shareable tour links
+
+5. PRIORITIZED ORDER OF IMPLEMENTATION (V1 → V4)
+V1: Core Delivery (Already in progress / nearly done)
+
+Listing Provider abstraction
+
+Map/List/Search UI
+
+PDP Modal
+
+Filters + URL State
+
+Shared Types + Mappers
+
+Basic theme system
+
+V2: Enhancement Pass
+
+Tour Engine v1
+
+Map Lens v1
+
+AI NL Search v1
+
+Saved homes / basic account system
+
+White label presets
+
+Performance tuning
+
+V3: Transformation Stage (High strategic value)
+
+Tour Engine v2 (time windows, conflict handling)
+
+Advanced Map Lens (de-overlapping, mobile hold-activation)
+
+Full AI Search + Recommendations
+
+Neighborhood layers
+
+Mortgage + tax tools
+
+Mobile App (Flutter)
+
+Saved search alerts
+
+V4: Differentiation Stage (Patents + Acquisition Readiness)
+
+Android Auto Integration
+
+Arrival Narration System
+
+Tour Engine v3 (dynamic re-routing)
+
+Shared tours (buyer ↔ agent)
+
+CRM integrations
+
+Multi-surface sync engine
+
+AR map overlays (stretch)
+
+6. NEW FEATURES (HIGH PRIORITY ADDITIONS)
+6.1 Android Auto Integration (In-Car Tour Assistant)
+Purpose
+
+Allow agents/buyers to navigate multi-property showing routes directly inside their vehicle with hands-free operation.
+
+Key Functions
+
+Tour Engine → Android Auto sync
+
+Turn-by-turn navigation for scheduled showings
+
+Auto-advance to next stop
+
+Voice-only commands
+
+Re-optimization inside vehicle
+
+Why It Matters
+
+This is the first real estate touring system designed for the agent’s real working environment: the car.
+Huge acquisition leverage.
+
+6.2 Arrival Narration System (“Listing Intelligence on Approach”)
+Purpose
+
+Provide contextual, spoken listing insights automatically when approaching a showing location.
+
+How It Works
+
+GPS proximity triggers (100–300 ft)
+
+Listing metadata retrieval
+
+AI summarization
+
+Spoken briefing via TTS (Android Auto or phone)
+
+Example Output
+
+“Now arriving at 1728 Mason St NE.
+3 beds, 2 baths, 1710 sqft.
+Updated kitchen in 2022.
+Price reduced 5 days ago.
+Days on market: 7.”
+
+Why It Matters
+
+This is a patent-worthy feature and positions Project X as a true in-car real estate co-pilot.
+
+7. RADICAL DIFFERENTIATORS (THE “WHY US” LIST FOR ACQUISITION)
+
+Project X becomes the only platform with:
+
+Map Lens cluster magnification
+
+Full Tour Engine with time windows
+
+AI listing intelligence
+
+Multi-surface white label system
+
+Cross-device sync (web ↔ mobile ↔ car)
+
+Android Auto real estate navigation
+
+Arrival Narration AI assistant
+
+These features create a moat that Zillow, Redfin, or CoStar would take 12–24 months to replicate.
+
+8. STRATEGIC VALUE SUMMARY
+
+With V3 + V4 (including the new features):
+
+Project X transforms into:
+
+✔ The first real estate touring operating system
+✔ A cross-surface agent platform
+✔ A mobile + automotive productivity suite
+✔ A search + scheduling + routing + insight engine
+
+Strategic valuation estimate:
+
+Pre-revenue: $25M–$60M
+
+With Android Auto + Arrival Narration: $35M–$80M+
+
+With even small brokerage adoption: $80M–$120M
+
+END OF ADDENDUM F

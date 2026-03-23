@@ -1,0 +1,64 @@
+Addendum E: CRM Integration / “CRM Infusion”
+
+This answers your CRM question directly.
+
+“Do we need to keep a CRM infusion in mind here or is that already a thing?”
+
+It’s not yet codified, so we’re codifying it now. We’re not implementing it in Phase 6, but we are designing the seam so adding it later doesn’t wreck anything.
+
+Goal: Allow the app to emit leads and actions to whatever CRM the brokerage uses (Follow Up Boss, HubSpot, Sierra, etc.) without contaminating the core app with CRM-specific logic.
+
+Concept: CRM Provider
+
+Analogous to ListingProvider, but for outbound events.
+
+interface CrmProvider {
+  createLead(payload: CrmLeadPayload): Promise<void>;
+  logEvent(payload: CrmEventPayload): Promise<void>;
+}
+
+
+High-level payloads like:
+
+interface CrmLeadPayload {
+  name?: string;
+  email?: string;
+  phone?: string;
+  source: "project-x-web" | "project-x-app";
+  message?: string;
+  listingId?: string;
+  tourId?: string;
+}
+
+Rules
+
+UI never talks to CRMs directly.
+
+No direct calls to HubSpot/FUB SDKs from React.
+
+UI posts to your backend (/api/leads, /api/events).
+
+Backend passes that to the configured CrmProvider.
+
+CRM integration is optional.
+
+App must work with NullCrmProvider (no-op).
+
+For pilots, you can turn CRM on per deployment via env variables.
+
+CRM must not shape your domain.
+
+Your domain events are generic (“LeadCreated,” “TourRequested”).
+
+CRM-specific fields/IDs live only in the provider implementation.
+
+Later Phases (not now)
+
+“Save search”, “favorite listing”, “request showing” all emit events that can be mirrored into CRM.
+
+Tour Engine can notify CRM when a tour is created or updated.
+
+All via CrmProvider, not sprinkled calls.
+
+So:
+CRM integration is not a hard requirement in Phase 6/7, but we are keeping it in mind and defining the seam now. That way when you want “full CRM infusion,” we’re adding a provider and endpoints, not refactoring the whole app.

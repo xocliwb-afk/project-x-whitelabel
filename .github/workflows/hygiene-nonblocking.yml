@@ -1,0 +1,40 @@
+name: hygiene (non-blocking)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run hygiene reports (non-blocking)
+        run: |
+          mkdir -p artifacts
+          echo "Running knip:report..."
+          pnpm knip:report 2>&1 | tee artifacts/knip-report.txt || true
+          echo "Running madge:circular:report..."
+          pnpm madge:circular:report 2>&1 | tee artifacts/madge-circular-report.txt || true
+
+      - name: Upload hygiene artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hygiene-reports
+          path: artifacts

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "ignore": [
+    "**/.next/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/.turbo/**",
+    "**/node_modules/**",
+    "apps/web/public/marketing/assets/js/main.js",
+    "marketing/assets/js/main.js",
+    "apps/web/public/marketing/assets/css/**/*.css",
+    "assets/js/main.js",
+    "scripts/e2e-servers.mjs"
+  ],
+  "workspaces": {
+    "apps/web": {
+      "project": ["apps/web/tsconfig.json"],
+      "entry": [
+        "apps/web/next.config.*",
+        "apps/web/middleware.*",
+        "apps/web/app/**/{page,layout,route,loading,not-found,error,template}.{ts,tsx,js,jsx}",
+        "apps/web/public/marketing/**/*.html",
+        "apps/web/public/marketing/**/main.js",
+        "apps/web/public/marketing/**/style.css",
+        "apps/web/public/marketing/assets/js/**/*.js",
+        "apps/web/public/marketing/assets/css/**/*.css"
+      ]
+    },
+    "apps/api": {
+      "project": ["apps/api/tsconfig.json"],
+      "entry": ["src/**/*.{ts,tsx,js,jsx}"]
+    },
+    "packages/shared-types": {
+      "project": ["packages/shared-types/tsconfig.json"],
+      "entry": ["src/**/*.{ts,tsx,js,jsx}"]
+    }
+  },
+  "entry": [
+    "scripts/**/*.mjs"
+  ]
+}

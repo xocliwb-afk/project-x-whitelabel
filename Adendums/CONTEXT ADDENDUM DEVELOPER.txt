@@ -1,0 +1,184 @@
+CONTEXT ADDENDUM – DEVELOPER ONBOARDING & PROJECT SETUP
+White-Label Zillow-Style Search Platform
+Last updated: 2025-12-04
+
+PURPOSE
+Provide a standardized onboarding guide for:
+- Running the web app (Next.js)
+- Running the backend BFF (Node + Express)
+- Running the mobile app (Flutter)
+- Managing environment variables
+- Running tests
+- Contributing new code
+- AI-assisted development rules
+
+This is the document an acquirer’s engineering team will read first.
+
+========================================================
+SYSTEM REQUIREMENTS
+========================================================
+Node: v18+
+npm or pnpm  
+Flutter: latest stable channel  
+Git  
+VS Code (recommended)  
+Recommended extensions:
+- Tailwind CSS IntelliSense
+- ESLint
+- Prettier
+- Dart & Flutter
+- GitLens
+- Gemini / ChatGPT extensions
+
+========================================================
+REPO SETUP (MONOREPO)
+========================================================
+Clone the repository:
+
+git clone https://github.com/<YOUR_ORG>/white-label-zillow.git
+cd white-label-zillow
+
+Install dependencies (root):
+npm install
+
+Install app-specific deps:
+cd apps/web && npm install
+cd ../api && npm install
+cd ../mobile && flutter pub get
+
+========================================================
+ENVIRONMENT VARIABLES
+========================================================
+Each app has a .env file:
+
+/apps/web/.env.local
+NEXT_PUBLIC_API_URL=http://localhost:4000
+
+/apps/api/.env
+PORT=4000
+IDX_API_KEY=your_simplyrets_key
+IDX_API_SECRET=your_simplyrets_secret
+IDX_BASE_URL=https://api.simplyrets.com
+
+/apps/mobile/lib/env.dart (Flutter)
+const apiBaseUrl = "http://localhost:4000";
+
+NEVER commit .env files.
+
+========================================================
+RUNNING THE BACKEND (BFF)
+========================================================
+cd apps/api
+npm run dev
+
+Available at:
+http://localhost:4000/api/listings  
+http://localhost:4000/api/listing/:id  
+http://localhost:4000/api/theme  
+
+========================================================
+RUNNING THE WEB APP (NEXT.JS)
+========================================================
+cd apps/web
+npm run dev
+
+Available at:
+http://localhost:3000/
+
+========================================================
+RUNNING THE MOBILE APP (FLUTTER)
+========================================================
+cd apps/mobile
+flutter run -d chrome       # web mode
+flutter run -d <device>     # android/ios
+
+========================================================
+LINTING & FORMAT
+========================================================
+Root-level npm scripts enforce consistency:
+
+npm run lint
+npm run format
+
+Tailwind, ESLint, and Prettier must pass before merging code.
+
+========================================================
+TESTING
+========================================================
+Backend tests:
+cd apps/api
+npm run test
+
+Web app tests (optional):
+cd apps/web
+npm run test
+
+========================================================
+GIT BRANCHING STRATEGY
+========================================================
+Branch types:
+- main → stable, deployable
+- dev → active development
+- feature/<name> → new features
+- fix/<name> → bugfixes
+
+All pull requests must:
+- Reference a PRD feature or addendum requirement
+- Pass linting
+- Add/update docs if needed
+
+========================================================
+AI-ASSISTED DEVELOPMENT RULES
+========================================================
+Gemini, ChatGPT, and Codex may:
+- Modify isolated files when instructed
+- Create new components/hooks/services in approved folders
+- Refactor code ONLY when explicitly told
+
+AI may NOT:
+- Delete or move entire folders
+- Rename files without explicit approval
+- Change project architecture
+- Introduce new dependencies without explaining why
+
+When using AI tools:
+- Always specify which file to edit
+- Always approve or reject changes manually
+
+========================================================
+LOCAL MOCK DATA (OPTIONAL)
+========================================================
+During API downtime, developers may load a mock dataset:
+
+/apps/api/src/mock/listings.json
+
+Enable mock mode with:
+USE_MOCK_DATA=true in .env
+
+========================================================
+BUILDING FOR PRODUCTION
+========================================================
+Backend:
+npm run build && npm start
+
+Web:
+npm run build && npm run start
+
+Mobile:
+flutter build apk
+flutter build ios
+
+========================================================
+ACQUISITION READINESS NOTES
+========================================================
+Buyers will look for:
+- Clear file structure
+- Clean onboarding steps
+- Ability to run the project within 5 minutes
+- Minimal external assumptions
+- Strong documentation
+
+This addendum ensures the repo is self-explanatory.
+
+END OF DOCUMENT
+

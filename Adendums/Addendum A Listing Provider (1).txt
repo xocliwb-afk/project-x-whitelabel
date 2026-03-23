@@ -1,0 +1,51 @@
+Addendum A: Listing Provider Abstraction
+
+Goal: Make the backend data source swappable (Mock, SimplyRETS, direct MLS, etc.) without ever touching the frontend or UI models.
+
+Contract
+
+Define a backend-only interface:
+
+interface ListingProvider {
+  search(params: ListingSearchParams): Promise<NormalizedListing[]>;
+  getById(id: string): Promise<NormalizedListing | null>;
+}
+
+
+ListingSearchParams and NormalizedListing remain the only shared types across the boundary:
+
+Defined in @project-x/shared-types
+
+Used by both API and frontend
+
+UI never sees SimplyRETS or MLS-native shapes
+
+Implementations
+
+MockListingProvider
+
+Reads from mockListings
+
+Applies filters using ListingSearchParams
+
+Used in dev/demo, no external dependency
+
+SimplyRetsListingProvider (Phase 7+)
+
+Lives in apps/api/src/providers/simplyrets
+
+Uses env vars: SIMPLYRETS_API_KEY, SIMPLYRETS_API_SECRET
+
+Maps SimplyRETS responses → NormalizedListing via a mapper
+
+Handles vendor quirks internally; nothing leaks out
+
+Rules
+
+API routes must call only the ListingProvider, never vendor SDKs, raw HTTP, or MLS field names.
+
+UI never imports vendor types (no “SimplyRetsProperty” type leaking into React).
+
+Switching providers is done via configuration/env (DATA_PROVIDER=mock|simplyrets), not code rewrites.
+
+Mock mode must always remain supported for development and demos.

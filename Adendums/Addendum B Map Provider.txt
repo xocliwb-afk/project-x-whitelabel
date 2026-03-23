@@ -1,0 +1,48 @@
+Addendum B: Map Provider & Routing Separation
+
+Goal: Decouple “what renders the map” from “who calculates routes / turn-by-turn,” so you can swap Leaflet/Mapbox/Google later without surgery.
+
+Concepts
+
+Map Provider = how tiles & markers are rendered in the web UI.
+
+Routing Provider = who plans driving routes (Google Maps, later Directions API).
+
+Rules
+
+Map is visualization, not authority.
+
+Map gets a list of UI Listing objects with:
+
+coords: { lat: number; lng: number };
+id: string;
+
+
+Map reflects selection state (selectedListingId), but does not own search params or business logic.
+
+MapPanel takes a stable contract:
+
+interface MapPanelProps {
+  listings: Listing[];
+  selectedListingId: string | null;
+  onSelectListing(id: string): void;
+}
+
+
+No vendor-specific props.
+
+Vendor-specific details (Leaflet/Mapbox/Google) stay inside the map implementation, not the rest of the UI.
+
+Routing is handled separately
+
+For now: Google Maps deep links from a Tour object (Phase 7).
+
+Later: Directions API calls live in a dedicated backend service, not sprinkled in React.
+
+Swapping Leaflet → Mapbox → Google maps should only require:
+
+Changing the map implementation file
+
+Possibly a MapProvider config
+
+No changes to cards, modal, filters, or API.

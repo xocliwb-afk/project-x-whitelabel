@@ -1,0 +1,33 @@
+{
+  "brandName": "Brandon Wilcox Home Group",
+  "colors": {
+    "primary": "#14243B",
+    "primaryForeground": "#FFFFFF",
+    "primaryAccent": "#C7855B",
+    "background": "#FFFFFF",
+    "surface": "#F5F1E8",
+    "surfaceMuted": "#EEE8DC",
+    "surfaceAccent": "#E4DACA",
+    "textMain": "#14243B",
+    "textSecondary": "#6B7280",
+    "textMuted": "#6B7280",
+    "border": "#E6E7E8",
+    "danger": "#DC2626",
+    "success": "#16A34A"
+  },
+  "typography": {
+    "fontFamily": "Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    "baseSizePx": 16,
+    "headingWeight": 600,
+    "bodyWeight": 400
+  },
+  "radius": {
+    "card": 16,
+    "button": 9999,
+    "input": 9999
+  },
+  "logo": {
+    "url": "/logos/bwhg-logo-light.svg",
+    "height": 32
+  }
+}

@@ -1,0 +1,41 @@
+ADDENDUM 2: “No CRM, Integrations Only” Policy
+Policy Statement
+
+Project X shall act as a lead generation and search platform, not a CRM.
+The system will capture leads and forward them to external CRMs through one of the following mechanisms:
+
+REST API connectors (HubSpot, FollowUpBoss, GoHighLevel, etc.)
+
+Webhooks (Zapier, Make, CRM generic webhooks)
+
+Email notifications as fallback when CRM integration fails
+
+Broker/agent-specific routing rules
+
+Project X does not store ongoing CRM contact data, deal pipelines, task histories, automations, or communication logs.
+
+Lead Data Retention
+
+Project X may store minimal transient lead data for:
+
+auditing
+
+analytics
+
+retry logic
+
+activity tracking
+
+But it will not replace the CRM as system-of-record.
+
+Compliance & Interoperability
+
+By remaining CRM-agnostic, Project X:
+
+avoids duplicating functionality
+
+reduces development overhead
+
+increases adoption rate
+
+provides maximum compatibility with brokerage tech stacks

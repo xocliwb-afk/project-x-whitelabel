@@ -1,0 +1,71 @@
+Lead endpoint (POST /api/leads)
+
+CRM connector layer
+
+Multi-tenant brokerage configuration
+
+Logging + error handling
+
+Listing Providers
+
+Implement ListingProvider interface
+
+Current: Mock
+
+Future: SimplyRETS, RESO Web API, MLS direct feeds
+
+External CRMs
+
+HubSpot
+
+GoHighLevel
+
+FollowUpBoss
+
+Sierra Interactive
+
+Chime
+
+Generic webhook endpoints
+
+Database
+
+Stores:
+
+Broker config
+
+Provider configs
+
+Minimal lead logs
+
+Saved search settings
+
+Theme and UI preferences
+
+Does not store CRM contact pipelines or automation state
+
+Data Flow Diagram (Text Version)
+[User] 
+   → Clicks “I’m Interested” on Listing
+   → Frontend POST /api/leads
+
+[Project X API]
+   → Validates payload
+   → Normalizes lead
+   → Loads broker CRM configuration
+   → Routes lead to CRM Connector
+
+[CRM Connector Layer]
+   → HubSpot: Create Contact + Deal
+   → GoHighLevel: Create Opportunity + Assign Tag
+   → FollowUpBoss: Add Lead + Source Tracking
+   → Webhook: JSON payload to Zapier/Make/Other
+
+[CRM]
+   → Receives lead
+   → Runs automations, tasks, workflows, follow-ups
+
+[Project X]
+   → Stores minimal analytic log (timestamp, listingId, brokerId)
+   → Returns success to frontend
+

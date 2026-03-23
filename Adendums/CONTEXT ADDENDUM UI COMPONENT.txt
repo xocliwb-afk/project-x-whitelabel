@@ -1,0 +1,275 @@
+CONTEXT ADDENDUM – UI COMPONENT LIBRARY & DESIGN TOKENS
+White-Label Zillow-Style Search Platform
+Last updated: 2025-12-04
+
+PURPOSE
+Define:
+- The core UI components (web + mobile)
+- Their responsibilities and anatomy
+- The design tokens (colors, spacing, typography, radii, shadows, breakpoints)
+
+This ensures:
+- Consistent UI implementation across web and mobile
+- Faster development using a reusable component library
+- A polished, acquisition-grade front end
+
+========================================================
+DESIGN PRINCIPLES (BOLD MINIMALISM)
+========================================================
+- Clean, spacious layouts
+- High readability and scannability
+- Strong hierarchy (price, key stats, then details)
+- Soft shadows, rounded corners
+- Limited, purposeful color usage
+- Feels like “Zillow-quality” but more modern and minimal
+
+========================================================
+DESIGN TOKENS
+========================================================
+1) COLORS (BASE THEME)
+These are logical tokens; actual hex values can be overridden by theme.json.
+
+- color.bg: main background
+- color.surface: card backgrounds / panels
+- color.primary: main accent (buttons, key highlights)
+- color.primaryAccent: secondary accent (chips, map pins)
+- color.textMain: primary text
+- color.textMuted: secondary text
+- color.border: subtle borders and dividers
+- color.danger: errors
+- color.success: confirmations
+
+2) TYPOGRAPHY
+Font family: Montserrat (or similar geometric sans-serif), plus system fallbacks.
+
+Token tiers:
+- text.xlTitle: 24–32px, bold (page titles / hero)
+- text.lgHeading: 20–24px, semibold (section titles)
+- text.mdBody: 16px, regular (paragraphs)
+- text.smLabel: 14px, medium (labels, chips)
+- text.xsMeta: 12px, medium (meta info like “Days on market”)
+
+3) SPACING SCALE (in px)
+Use these consistent steps:
+- space.0 = 0
+- space.1 = 4
+- space.2 = 8
+- space.3 = 12
+- space.4 = 16
+- space.5 = 20
+- space.6 = 24
+- space.8 = 32
+- space.10 = 40
+- space.12 = 48
+- space.16 = 64
+
+4) RADII
+- radius.sm = 4px
+- radius.md = 8px
+- radius.lg = 16px
+- radius.pill = 9999px
+
+Convention:
+- Inputs, buttons: radius.pill
+- Cards: radius.lg
+- Small badges: radius.pill
+
+5) SHADOWS
+- shadow.none: none
+- shadow.sm: very soft card shadow
+- shadow.md: stronger, for popovers/bottom sheets
+Minimal use; only to elevate important elements.
+
+6) BREAKPOINTS (WEB)
+- mobile: < 640px
+- tablet: 640px–1024px
+- desktop: > 1024px
+
+========================================================
+CORE WEB COMPONENTS
+========================================================
+
+1) Layout Components
+- <AppShell>
+  - Renders header, main area, optional footer
+  - Handles app-wide theme and responsive layout
+- <Header>
+  - Logo, nav items, possibly “Sign In” / “Contact” links
+- <Footer>
+  - Basic branding, disclaimers, MLS attribution
+
+2) Search & Filters
+- <SearchBar>
+  - Free-text search input (location, city, ZIP)
+  - “Search” button or auto-suggest (phase 2)
+- <FilterBar>
+  - Price range control
+  - Beds/Baths
+  - Property type dropdown
+  - More filters (optional, expandable)
+- <FilterChip>
+  - Small pill with label + optional icon
+  - Active vs inactive states
+
+3) Map & Map-Related Components
+- <MapContainer>
+  - Wraps Mapbox map, handles initial center/zoom
+- <MapPinsLayer>
+  - Renders pins/clusters based on Listing[] data
+- <MapPin>
+  - Single property pin
+  - Hover/selected states
+- <MapClusterMarker>
+  - Cluster of properties with count
+- <MapControls>
+  - Zoom in/out
+  - “Search this area” button
+  - Map/list toggle (for smaller screens)
+
+4) Listing Cards & Lists
+- <ListingCard>
+  RESPONSIBILITY:
+  - Present a single property snippet in map/list context.
+
+  ANATOMY:
+  - Thumbnail image (fixed aspect ratio, e.g., 4:3)
+  - Price (primary)
+  - Beds/Baths/SqFt row
+  - Address (secondary)
+  - Status badge (Active, Pending, Sold)
+  - Small meta text (Days on market, MLS ID optional)
+
+- <ListingCardSkeleton>
+  - Grey skeleton state while data loads
+
+- <ListingsList>
+  - Vertical stack of <ListingCard>
+  - Supports infinite scroll or “Load more” button
+
+5) Listing Detail (PDP) Components
+- <ListingHero>
+  - Large main photo
+  - Optional image carousel thumbnails
+
+- <ListingKeyFacts>
+  - Price
+  - Beds/Baths
+  - SqFt, Lot size
+  - Year built
+  - HOA, Basement (if available)
+  - Status badges
+
+- <ListingDescription>
+  - Paragraph text, formatted cleanly
+
+- <ListingDetailsGrid>
+  - Additional feature list (parking, heating, cooling, etc.)
+
+- <ListingMapSection>
+  - Embedded map with marker at property
+
+- <ContactAgentPanel>
+  - Sticky panel (desktop: right side; mobile: bottom sticky or within PDP)
+  - Fields: Name, Email, Phone (optional), Message
+  - Submit button
+  - Disclaimers/consent text (for legal)
+
+6) UI Primitives
+- <Button>
+  - Variants: primary, secondary, ghost
+  - Sizes: sm, md, lg
+- <Input>
+  - Base text input, supports icons
+- <Select>
+  - Basic dropdown
+- <Checkbox>, <Radio>, <Toggle>
+- <Modal>, <Drawer>
+- <Badge>
+- <Chip>
+
+7) Loading & Feedback
+- <SkeletonBlock>
+  - Generic rectangular skeleton
+- <Toast>
+  - For success/failure messages
+
+========================================================
+CORE MOBILE (FLUTTER) COMPONENTS
+========================================================
+
+1) Screens
+- SearchScreen
+  - Contains top search bar, filter button, and map/list toggle.
+- SearchMapView
+  - Full-screen map with pins/clusters and a bottom sheet.
+- SearchListView
+  - Scrollable list of listing cards.
+- ListingDetailScreen
+  - Hero image, info sections, map, contact CTA.
+
+2) Widgets
+- ListingCardWidget
+  - Used in list and bottom sheets.
+- MapPinWidget
+  - Custom pin icon, highlight when selected.
+- BottomSheetListingWidget
+  - Peeks above bottom edge, expandable.
+- SearchBarWidget
+  - Input + filter icon.
+- FilterChipsRow
+  - Scrollable row of chips.
+- PrimaryButtonWidget
+- TextFieldWidget
+- ContactSectionWidget
+
+3) Theme Usage (Flutter)
+- All colors come from theme.dart (built from theme.json).
+- Typography derived from theme + GoogleFonts (if used).
+- No hard-coded hex colors or fonts in widgets.
+
+========================================================
+MAPPING WEB ↔ MOBILE COMPONENTS
+========================================================
+Maintain conceptual parity:
+
+- Web <ListingCard> ↔ Mobile ListingCardWidget
+- Web <MapPin> ↔ Mobile MapPinWidget
+- Web <ListingHero> ↔ Mobile hero image in ListingDetailScreen
+- Web <ContactAgentPanel> ↔ Mobile bottom CTA + contact section
+
+This ensures:
+- Visual consistency
+- Easier reasoning about shared behavior
+- Stronger acquisition story (“single design language across platforms”)
+
+========================================================
+IMPLEMENTATION PRIORITY (MVP)
+========================================================
+1) Web:
+   - AppShell, Header, Footer
+   - SearchBar, FilterBar
+   - MapContainer, MapPin, MapClusterMarker
+   - ListingCard, ListingsList
+   - ListingHero, ListingKeyFacts, ListingMapSection, ContactAgentPanel
+   - Skeletons for list and PDP
+
+2) Mobile:
+   - Theme (from theme.json)
+   - SearchScreen, SearchListView, SearchMapView
+   - ListingCardWidget
+   - ListingDetailScreen
+   - Basic Contact CTA
+
+Later phases can extend with saved searches, analytics, etc.
+
+========================================================
+SUMMARY
+========================================================
+This addendum defines the UI building blocks and design tokens so that:
+- The product feels cohesive and premium
+- AI tools generate consistent UI code
+- Web and mobile stay visually aligned
+- Acquirers see a mature, thoughtfully designed system
+
+END OF DOCUMENT
+

@@ -1,0 +1,32 @@
+ADDENDUM 1: Project X PRD Addendum – CRM & Integration Strategy
+Scope Clarification
+
+Project X will not include a built-in CRM.
+The platform will focus exclusively on IDX/search, lead capture, AI-assisted search, and consumer-facing real-estate functionality.
+
+CRM functionality (contacts, pipelines, tasks, automations, drip campaigns, SMS/email engines, team workflows) is formally out of scope.
+
+Core Responsibility of Project X
+
+Listing ingestion via provider abstraction
+
+Normalized listing model
+
+Search, filters, AI search, map results
+
+Lead capture events
+
+Lead routing into external CRMs
+
+MLS-compliant display + SEO-friendly rendering
+
+Broker/agent-specific theming and configuration
+
+Public-facing search UX
+
+Reasoning
+
+Most brokerages and agents are already committed to an existing CRM.
+Introducing a second CRM creates workflow fragmentation, duplicate tasks, inconsistent follow-ups, and poor adoption.
+
+Integrating with their existing CRM is the correct product direction.
