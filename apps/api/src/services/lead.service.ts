@@ -41,8 +41,6 @@ export class LeadService {
     if (!result.success) {
       if (result.message?.includes("not configured")) {
         status = 503;
-      } else if (providerName === "gohighlevel") {
-        status = 502;
       } else {
         status = 500;
       }
