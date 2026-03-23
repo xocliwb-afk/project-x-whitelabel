@@ -24,7 +24,7 @@ export type SubmitLeadResult = {
 export async function submitLead(payload: LeadSubmitPayload): Promise<SubmitLeadResult> {
   const normalizedPayload: LeadSubmitPayload = {
     ...payload,
-    source: payload.source ?? 'project-x-web',
+    source: payload.source ?? 'web',
   };
 
   try {

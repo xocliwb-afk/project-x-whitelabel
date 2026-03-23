@@ -104,7 +104,7 @@ export class LeadService {
       phone: normalizePhone(payload.phone),
       brokerId: trimmed(payload.brokerId)!,
       agentId: trimmed(payload.agentId),
-      source: trimmed(payload.source) || "project-x-web",
+      source: trimmed(payload.source) || process.env.LEAD_DEFAULT_SOURCE || "web",
       createdAt: new Date().toISOString(),
     };
   }
