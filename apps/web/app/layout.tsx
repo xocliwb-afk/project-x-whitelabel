@@ -5,11 +5,12 @@ import Header from "@/components/Header";
 import { ThemeProvider } from "@/context/ThemeContext";
 import LeadModalContainer from "@/components/LeadModalContainer";
 import DevAnalyticsPanel from "@/components/DevAnalyticsPanel";
+import brand from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: {
-    default: "Brandon Wilcox Home Group",
-    template: "%s | Brandon Wilcox Home Group",
+    default: brand.brandName,
+    template: `%s | ${brand.brandName}`,
   },
   description: "White-label real estate search platform",
 };

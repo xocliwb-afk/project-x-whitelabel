@@ -9,6 +9,7 @@ import { useTheme } from "@/context/ThemeContext";
 import SearchFiltersBar, { SortButton } from "@/components/SearchFiltersBar";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
+import brand from "@/lib/brand";
 
 export default function Header() {
   const { mapSide, paneDominance, setMapSide, setPaneDominance } = useTheme();
@@ -130,13 +131,13 @@ export default function Header() {
           <Link href="/" className={styles.topNavBrand} onClick={() => setMobileOpen(false)}>
             <Image
               src="/assets/img/bw-home-group-logo.webp"
-              alt="Brandon Wilcox Home Group"
+              alt={brand.logo.alt}
               width={44}
               height={44}
               className={styles.topNavLogo}
               priority
             />
-            <span className={styles.topNavBrandText}>Brandon Wilcox Home Group</span>
+            <span className={styles.topNavBrandText}>{brand.brandName}</span>
           </Link>
 
           <div className={styles.topNavLinks}>
@@ -185,7 +186,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() =>
-                openLeadModal({ intent: "talk-to-brandon", entrySource: "header-nav-desktop" })
+                openLeadModal({ intent: "talk-to-agent", entrySource: "header-nav-desktop" })
               }
               className={styles.navLink}
             >
@@ -267,7 +268,7 @@ export default function Header() {
                 type="button"
                 className={styles.navLink}
                 onClick={() => {
-                  openLeadModal({ intent: "talk-to-brandon", entrySource: "header-nav-mobile" });
+                  openLeadModal({ intent: "talk-to-agent", entrySource: "header-nav-mobile" });
                   setMobileOpen(false);
                 }}
               >
