@@ -113,9 +113,9 @@
 
 ---
 
-### Epic 8: Narration / Geofence / Android Auto ← CURRENT
+### Epic 8: Narration / Geofence / Android Auto ✅ COMPLETE
 **Branch:** `feature/phase-8-narration-android-auto`
-**Status:** Complete — awaiting PR
+**PR:** #9 → merged to dev
 **Goal:** Architecture and foundational code for narration/geofence/Android Auto
 
 **What was done:**
@@ -130,10 +130,19 @@
 
 ---
 
-### Epic 9: HubSpot Hardening
-**Branch:** TBD
-**Status:** Not Started
+### Epic 9: HubSpot Hardening ← CURRENT
+**Branch:** `feature/phase-9-hubspot-hardening`
+**Status:** Complete — awaiting PR
 **Goal:** Production-quality HubSpot integration
+
+**What was done:**
+- HubSpot client rewrite: exponential backoff retry (500ms/1s/2s, max 3 retries)
+- HubSpotApiError classification (auth/rate_limit/validation/server/network)
+- HubSpot provider: classified error messages, never leaks API details
+- Leads route: include provider in responses, prevent error message leakage
+- Verified deduplication (create-or-update via email search) already working
+- Verified mock provider parity (same LeadResult shape)
+- Lead service tests: validation rejections, mock provider submission, response shape
 
 **Dependencies:** Epic 5
 
@@ -149,9 +158,9 @@ Epic 0 (Audit) ✅
       │   └── Epic 4 (Brand Config) ✅
       │       ├── Epic 5 (Web Stabilization) ✅
       │       │   ├── Epic 7 (Tour Engine) ✅
-      │       │   └── Epic 9 (HubSpot) — Not Started
+      │       │   └── Epic 9 (HubSpot) ✅ ← CURRENT
       │       └── Epic 6 (Mobile Foundation) ✅
-      │           └── Epic 8 (Android Auto/Narration) ✅ ← CURRENT
+      │           └── Epic 8 (Android Auto/Narration) ✅
       └── Epic 7 depends on Epic 5 + 6
 ```
 
