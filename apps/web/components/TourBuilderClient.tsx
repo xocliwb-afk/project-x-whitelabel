@@ -1,55 +1,29 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTourStore } from "@/src/stores/useTourStore";
+import { useTourStore } from "@/stores/useTourStore";
 
-function formatInputValue(value: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 16);
-}
-
-function formatIsoDisplay(value: string) {
+function formatTime(value?: string) {
+  if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toISOString();
-}
-
-function formatIsoDisplaySafe(value?: string) {
-  if (!value) return "—";
-  return formatIsoDisplay(value);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function TourBuilderClient() {
-  const {
-    stops,
-    startTime,
-    travelTimeMinutes,
-    plannedTour,
-    isLoading,
-    error,
-    setStartTime,
-    setTravelTimeMinutes,
-    planTour,
-    removeStop,
-    clearTour,
-  } = useTourStore((state) => state);
+  const { tour, isPlanning, planError, actions } = useTourStore((state) => ({
+    tour: state.tour,
+    isPlanning: state.isPlanning,
+    planError: state.planError,
+    actions: state.actions,
+  }));
 
-  const hasStops = stops.length > 0;
-  const planDisabled = isLoading || !startTime || !hasStops;
-
-  const formattedStartInput = useMemo(
-    () => formatInputValue(startTime),
-    [startTime]
+  const sortedStops = useMemo(
+    () => (tour ? [...tour.stops].sort((a, b) => a.order - b.order) : []),
+    [tour],
   );
 
-  const totalDurationMinutes =
-    plannedTour?.stops.reduce((sum, stop) => {
-      const dur = (stop as any).durationMinutes ?? plannedTour.defaultDurationMinutes;
-      const buf = (stop as any).bufferMinutes ?? plannedTour.defaultBufferMinutes;
-      return sum + dur + buf;
-    }, 0) ?? 0;
+  const hasStops = sortedStops.length > 0;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
@@ -61,33 +35,64 @@ export default function TourBuilderClient() {
       </div>
 
       <div className="grid gap-4 rounded-lg border border-border bg-surface p-4">
-        <label className="flex flex-col gap-2 text-sm text-text-main">
-          <span className="text-xs font-semibold uppercase tracking-wide text-text-main/70">
-            Start time (UTC)
-          </span>
-          <input
-            type="datetime-local"
-            value={formattedStartInput}
-            onChange={(e) =>
-              setStartTime(
-                e.target.value ? new Date(e.target.value).toISOString() : null
-              )
-            }
-            className="rounded border border-border bg-white/5 px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-sm text-text-main">
-          <span className="text-xs font-semibold uppercase tracking-wide text-text-main/70">
-            Travel time between stops (minutes)
-          </span>
-          <input
-            type="number"
-            min={0}
-            value={travelTimeMinutes}
-            onChange={(e) => setTravelTimeMinutes(Number(e.target.value))}
-            className="w-32 rounded border border-border bg-white/5 px-3 py-2 text-sm"
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <label className="flex flex-col gap-1 text-xs text-text-muted">
+            Title
+            <input
+              className="rounded border border-border bg-surface px-2 py-1 text-text-main"
+              value={tour?.title ?? ""}
+              onChange={(e) => actions.setTourMeta({ title: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-text-muted">
+            Client
+            <input
+              className="rounded border border-border bg-surface px-2 py-1 text-text-main"
+              value={tour?.clientName ?? ""}
+              onChange={(e) => actions.setTourMeta({ clientName: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-text-muted">
+            Date
+            <input
+              type="date"
+              className="rounded border border-border bg-surface px-2 py-1 text-text-main"
+              value={tour?.date ?? ""}
+              onChange={(e) => actions.setTourMeta({ date: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-text-muted">
+            Start time
+            <input
+              type="time"
+              className="rounded border border-border bg-surface px-2 py-1 text-text-main"
+              value={tour?.startTime ?? ""}
+              onChange={(e) => actions.setTourMeta({ startTime: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-text-muted">
+            Duration (min)
+            <input
+              type="number"
+              className="rounded border border-border bg-surface px-2 py-1 text-text-main"
+              value={tour?.defaultDurationMinutes ?? 30}
+              onChange={(e) =>
+                actions.setTourMeta({ defaultDurationMinutes: Number(e.target.value) || 0 })
+              }
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-text-muted">
+            Buffer (min)
+            <input
+              type="number"
+              className="rounded border border-border bg-surface px-2 py-1 text-text-main"
+              value={tour?.defaultBufferMinutes ?? 15}
+              onChange={(e) =>
+                actions.setTourMeta({ defaultBufferMinutes: Number(e.target.value) || 0 })
+              }
+            />
+          </label>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-surface p-4">
@@ -96,15 +101,28 @@ export default function TourBuilderClient() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={planTour}
-              disabled={planDisabled}
+              onClick={() => actions.planTourServerSide()}
+              disabled={isPlanning || !hasStops}
               className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Planning..." : "Plan Tour"}
+              {isPlanning ? "Planning..." : "Plan Tour"}
             </button>
             <button
               type="button"
-              onClick={clearTour}
+              onClick={() => {
+                const url = actions.buildGoogleMapsRouteUrl();
+                if (url) {
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }
+              }}
+              disabled={!hasStops}
+              className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-main hover:bg-surface-accent disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Open in Google Maps
+            </button>
+            <button
+              type="button"
+              onClick={() => actions.clearTour()}
               className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-main hover:bg-surface-accent"
             >
               Clear
@@ -121,65 +139,57 @@ export default function TourBuilderClient() {
 
         {hasStops && (
           <ul className="flex flex-col gap-3">
-            {stops.map((stop, idx) => (
+            {sortedStops.map((stop, idx) => (
               <li
-                key={stop.listingId}
+                key={stop.id}
                 className="flex items-center justify-between rounded border border-border bg-surface-muted px-3 py-2 text-sm"
               >
                 <div>
                   <p className="font-semibold text-text-main">
                     Stop {idx + 1}: {stop.address}
                   </p>
+                  {stop.startTime && stop.endTime && (
+                    <p className="text-xs text-text-muted">
+                      {formatTime(stop.startTime)} – {formatTime(stop.endTime)}
+                    </p>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeStop(stop.listingId)}
-                  className="text-xs font-semibold text-red-500 hover:underline"
-                >
-                  Remove
-                </button>
+                <div className="flex items-center gap-2">
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => actions.reorderStops(idx, idx - 1)}
+                      className="rounded-full border border-border px-2 py-1 text-xs text-text-main hover:bg-surface-accent"
+                    >
+                      ↑
+                    </button>
+                  )}
+                  {idx < sortedStops.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => actions.reorderStops(idx, idx + 1)}
+                      className="rounded-full border border-border px-2 py-1 text-xs text-text-main hover:bg-surface-accent"
+                    >
+                      ↓
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => actions.removeStop(stop.id)}
+                    className="text-xs font-semibold text-red-500 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
 
-        {error && (
-          <p className="mt-3 text-sm text-red-500">
-            {error}
-          </p>
+        {planError && (
+          <p className="mt-3 text-sm text-red-500">{planError}</p>
         )}
       </div>
-
-      {plannedTour && (
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <div className="mb-3">
-            <h3 className="text-lg font-semibold text-text-main">Planned Tour</h3>
-            <p className="text-xs text-text-main/60">
-              Total duration: {totalDurationMinutes} minutes
-            </p>
-          </div>
-          <div className="mb-3 text-sm text-text-main/80">
-            <p>Start: {formatIsoDisplay(plannedTour.startTime)}</p>
-            <p>
-              End: {formatIsoDisplaySafe(plannedTour.stops.at(-1)?.endTime)}
-            </p>
-          </div>
-          <div className="mt-4 space-y-2">
-            {plannedTour.stops.map((stop) => (
-              <div
-                key={stop.listingId + stop.startTime}
-                className="rounded border border-border bg-surface-muted p-3 text-sm"
-              >
-                <p className="font-semibold text-text-main">{stop.address}</p>
-                <p className="text-xs text-text-main/60">
-                  {formatIsoDisplaySafe(stop.startTime)} →{" "}
-                  {formatIsoDisplaySafe(stop.endTime)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
