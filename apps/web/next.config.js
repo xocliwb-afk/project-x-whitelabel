@@ -24,6 +24,9 @@ const nextConfig = {
         hostname: 'd2bd5h5te3s67r.cloudfront.net',
         pathname: '/**',
       },
+      // TODO: Image domains should be config-driven per data provider.
+      // This SimplyRETS CDN entry is needed while SimplyRETS is the active
+      // listing provider. Remove when switching to a different provider.
       {
         protocol: 'https',
         hostname: 's3-us-west-2.amazonaws.com',
