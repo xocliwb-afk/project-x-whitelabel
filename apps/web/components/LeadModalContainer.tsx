@@ -7,6 +7,7 @@ import Script from "next/script";
 import LeadForm from "./LeadForm";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
+import brand from "@/lib/brand";
 
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
@@ -34,7 +35,7 @@ export default function LeadModalContainer() {
     close();
   }, [pathname, close]);
 
-  const handleSelectIntent = (selected: "schedule-showing" | "get-details" | "talk-to-brandon") => {
+  const handleSelectIntent = (selected: "schedule-showing" | "get-details" | "talk-to-agent") => {
     setIntent(selected);
   };
 
@@ -95,10 +96,10 @@ export default function LeadModalContainer() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSelectIntent("talk-to-brandon")}
+                        onClick={() => handleSelectIntent("talk-to-agent")}
                         className="w-full rounded-lg border border-border bg-surface px-4 py-3 text-left font-semibold hover:bg-slate-50"
                       >
-                        Talk to Brandon
+                        Talk to {brand.agentName?.split(" ")[0] ?? "an Agent"}
                       </button>
                     </div>
                   </div>
