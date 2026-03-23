@@ -15,7 +15,7 @@ A **multi-surface, white-label real estate search platform** built as a monorepo
 | API (BFF) | Express + TypeScript + Zod | `apps/api` |
 | Mobile | Flutter | `apps/mobile` |
 | Shared Types | TypeScript | `packages/shared-types` |
-| Theme/Brand | JSON config | `config/theme.json` |
+| Theme/Brand | JSON config | `config/brand.json` (canonical — theme.json is legacy, migrated in Epic 1) |
 
 ## 2. What This Product Is NOT
 
@@ -40,13 +40,14 @@ A **multi-surface, white-label real estate search platform** built as a monorepo
 - **ListingProvider abstraction**: Frontend never talks to MLS vendors directly
 - **Normalized data**: All listings converted to `NormalizedListing` DTO before client
 - **Provider seams**: ListingProvider, CrmProvider, LeadProvider — all behind interfaces
-- **Theme via JSON**: `config/theme.json` → Tailwind CSS tokens → components
+- **Theme via JSON**: `config/brand.json` → Tailwind CSS tokens → components (theme.json is legacy)
 - **Compliance in API**: MLS/IDX rules enforced in BFF, not in UI
 - **Shared types**: Canonical contracts in `packages/shared-types`
 
 ## 5. What NOT To Do
 
 - Do NOT revive GoHighLevel (it is dead)
+- Do NOT reference GoHighLevel as a supported provider — it is removed, not deprecated
 - Do NOT build a CMS or admin panel
 - Do NOT overinvest in static/marketing pages
 - Do NOT hardcode brand/business names in product code
@@ -62,7 +63,7 @@ A **multi-surface, white-label real estate search platform** built as a monorepo
 | Variable | Purpose |
 |----------|---------|
 | `DATA_PROVIDER` | `mock` or `simplyrets` |
-| `LEAD_PROVIDER` | `mock`, `hubspot`, or `gohighlevel` |
+| `LEAD_PROVIDER` | `mock` or `hubspot` |
 | `SIMPLYRETS_USERNAME/PASSWORD` | SimplyRETS credentials |
 | `HUBSPOT_PRIVATE_APP_TOKEN` | HubSpot API token |
 | `MAPBOX_GEOCODE_TOKEN` | Mapbox geocoding |

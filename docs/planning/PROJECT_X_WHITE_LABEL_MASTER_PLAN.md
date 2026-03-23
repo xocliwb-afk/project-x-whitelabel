@@ -60,6 +60,7 @@ Project X White Label is a **multi-surface, white-label real estate search platf
 - Verify SimplyRETS provider completeness
 - Normalize provider outputs for all edge cases
 - Harden filter semantics and compliance/attribution
+- **Compliance hardening is blocker-class** — the current `applyListingCompliance` implementation is a passthrough stub that does not enforce MLS display rules
 - Maintain dev-safe mock path
 
 ### Phase 4 — Brand Config System
