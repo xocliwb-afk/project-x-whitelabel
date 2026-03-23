@@ -166,6 +166,8 @@ export type LeadPayload = {
 
 export type LeadResponse = {
   success: boolean;
+  provider?: string;
+  message?: string;
 };
 
 // TEMP: keep contract-safe and serializable. Status / propertyType are strings in the API.
