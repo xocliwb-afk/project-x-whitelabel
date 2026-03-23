@@ -9,7 +9,6 @@ const DEFAULT_DISCLAIMER =
  * Rules applied:
  * 1. Attribution is always present (mlsName + disclaimer).
  * 2. Compensation/commission fields are stripped — never sent to consumers.
- * 3. Status values are normalized to known display strings.
  */
 export function applyListingCompliance(listing: Listing): Listing {
   // 1. Ensure attribution is always present
