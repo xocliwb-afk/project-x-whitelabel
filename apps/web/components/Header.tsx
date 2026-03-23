@@ -122,10 +122,10 @@ export default function Header() {
         <div className={styles.topNavInner}>
           <Link href="/" className={styles.topNavBrand} onClick={() => setMobileOpen(false)}>
             <Image
-              src="/assets/img/bw-home-group-logo.webp"
+              src={brand.logo.url}
               alt={brand.logo.alt}
-              width={44}
-              height={44}
+              width={brand.logo.height}
+              height={brand.logo.height}
               className={styles.topNavLogo}
               priority
             />
