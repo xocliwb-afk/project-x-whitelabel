@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import { MapLayoutProvider } from "@/context/MapLayoutContext";
 import LeadModalContainer from "@/components/LeadModalContainer";
 import DevAnalyticsPanel from "@/components/DevAnalyticsPanel";
+import AuthInitializer from "@/components/auth/auth-initializer";
 import brand from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="flex min-h-screen flex-col overflow-x-hidden bg-surface text-text-main antialiased font-sans transition-colors duration-300">
         <MapLayoutProvider>
+          <AuthInitializer />
           <Header />
           <LeadModalContainer />
           <main className="relative flex-1 overflow-x-hidden">{children}</main>
