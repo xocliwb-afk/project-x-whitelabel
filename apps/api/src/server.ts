@@ -1,3 +1,4 @@
+import "./types/express";
 import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
@@ -8,6 +9,7 @@ import toursRouter from "./routes/tours.route";
 import aiRouter from "./routes/ai.route";
 import geoRouter from "./routes/geo.route";
 import brandRouter from "./routes/brand.route";
+import authRouter from "./routes/auth.route";
 import { getListingProvider } from "./utils/provider.factory";
 import { CaptchaService } from "./services/captcha.service";
 
@@ -75,7 +77,7 @@ app.use(
       return callback(null, false);
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
   })
 );
 app.options("*", cors());
@@ -108,6 +110,7 @@ app.use("/api/v1/tours", toursRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/brand", brandRouter);
+app.use("/api/auth", authRouter);
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -170,6 +173,14 @@ app.get("/ready", (req, res) => {
   readyCache = { data: response, expiresAt: now + 10 * 1000 };
 
   res.status(ready ? 200 : 503).json(response);
+});
+
+// Global JSON error handler — must be after all routes
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[API] Unhandled error:', err);
+  const status = err.status || err.statusCode || 500;
+  const message = status < 500 ? err.message : 'Internal server error';
+  res.status(status).json({ error: true, message });
 });
 
 app.listen(PORT, () => {
