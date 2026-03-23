@@ -25,7 +25,7 @@ class ApiException implements Exception {
 class ApiClient {
   final Dio _dio;
 
-  ApiClient({required String baseUrl})
+  ApiClient({required String baseUrl, List<Interceptor>? interceptors})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 10),
@@ -34,7 +34,11 @@ class ApiClient {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-        ));
+        )) {
+    if (interceptors != null) {
+      _dio.interceptors.addAll(interceptors);
+    }
+  }
 
   /// Search listings with optional query parameters.
   /// GET /api/listings

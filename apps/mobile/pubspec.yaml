@@ -28,6 +28,9 @@ dependencies:
   # Immutable models
   freezed_annotation: ^2.4.1
 
+  # Supabase auth
+  supabase_flutter: ^2.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

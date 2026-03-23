@@ -5,3 +5,4 @@ export 'brand_config.dart';
 export 'lead.dart';
 export 'tour.dart';
 export 'narration.dart';
+export 'auth_user.dart';
