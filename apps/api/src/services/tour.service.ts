@@ -6,28 +6,41 @@ import {
   NormalizedListing,
 } from '@project-x/shared-types';
 import { generateTourNarrations } from './narration.service';
+import * as tourRepo from '../repositories/tour.repository';
+import { toApiTour } from './tour.mapper';
 
-const makeId = () => `tour-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-
-/** In-memory tour store — persists across requests within a server session. */
-const tourStore = new Map<string, Tour>();
+interface TourOptions {
+  tenantId: string;
+  userId?: string | null;
+}
 
 /**
- * Plan a tour. Optionally accepts listing data for rich narration generation.
- * If no listings provided, generates basic narrations from address only.
+ * Schedule stop times based on duration and buffer.
+ * Pure function — same logic as the original in-memory version.
  */
-export function planTour(
-  req: PlanTourRequest,
-  listings?: Map<string, NormalizedListing>,
-): PlannedTour {
-  const { date, startTime, defaultDurationMinutes, defaultBufferMinutes } = req;
+function scheduleStops(
+  stops: Array<{ listingId: string; address: string; lat: number; lng: number }>,
+  date: string,
+  startTime: string,
+  defaultDurationMinutes: number,
+  defaultBufferMinutes: number,
+): Array<{
+  listingId: string;
+  order: number;
+  address: string;
+  lat: number;
+  lng: number;
+  thumbnailUrl: null;
+  startTime: string;
+  endTime: string;
+}> {
   const startDate = new Date(`${date}T${startTime}:00`);
   if (Number.isNaN(startDate.getTime())) {
     throw new Error('Invalid startTime provided');
   }
 
   let current = startDate;
-  const stops: TourStop[] = req.stops.map((stop: any, idx: number) => {
+  return stops.map((stop, idx) => {
     const startIso = current.toISOString();
     const endDate = new Date(current);
     endDate.setMinutes(endDate.getMinutes() + defaultDurationMinutes);
@@ -37,7 +50,6 @@ export function planTour(
     current = nextStart;
 
     return {
-      id: makeId(),
       listingId: stop.listingId,
       order: idx,
       address: stop.address,
@@ -48,68 +60,132 @@ export function planTour(
       endTime: endIso,
     };
   });
+}
 
-  const tour: Tour = {
-    id: makeId(),
-    title: req.clientName ? `${req.clientName}'s Tour` : "Planned Tour",
-    clientName: req.clientName ?? '',
-    date: req.date,
-    startTime: req.startTime,
+/**
+ * Plan a tour. Optionally accepts listing data for rich narration generation.
+ * If no listings provided, generates basic narrations from address only.
+ */
+export async function planTour(
+  req: PlanTourRequest,
+  options: TourOptions,
+  listings?: Map<string, NormalizedListing>,
+): Promise<PlannedTour> {
+  const { date, startTime, defaultDurationMinutes, defaultBufferMinutes } = req;
+
+  const scheduledStops = scheduleStops(
+    req.stops,
+    date,
+    startTime,
     defaultDurationMinutes,
     defaultBufferMinutes,
-    stops,
-    narrationPayloads: generateTourNarrations(
-      { stops } as Tour,
-      listings ?? new Map(),
-    ),
-  };
+  );
 
-  tourStore.set(tour.id, tour);
-  return tour as PlannedTour;
+  // 1. Create tour + stops in DB first (no narrations yet — need real stop IDs)
+  const dbTour = await tourRepo.create({
+    tenantId: options.tenantId,
+    userId: options.userId ?? null,
+    title: req.clientName ? `${req.clientName}'s Tour` : 'Planned Tour',
+    clientName: req.clientName ?? '',
+    date,
+    startTime,
+    defaultDurationMinutes,
+    defaultBufferMinutes,
+    stops: scheduledStops,
+  });
+
+  // 2. Generate narrations using real stop IDs from the DB
+  const realTourStops: TourStop[] = dbTour.stops.map((s) => ({
+    id: s.id,
+    listingId: s.listingId,
+    order: s.order,
+    address: s.address,
+    lat: s.lat,
+    lng: s.lng,
+    thumbnailUrl: s.thumbnailUrl ?? null,
+    startTime: s.startTime ?? undefined,
+    endTime: s.endTime ?? undefined,
+  }));
+  const narrationPayloads = generateTourNarrations(
+    { stops: realTourStops } as Tour,
+    listings ?? new Map(),
+  );
+
+  // 3. Update the tour with the generated narration payloads
+  const updatedTour = await tourRepo.update(dbTour.id, options.tenantId, {
+    narrationPayloads,
+  });
+
+  return toApiTour(updatedTour ?? dbTour) as PlannedTour;
 }
 
-export function getTourById(id: string): Tour | undefined {
-  return tourStore.get(id);
+export async function getTourById(id: string, tenantId: string): Promise<Tour | undefined> {
+  const dbTour = await tourRepo.findById(id, tenantId);
+  return dbTour ? toApiTour(dbTour) : undefined;
 }
 
-export function updateTour(id: string, updates: Partial<Tour>): Tour | undefined {
-  const existing = tourStore.get(id);
+export async function updateTour(
+  id: string,
+  tenantId: string,
+  updates: Partial<Tour>,
+): Promise<Tour | undefined> {
+  // If stops were updated, recalculate times
+  // First fetch existing to get scheduling params
+  const existing = await tourRepo.findById(id, tenantId);
   if (!existing) return undefined;
 
-  const updated: Tour = {
-    ...existing,
-    ...updates,
-    id: existing.id, // ID is immutable
-  };
+  let stopsData: Array<{
+    listingId: string;
+    order: number;
+    address: string;
+    lat: number;
+    lng: number;
+    thumbnailUrl: string | null;
+    startTime: string | null;
+    endTime: string | null;
+  }> | undefined;
 
-  // If stops were updated, recalculate times
   if (updates.stops) {
-    const { date, startTime, defaultDurationMinutes, defaultBufferMinutes } = updated;
-    const startDate = new Date(`${date}T${startTime}:00`);
-    if (!Number.isNaN(startDate.getTime())) {
-      let current = startDate;
-      updated.stops = updated.stops.map((stop, idx) => {
-        const startIso = current.toISOString();
-        const endDate = new Date(current);
-        endDate.setMinutes(endDate.getMinutes() + defaultDurationMinutes);
-        const endIso = endDate.toISOString();
-        const nextStart = new Date(endDate);
-        nextStart.setMinutes(nextStart.getMinutes() + defaultBufferMinutes);
-        current = nextStart;
+    const date = updates.date ?? existing.date;
+    const startTimeStr = updates.startTime ?? existing.startTime;
+    const duration = updates.defaultDurationMinutes ?? existing.defaultDurationMinutes;
+    const buffer = updates.defaultBufferMinutes ?? existing.defaultBufferMinutes;
 
-        return { ...stop, order: idx, startTime: startIso, endTime: endIso };
-      });
-    }
+    const rescheduled = scheduleStops(
+      updates.stops.map((s) => ({
+        listingId: s.listingId,
+        address: s.address,
+        lat: s.lat,
+        lng: s.lng,
+      })),
+      date,
+      startTimeStr,
+      duration,
+      buffer,
+    );
+
+    stopsData = rescheduled;
   }
 
-  tourStore.set(id, updated);
-  return updated;
+  const dbTour = await tourRepo.update(id, tenantId, {
+    title: updates.title,
+    clientName: updates.clientName,
+    date: updates.date,
+    startTime: updates.startTime,
+    defaultDurationMinutes: updates.defaultDurationMinutes,
+    defaultBufferMinutes: updates.defaultBufferMinutes,
+    narrationPayloads: updates.narrationPayloads,
+    stops: stopsData,
+  });
+
+  return dbTour ? toApiTour(dbTour) : undefined;
 }
 
-export function deleteTour(id: string): boolean {
-  return tourStore.delete(id);
+export async function deleteTour(id: string, tenantId: string): Promise<boolean> {
+  return tourRepo.deleteById(id, tenantId);
 }
 
-export function listTours(): Tour[] {
-  return Array.from(tourStore.values());
+export async function listTours(options: TourOptions): Promise<Tour[]> {
+  const dbTours = await tourRepo.findAll(options);
+  return dbTours.map(toApiTour);
 }

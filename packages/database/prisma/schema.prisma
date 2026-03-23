@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CONSUMER
+  AGENT
+  ADMIN
+}
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users  User[]
+  brands Brand[]
+  tours  Tour[]
+
+  @@map("tenants")
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  supabaseId    String   @unique @map("supabase_id")
+  tenantId      String   @map("tenant_id") @db.Uuid
+  email         String
+  displayName   String?  @map("display_name")
+  phone         String?
+  role          Role     @default(CONSUMER)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  savedSearches SavedSearch[]
+  favorites     Favorite[]
+  tours         Tour[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([supabaseId])
+  @@map("users")
+}
+
+model Brand {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @unique @map("tenant_id") @db.Uuid
+  config     Json
+  logoUrl    String?  @map("logo_url")
+  faviconUrl String?  @map("favicon_url")
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("brands")
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  filters   Json
+  notifyNew Boolean  @default(false) @map("notify_new")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@map("saved_searches")
+}
+
+model Favorite {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  listingId String   @map("listing_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([tenantId])
+  @@map("favorites")
+}
+
+model Tour {
+  id                     String     @id @default(dbgenerated("'tour-' || substr(md5(random()::text), 1, 12)"))
+  tenantId               String     @map("tenant_id") @db.Uuid
+  userId                 String?    @map("user_id") @db.Uuid
+  title                  String
+  clientName             String     @map("client_name")
+  date                   String
+  startTime              String     @map("start_time")
+  defaultDurationMinutes Int        @map("default_duration_minutes")
+  defaultBufferMinutes   Int        @map("default_buffer_minutes")
+  narrationPayloads      Json?      @map("narration_payloads")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
+
+  user   User?      @relation(fields: [userId], references: [id])
+  tenant Tenant     @relation(fields: [tenantId], references: [id])
+  stops  TourStop[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("tours")
+}
+
+model TourStop {
+  id           String  @id @default(uuid()) @db.Uuid
+  tourId       String  @map("tour_id")
+  listingId    String  @map("listing_id")
+  order        Int
+  address      String
+  lat          Float
+  lng          Float
+  thumbnailUrl String? @map("thumbnail_url")
+  startTime    String? @map("start_time")
+  endTime      String? @map("end_time")
+
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@index([tourId])
+  @@map("tour_stops")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  action    String
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("audit_logs")
+}

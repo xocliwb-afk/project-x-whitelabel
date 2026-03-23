@@ -8,8 +8,10 @@ import { useEffect, useRef, useState } from "react";
 import { useMapLayout } from "@/context/MapLayoutContext";
 import SearchFiltersBar, { SortButton } from "@/components/SearchFiltersBar";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
+import { useAuthStore } from "@/stores/auth-store";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
 import brand from "@/lib/brand";
+import UserMenu from "@/components/auth/user-menu";
 
 export default function Header() {
   const { mapSide, paneDominance, setMapSide, setPaneDominance } = useMapLayout();
@@ -21,6 +23,7 @@ export default function Header() {
   const [neighborhoodsOpen, setNeighborhoodsOpen] = useState(false);
   const [neighborhoodsMobileOpen, setNeighborhoodsMobileOpen] = useState(false);
   const openLeadModal = useLeadModalStore((s) => s.open);
+  const authUser = useAuthStore((s) => s.user);
   const neighborhoodsMenuRef = useRef<HTMLDivElement | null>(null);
 
   const neighborhoods = (brand.neighborhoods ?? []).map((n) => ({
@@ -182,6 +185,13 @@ export default function Header() {
             >
               Contact
             </button>
+            {authUser ? (
+              <UserMenu />
+            ) : (
+              <Link href="/login" className={styles.navLink}>
+                Log In
+              </Link>
+            )}
           </div>
 
           <button
@@ -264,6 +274,19 @@ export default function Header() {
               >
                 Contact
               </button>
+            </li>
+            <li>
+              {authUser ? (
+                <UserMenu />
+              ) : (
+                <Link
+                  href="/login"
+                  className={styles.navLink}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Log In
+                </Link>
+              )}
             </li>
           </ul>
         </div>

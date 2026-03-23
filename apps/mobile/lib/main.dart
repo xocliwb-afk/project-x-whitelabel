@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/brand_config.dart';
 import 'services/api_client.dart';
+import 'services/auth_service.dart';
+import 'services/auth_interceptor.dart';
+import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
+import 'providers/auth_provider.dart';
 
-/// API base URL — override via environment or build config.
-/// Default points to local dev server.
-const String _defaultApiBaseUrl = 'http://10.0.2.2:3001';
+/// Riverpod provider for the auth service (singleton).
+final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
-/// Riverpod provider for the API client.
+/// Riverpod provider for the API client (with auth interceptor).
 final apiClientProvider = Provider<ApiClient>((ref) {
-  const baseUrl = String.fromEnvironment('API_BASE_URL',
-      defaultValue: _defaultApiBaseUrl);
-  return ApiClient(baseUrl: baseUrl);
+  final authSvc = ref.watch(authServiceProvider);
+  return ApiClient(
+    baseUrl: AppConfig.apiBaseUrl,
+    interceptors: [AuthInterceptor(authSvc)],
+  );
 });
 
 /// Riverpod provider that fetches brand config on app startup.
@@ -23,18 +29,39 @@ final brandConfigProvider = FutureProvider<BrandConfig>((ref) async {
   return apiClient.getBrandConfig();
 });
 
-/// GoRouter instance.
-final routerProvider = Provider<GoRouter>((ref) => createRouter());
+/// GoRouter instance — depends on auth state for redirect guard.
+final routerProvider = Provider<GoRouter>((ref) => createRouter(ref));
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
+  );
+
   runApp(const ProviderScope(child: ProjectXApp()));
 }
 
-class ProjectXApp extends ConsumerWidget {
+class ProjectXApp extends ConsumerStatefulWidget {
   const ProjectXApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectXApp> createState() => _ProjectXAppState();
+}
+
+class _ProjectXAppState extends ConsumerState<ProjectXApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Kick off auth initialization after first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authProvider.notifier).initialize();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final brandConfigAsync = ref.watch(brandConfigProvider);
     final router = ref.watch(routerProvider);
 

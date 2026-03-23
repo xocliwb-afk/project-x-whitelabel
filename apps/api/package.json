@@ -13,10 +13,13 @@
     "profile:flame": "pnpm build && clinic flame -- node dist/server.js"
   },
   "dependencies": {
+    "@project-x/database": "workspace:^",
     "@project-x/shared-types": "workspace:*",
+    "@supabase/supabase-js": "^2.100.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
+    "jose": "^6.2.2",
     "node-fetch": "2",
     "zod": "^4.3.5"
   },

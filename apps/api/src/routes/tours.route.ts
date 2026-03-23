@@ -3,23 +3,36 @@ import { PlanTourRequest, PlannedTour, NormalizedListing } from '@project-x/shar
 import { planTour, getTourById, updateTour, deleteTour, listTours } from '../services/tour.service';
 import { generateTourNarrations } from '../services/narration.service';
 import { getListingProvider } from '../utils/provider.factory';
+import { resolveTenant } from '../middleware/tenant';
+import { attachAuth } from '../middleware/auth';
 
 const router = express.Router();
 
+// Apply tenant + optional auth to all tour routes
+router.use(resolveTenant);
+router.use(attachAuth);
+
 /**
  * GET /api/tours
- * List all tours in the in-memory store.
+ * List tours for the current tenant.
  */
-router.get('/', (_req, res) => {
-  const tours = listTours();
-  return res.status(200).json({ tours });
+router.get('/', async (req, res, next) => {
+  try {
+    const tours = await listTours({
+      tenantId: req.tenantId!,
+      userId: req.user?.id ?? null,
+    });
+    return res.status(200).json({ tours });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 /**
  * POST /api/tours
  * Plan a new tour with scheduled stop times.
  */
-router.post('/', (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
     const body = req.body as PlanTourRequest;
 
@@ -37,7 +50,10 @@ router.post('/', (req, res, next) => {
         .json({ error: true, message: 'Invalid tour planning request' });
     }
 
-    const planned: PlannedTour = planTour(body);
+    const planned: PlannedTour = await planTour(body, {
+      tenantId: req.tenantId!,
+      userId: req.user?.id ?? null,
+    });
     return res.status(200).json(planned);
   } catch (err) {
     return next(err);
@@ -50,7 +66,7 @@ router.post('/', (req, res, next) => {
  */
 router.get('/:id/narrations', async (req, res, next) => {
   try {
-    const tour = getTourById(req.params.id);
+    const tour = await getTourById(req.params.id, req.tenantId!);
     if (!tour) {
       return res.status(404).json({ error: true, message: 'Tour not found' });
     }
@@ -82,36 +98,48 @@ router.get('/:id/narrations', async (req, res, next) => {
  * GET /api/tours/:id
  * Get a single tour by ID.
  */
-router.get('/:id', (req, res) => {
-  const tour = getTourById(req.params.id);
-  if (!tour) {
-    return res.status(404).json({ error: true, message: 'Tour not found' });
+router.get('/:id', async (req, res, next) => {
+  try {
+    const tour = await getTourById(req.params.id, req.tenantId!);
+    if (!tour) {
+      return res.status(404).json({ error: true, message: 'Tour not found' });
+    }
+    return res.status(200).json(tour);
+  } catch (err) {
+    return next(err);
   }
-  return res.status(200).json(tour);
 });
 
 /**
  * PUT /api/tours/:id
  * Update an existing tour (reorder stops, change times, add/remove stops).
  */
-router.put('/:id', (req, res) => {
-  const updated = updateTour(req.params.id, req.body);
-  if (!updated) {
-    return res.status(404).json({ error: true, message: 'Tour not found' });
+router.put('/:id', async (req, res, next) => {
+  try {
+    const updated = await updateTour(req.params.id, req.tenantId!, req.body);
+    if (!updated) {
+      return res.status(404).json({ error: true, message: 'Tour not found' });
+    }
+    return res.status(200).json(updated);
+  } catch (err) {
+    return next(err);
   }
-  return res.status(200).json(updated);
 });
 
 /**
  * DELETE /api/tours/:id
  * Delete a tour.
  */
-router.delete('/:id', (req, res) => {
-  const deleted = deleteTour(req.params.id);
-  if (!deleted) {
-    return res.status(404).json({ error: true, message: 'Tour not found' });
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const deleted = await deleteTour(req.params.id, req.tenantId!);
+    if (!deleted) {
+      return res.status(404).json({ error: true, message: 'Tour not found' });
+    }
+    return res.status(204).send();
+  } catch (err) {
+    return next(err);
   }
-  return res.status(204).send();
 });
 
 export default router;
