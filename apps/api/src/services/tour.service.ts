@@ -3,15 +3,23 @@ import {
   PlannedTour,
   Tour,
   TourStop,
-  NarrationPayload,
+  NormalizedListing,
 } from '@project-x/shared-types';
+import { generateTourNarrations } from './narration.service';
 
 const makeId = () => `tour-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 /** In-memory tour store — persists across requests within a server session. */
 const tourStore = new Map<string, Tour>();
 
-export function planTour(req: PlanTourRequest): PlannedTour {
+/**
+ * Plan a tour. Optionally accepts listing data for rich narration generation.
+ * If no listings provided, generates basic narrations from address only.
+ */
+export function planTour(
+  req: PlanTourRequest,
+  listings?: Map<string, NormalizedListing>,
+): PlannedTour {
   const { date, startTime, defaultDurationMinutes, defaultBufferMinutes } = req;
   const startDate = new Date(`${date}T${startTime}:00`);
   if (Number.isNaN(startDate.getTime())) {
@@ -41,20 +49,6 @@ export function planTour(req: PlanTourRequest): PlannedTour {
     };
   });
 
-  const narrationPayloads: NarrationPayload[] = stops.map((stop) => ({
-    tourStopId: stop.id,
-    listingId: stop.listingId,
-    trigger: 'approaching' as const,
-    narrationText: `Approaching ${stop.address}.`,
-    listingSummary: {
-      address: stop.address,
-      price: '',
-      beds: null,
-      baths: null,
-      sqft: null,
-    },
-  }));
-
   const tour: Tour = {
     id: makeId(),
     title: req.clientName ? `${req.clientName}'s Tour` : "Planned Tour",
@@ -64,7 +58,10 @@ export function planTour(req: PlanTourRequest): PlannedTour {
     defaultDurationMinutes,
     defaultBufferMinutes,
     stops,
-    narrationPayloads,
+    narrationPayloads: generateTourNarrations(
+      { stops } as Tour,
+      listings ?? new Map(),
+    ),
   };
 
   tourStore.set(tour.id, tour);
