@@ -1,26 +1,15 @@
 import { Listing, ListingSearchParams, PlanTourRequest, PlannedTour } from '@project-x/shared-types';
 
 /**
- * Extended filter params for web client.
- * These extend the base ListingSearchParams with additional filters
- * that the API supports but may not be in the shared-types yet.
+ * Web client listing params. Extends ListingSearchParams with
+ * corner-based bbox convenience fields (swLat/swLng/neLat/neLng)
+ * that are converted to a bbox string before the API call.
  */
 export type FetchListingsParams = ListingSearchParams & {
   swLat?: number;
   swLng?: number;
   neLat?: number;
   neLng?: number;
-  // Extended filters (API supports these, wired in this PR)
-  cities?: string[];
-  postalCodes?: string[];
-  counties?: string[];
-  neighborhoods?: string[];
-  features?: string[];
-  subtype?: string[];
-  agent?: string[];
-  brokers?: string[];
-  maxBeds?: number;
-  maxBaths?: number;
 };
 
 export type PaginatedListingsResponse = {

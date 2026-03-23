@@ -16,6 +16,7 @@ export class HubSpotLeadProvider implements LeadProvider {
       return {
         success: false,
         provider: "hubspot",
+        code: "NOT_CONFIGURED",
         message: "HubSpot not configured (missing HUBSPOT_PRIVATE_APP_TOKEN)",
       };
     }

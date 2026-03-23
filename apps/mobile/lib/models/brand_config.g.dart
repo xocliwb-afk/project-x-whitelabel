@@ -15,6 +15,9 @@ BrandConfig _$BrandConfigFromJson(Map<String, dynamic> json) => BrandConfig(
       logo: BrandLogo.fromJson(json['logo'] as Map<String, dynamic>),
       favicon: json['favicon'] as String?,
       theme: ThemeConfig.fromJson(json['theme'] as Map<String, dynamic>),
+      navItems: (json['navItems'] as List<dynamic>?)
+          ?.map((e) => NavItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
       neighborhoods: (json['neighborhoods'] as List<dynamic>?)
           ?.map((e) => Neighborhood.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -39,6 +42,7 @@ Map<String, dynamic> _$BrandConfigToJson(BrandConfig instance) =>
       'logo': instance.logo.toJson(),
       'favicon': instance.favicon,
       'theme': instance.theme.toJson(),
+      'navItems': instance.navItems?.map((e) => e.toJson()).toList(),
       'neighborhoods': instance.neighborhoods?.map((e) => e.toJson()).toList(),
       'search': instance.search?.toJson(),
       'compliance': instance.compliance?.toJson(),
@@ -150,6 +154,16 @@ Map<String, dynamic> _$ThemeRadiusToJson(ThemeRadius instance) =>
       'card': instance.card,
       'button': instance.button,
       'input': instance.input,
+    };
+
+NavItem _$NavItemFromJson(Map<String, dynamic> json) => NavItem(
+      label: json['label'] as String,
+      href: json['href'] as String,
+    );
+
+Map<String, dynamic> _$NavItemToJson(NavItem instance) => <String, dynamic>{
+      'label': instance.label,
+      'href': instance.href,
     };
 
 Neighborhood _$NeighborhoodFromJson(Map<String, dynamic> json) =>

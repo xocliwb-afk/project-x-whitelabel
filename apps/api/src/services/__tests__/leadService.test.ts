@@ -78,7 +78,7 @@ describe("LeadService", () => {
     expect(captured.email).toBe("jane@example.com");
     expect(captured.brokerId).toBe("broker-1");
     expect(captured.listingId).toBe("listing-123");
-    expect(captured.source).toBe("project-x-web");
+    expect(captured.source).toBe("web");
     expect(captured.createdAt).toBeTruthy();
   });
 

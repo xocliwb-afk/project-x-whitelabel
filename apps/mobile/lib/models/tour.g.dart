@@ -43,6 +43,9 @@ Tour _$TourFromJson(Map<String, dynamic> json) => Tour(
       stops: (json['stops'] as List<dynamic>)
           .map((e) => TourStop.fromJson(e as Map<String, dynamic>))
           .toList(),
+      narrationPayloads: (json['narrationPayloads'] as List<dynamic>?)
+          ?.map((e) => NarrationPayload.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$TourToJson(Tour instance) => <String, dynamic>{
@@ -54,6 +57,8 @@ Map<String, dynamic> _$TourToJson(Tour instance) => <String, dynamic>{
       'defaultDurationMinutes': instance.defaultDurationMinutes,
       'defaultBufferMinutes': instance.defaultBufferMinutes,
       'stops': instance.stops.map((e) => e.toJson()).toList(),
+      'narrationPayloads':
+          instance.narrationPayloads?.map((e) => e.toJson()).toList(),
     };
 
 TourStopInput _$TourStopInputFromJson(Map<String, dynamic> json) =>

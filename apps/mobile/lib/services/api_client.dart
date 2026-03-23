@@ -38,34 +38,62 @@ class ApiClient {
 
   /// Search listings with optional query parameters.
   /// GET /api/listings
+  /// Search listings with optional query parameters.
+  /// Mirrors ListingSearchParams from packages/shared-types.
   Future<ListingSearchResponse> searchListings({
+    String? q,
     String? bbox,
     int? page,
     int? limit,
     int? minPrice,
     int? maxPrice,
     int? beds,
+    int? maxBeds,
     int? baths,
+    int? maxBaths,
     String? propertyType,
     String? sort,
     List<String>? status,
     int? minSqft,
     int? maxSqft,
+    int? minYearBuilt,
+    int? maxYearBuilt,
+    int? maxDaysOnMarket,
+    String? keywords,
+    List<String>? cities,
+    List<String>? postalCodes,
+    List<String>? counties,
+    List<String>? neighborhoods,
+    List<String>? features,
+    List<String>? subtype,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
+      if (q != null) queryParams['q'] = q;
       if (bbox != null) queryParams['bbox'] = bbox;
       if (page != null) queryParams['page'] = page;
       if (limit != null) queryParams['limit'] = limit;
       if (minPrice != null) queryParams['minPrice'] = minPrice;
       if (maxPrice != null) queryParams['maxPrice'] = maxPrice;
       if (beds != null) queryParams['beds'] = beds;
+      if (maxBeds != null) queryParams['maxBeds'] = maxBeds;
       if (baths != null) queryParams['baths'] = baths;
+      if (maxBaths != null) queryParams['maxBaths'] = maxBaths;
       if (propertyType != null) queryParams['propertyType'] = propertyType;
       if (sort != null) queryParams['sort'] = sort;
       if (status != null) queryParams['status'] = status;
       if (minSqft != null) queryParams['minSqft'] = minSqft;
       if (maxSqft != null) queryParams['maxSqft'] = maxSqft;
+      if (minYearBuilt != null) queryParams['minYearBuilt'] = minYearBuilt;
+      if (maxYearBuilt != null) queryParams['maxYearBuilt'] = maxYearBuilt;
+      if (maxDaysOnMarket != null) queryParams['maxDaysOnMarket'] = maxDaysOnMarket;
+      if (keywords != null) queryParams['keywords'] = keywords;
+      if (cities != null) queryParams['cities'] = cities;
+      if (postalCodes != null) queryParams['postalCodes'] = postalCodes;
+      if (counties != null) queryParams['counties'] = counties;
+      if (neighborhoods != null) queryParams['neighborhoods'] = neighborhoods;
+      if (features != null) queryParams['features'] = features;
+      if (subtype != null) queryParams['subtype'] = subtype;
 
       final response = await _dio.get(
         '/api/listings',

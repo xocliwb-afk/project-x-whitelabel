@@ -40,7 +40,7 @@ class ProjectXApp extends ConsumerWidget {
 
     return brandConfigAsync.when(
       loading: () => MaterialApp(
-        title: 'Project X',
+        title: 'Loading...',
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
@@ -50,7 +50,7 @@ class ProjectXApp extends ConsumerWidget {
         ),
       ),
       error: (error, stack) => MaterialApp(
-        title: 'Project X',
+        title: 'Loading...',
         theme: ThemeData(useMaterial3: true),
         home: Scaffold(
           body: Center(

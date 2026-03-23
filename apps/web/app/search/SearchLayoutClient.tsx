@@ -12,7 +12,7 @@ import { fetchListings } from '@/lib/api-client';
 import { trackEvent } from '@/lib/analytics';
 import Footer from '@/components/Footer';
 import ListingsList from '@/components/ListingsList';
-import { useTheme } from '@/context/ThemeContext';
+import { useMapLayout } from '@/context/MapLayoutContext';
 import { smartSubmit } from '@/lib/search/smartSubmit';
 
 const ListingDetailModal = dynamic(
@@ -93,7 +93,7 @@ export default function SearchLayoutClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { mapSide, paneDominance } = useTheme();
+  const { mapSide, paneDominance } = useMapLayout();
   // Mapbox-only: Leaflet fallback disabled in this PR to avoid feature-flag drift.
   const useMapbox = true;
   const [listings, setListings] = useState<Listing[]>(initialListings);

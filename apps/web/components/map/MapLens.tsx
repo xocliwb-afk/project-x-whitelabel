@@ -8,7 +8,7 @@ import type { Listing } from "@project-x/shared-types";
 import { useMapLensStore } from "@/stores/useMapLensStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
-import { useTheme } from "@/context/ThemeContext";
+import { useMapLayout } from "@/context/MapLayoutContext";
 import { trackEvent } from "@/lib/analytics";
 import {
   formatAddressFull,
@@ -56,7 +56,7 @@ export function MapLens({
   const lensRef = useRef<HTMLDivElement | null>(null);
   const lensOpenRef = useRef(false);
   const mobileDetected = useIsMobile();
-  const { mapSide } = useTheme();
+  const { mapSide } = useMapLayout();
 
   const allClusterListings = useMemo(
     () => activeClusterData?.listings ?? [],
