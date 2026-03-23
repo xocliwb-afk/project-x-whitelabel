@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../models/models.dart';
+import '../models/narration.dart';
 
 /// Error type for API failures with structured information.
 class ApiException implements Exception {
@@ -123,6 +124,21 @@ class ApiClient {
         data: request.toJson(),
       );
       return Tour.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Fetch narration payloads for a tour.
+  /// GET /api/tours/:id/narrations
+  Future<List<NarrationPayload>> getTourNarrations(String tourId) async {
+    try {
+      final response = await _dio.get('/api/tours/$tourId/narrations');
+      final data = response.data as Map<String, dynamic>;
+      final narrations = (data['narrations'] as List<dynamic>)
+          .map((e) => NarrationPayload.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return narrations;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

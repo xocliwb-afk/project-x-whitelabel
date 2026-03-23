@@ -63,11 +63,11 @@
 
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
-| Tour domain models | ✅ Built | NOW | Tour, TourStop, PlanTourRequest in shared-types |
-| Tour planning service | ✅ Built | NOW | Time-based scheduling in API |
-| Tour API route | ✅ Built | NOW | POST /api/tours |
-| Tour Builder web UI | ✅ Built | NOW | TourBuilderClient, TourPanel, TourStopCard |
-| Add-to-tour from search | ⚠️ Partial | DESIGN NOW | AddToTourIcon exists, needs integration audit |
+| Tour domain models | ✅ Built | NOW | Tour, TourStop, PlanTourRequest, NarrationPayload in shared-types |
+| Tour planning service | ✅ Built | NOW | Time-based scheduling, narration generation, in-memory CRUD |
+| Tour API routes | ✅ Built | NOW | GET/POST/PUT/DELETE /api/tours, GET /api/tours/:id/narrations |
+| Tour Builder web UI | ✅ Built | NOW | TourBuilderClient + TourPanel share unified Zustand store |
+| Add-to-tour from search | ⚠️ Partial | DESIGN NOW | AddToTourIcon exists but unused — needs search card integration |
 | Tour route optimization | ❌ Missing | LATER (COMMITTED) | Needs routing/directions API |
 | Tour sharing/export | ❌ Missing | LATER (COMMITTED) | Calendar export, share link |
 
@@ -75,9 +75,12 @@
 
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
-| Flutter project scaffold | ⚠️ Skeleton | DESIGN NOW | Just main.dart with placeholder |
-| API client | ❌ Missing | DESIGN NOW | Need Dart HTTP client for BFF |
-| Brand config consumption | ❌ Missing | DESIGN NOW | Need ThemeData from brand config |
+| Flutter project scaffold | ✅ Built | NOW | Riverpod, GoRouter, Dio, json_serializable |
+| API client | ✅ Built | NOW | Dio-based, all BFF endpoints including narrations |
+| Brand config consumption | ✅ Built | NOW | BrandConfig → ThemeData mapping |
+| Dart models | ✅ Built | NOW | Mirrors shared-types: Listing, Tour, Brand, Lead, Narration |
+| Narration service | ✅ Built | NOW | Fetch narrations, TtsEngine interface |
+| Proximity service | ⚠️ Stub | DESIGN NOW | Interface defined, simulate methods for testing |
 | Search UI | ❌ Missing | LATER (COMMITTED) | Core mobile feature |
 | Map integration | ❌ Missing | LATER (COMMITTED) | Need map SDK decision |
 | PDP | ❌ Missing | LATER (COMMITTED) | Detail view |
@@ -87,11 +90,12 @@
 
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
-| Narration domain models | ❌ Missing | DESIGN NOW | NarrationPayload, ProximityEvent types |
-| Arrival detection | ❌ Missing | DESIGN NOW | Geofence architecture |
-| TTS integration | ❌ Missing | LATER (COMMITTED) | Text-to-speech for narration |
-| Android Auto surface | ❌ Missing | LATER (COMMITTED) | Platform-specific client |
-| Flutter/native bridge | ❌ Missing | DESIGN NOW | Plugin architecture |
+| Narration domain models | ✅ Built | NOW | NarrationPayload, ProximityEvent in shared-types + Dart models |
+| Narration service (API) | ✅ Built | NOW | Rich listing-based narration generation, GET /api/tours/:id/narrations |
+| Arrival detection | ⚠️ Stub | DESIGN NOW | ProximityService interface defined, simulateArrival for testing |
+| TTS integration | ⚠️ Stub | LATER (COMMITTED) | TtsEngine interface defined, NoOpTtsEngine for dev |
+| Android Auto surface | ⚠️ Stub | LATER (COMMITTED) | AndroidAutoService interface, architecture documented |
+| Flutter/native bridge | ⚠️ Stub | DESIGN NOW | Platform channel architecture documented, not yet implemented |
 
 ## Infrastructure
 
