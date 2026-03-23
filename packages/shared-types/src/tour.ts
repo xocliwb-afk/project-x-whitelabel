@@ -21,6 +21,8 @@ export interface Tour {
   defaultDurationMinutes: number;
   defaultBufferMinutes: number;
   stops: TourStop[];
+  /** Narration payloads for each stop, generated during tour planning */
+  narrationPayloads?: import('./narration').NarrationPayload[];
 }
 
 export interface TourStopInput {
