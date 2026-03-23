@@ -244,6 +244,8 @@ export class SimplyRetsListingProvider implements ListingProvider {
         city: raw.address?.city ?? '',
         state: raw.address?.state ?? '',
         zip: raw.address?.postalCode ?? '',
+        county: raw.address?.county ?? raw.geo?.county ?? null,
+        neighborhood: raw.address?.neighborhood ?? raw.address?.subdivision ?? null,
         lat: raw.geo?.lat ?? 0,
         lng: raw.geo?.lng ?? 0,
       },

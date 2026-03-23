@@ -13,6 +13,8 @@ export type NormalizedListing = {
     city: string;
     state: string;
     zip: string;
+    county?: string | null;
+    neighborhood?: string | null;
     lat: number;
     lng: number;
   };
@@ -135,8 +137,6 @@ export type CRMType =
   | 'null'
   | 'webhook'
   | 'hubspot'
-  | 'gohighlevel'
-  | 'followupboss'
   | 'email';
 
 export type CRMConfig = {
@@ -149,19 +149,25 @@ export type CRMConfig = {
 };
 
 export type LeadPayload = {
-  listingId: string;
+  listingId?: string;
   listingAddress?: string;
   message?: string;
+  /** Serialized JSON context (max 8192 chars, validated server-side) */
+  context?: string;
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
   brokerId: string;
   agentId?: string;
-  source: 'project-x-web' | 'project-x-app';
+  source?: string;
+  /** reCAPTCHA token — required by API, verified server-side */
+  captchaToken?: string;
 };
 
 export type LeadResponse = {
   success: boolean;
+  provider?: string;
+  message?: string;
 };
 
 // TEMP: keep contract-safe and serializable. Status / propertyType are strings in the API.
@@ -197,3 +203,5 @@ export function computePreviewSide(
 }
 
 export * from './tour';
+export * from './brand';
+export * from './narration';

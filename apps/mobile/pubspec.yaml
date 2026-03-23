@@ -1,7 +1,7 @@
 name: project_x_mobile
-description: A new Flutter project for Project X.
+description: Project X White Label — Mobile Client
 
-publish_to: "none" # Remove this line if you wish to publish to pub.dev
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -12,10 +12,31 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # HTTP client
+  dio: ^5.4.0
+
+  # State management
+  flutter_riverpod: ^2.4.0
+  riverpod_annotation: ^2.3.0
+
+  # Navigation
+  go_router: ^13.0.0
+
+  # JSON serialization
+  json_annotation: ^4.8.1
+
+  # Immutable models
+  freezed_annotation: ^2.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+
+  # Code generation
+  build_runner: ^2.4.0
+  json_serializable: ^6.7.0
+  freezed: ^2.4.5
 
 flutter:
   uses-material-design: true

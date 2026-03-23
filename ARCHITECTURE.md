@@ -45,7 +45,7 @@ All listings are converted to a canonical `Listing` DTO before reaching the clie
 
 ### C. Theming Engine
 
-Branding lives in `theme.json` → CSS variables → Tailwind & Flutter themes.
+Branding lives in `config/brand.json` → CSS variables → Tailwind & Flutter themes.
 
 ### D. Compliance Layer
 

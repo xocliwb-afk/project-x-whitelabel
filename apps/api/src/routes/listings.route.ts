@@ -10,6 +10,7 @@ import {
   DEFAULT_LIMIT,
 } from '../utils/listingSearch.util';
 import { ListingsCache } from '../services/listingsCache.service';
+import { applyListingCompliance, applyListingsCompliance } from '../services/compliance';
 
 const router = Router();
 
@@ -242,7 +243,7 @@ router.get('/', async (req, res) => {
 
       const sorted = stableSortListings(resultsRaw, params.sort);
       const hasMore = sorted.length > limit;
-      const results = sorted.slice(0, limit);
+      const results = applyListingsCompliance(sorted.slice(0, limit));
 
       return {
         results,
@@ -367,7 +368,7 @@ const getListingById = async (req: any, res: any) => {
       return res.status(404).json(error);
     }
 
-    const payload = { listing };
+    const payload = { listing: applyListingCompliance(listing) };
     if (cacheConfig.enabled) {
       caches.byId.set(cacheKey, payload, cacheConfig.ttlMs);
     }

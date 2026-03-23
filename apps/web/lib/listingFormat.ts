@@ -1,13 +1,16 @@
 import type { Listing } from "@project-x/shared-types";
 
 export const formatAttribution = (listing: Listing): string => {
-  const name = listing.office?.name?.trim() ?? "";
-  const idRaw = listing.office?.id;
-  const id = idRaw != null ? String(idRaw).trim() : "";
-  if (name && id) {
-    return `Listed by ${name}\nData provided by SimplyRETS`;
+  const officeName = listing.office?.name?.trim() ?? "";
+  const disclaimer = listing.attribution?.disclaimer ?? "Listing information is deemed reliable but not guaranteed.";
+  const mlsName = listing.attribution?.mlsName ?? "";
+  if (officeName) {
+    return `Listed by ${officeName}\n${disclaimer}`;
   }
-  return "Data provided by SimplyRETS";
+  if (mlsName) {
+    return `Data provided by ${mlsName}\n${disclaimer}`;
+  }
+  return disclaimer;
 };
 
 export const formatAgentName = (agent?: Listing["agent"]): string | null => {

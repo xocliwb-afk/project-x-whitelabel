@@ -9,6 +9,7 @@ import { useTheme } from "@/context/ThemeContext";
 import SearchFiltersBar, { SortButton } from "@/components/SearchFiltersBar";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
+import brand from "@/lib/brand";
 
 export default function Header() {
   const { mapSide, paneDominance, setMapSide, setPaneDominance } = useTheme();
@@ -22,18 +23,10 @@ export default function Header() {
   const openLeadModal = useLeadModalStore((s) => s.open);
   const neighborhoodsMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const neighborhoods = [
-    { label: "Grand Rapids", href: "/grand-rapids" },
-    { label: "Ada", href: "/ada" },
-    { label: "Byron Center", href: "/byron-center" },
-    { label: "Caledonia", href: "/caledonia" },
-    { label: "East Grand Rapids", href: "/east-grand-rapids" },
-    { label: "Grandville", href: "/grandville" },
-    { label: "Kentwood", href: "/kentwood" },
-    { label: "Rockford", href: "/rockford" },
-    { label: "Wyoming", href: "/wyoming" },
-  ];
-  // Keep in sync with apps/web/next.config.js neighborhoodSlugs
+  const neighborhoods = (brand.neighborhoods ?? []).map((n) => ({
+    label: n.label,
+    href: `/${n.slug}`,
+  }));
 
   const navItems = [
     { label: "Home", href: "/" },
@@ -129,14 +122,14 @@ export default function Header() {
         <div className={styles.topNavInner}>
           <Link href="/" className={styles.topNavBrand} onClick={() => setMobileOpen(false)}>
             <Image
-              src="/assets/img/bw-home-group-logo.webp"
-              alt="Brandon Wilcox Home Group"
-              width={44}
-              height={44}
+              src={brand.logo.url}
+              alt={brand.logo.alt}
+              width={brand.logo.height}
+              height={brand.logo.height}
               className={styles.topNavLogo}
               priority
             />
-            <span className={styles.topNavBrandText}>Brandon Wilcox Home Group</span>
+            <span className={styles.topNavBrandText}>{brand.brandName}</span>
           </Link>
 
           <div className={styles.topNavLinks}>
@@ -185,7 +178,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() =>
-                openLeadModal({ intent: "talk-to-brandon", entrySource: "header-nav-desktop" })
+                openLeadModal({ intent: "talk-to-agent", entrySource: "header-nav-desktop" })
               }
               className={styles.navLink}
             >
@@ -267,7 +260,7 @@ export default function Header() {
                 type="button"
                 className={styles.navLink}
                 onClick={() => {
-                  openLeadModal({ intent: "talk-to-brandon", entrySource: "header-nav-mobile" });
+                  openLeadModal({ intent: "talk-to-agent", entrySource: "header-nav-mobile" });
                   setMobileOpen(false);
                 }}
               >

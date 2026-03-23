@@ -80,18 +80,23 @@ const createLeadHandler = async (req: Request, res: Response) => {
     const result = await leadService.submitLead(payload);
 
     if (result.success) {
-      return res.status(201).json({ success: true });
+      return res.status(201).json({
+        success: true,
+        provider: result.provider,
+      });
     }
 
     const status = result.status ?? 400;
     return res.status(status).json({
       success: false,
+      provider: result.provider,
       message: result.message ?? "Failed to submit lead",
     });
   } catch (err: any) {
+    console.error("[leads] Unexpected error:", err);
     res.status(500).json({
       success: false,
-      message: err?.message ?? "Failed to submit lead",
+      message: "Failed to submit lead",
     });
   }
 };

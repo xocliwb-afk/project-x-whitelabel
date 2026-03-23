@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import brand from "@/lib/brand";
 
 export default function Navbar() {
   return (
@@ -10,7 +11,7 @@ export default function Navbar() {
           <div className="flex items-center">
             {/* Logo / Brand */}
             <Link href="/" className="text-xl font-bold tracking-tight">
-              Brandon Wilcox Home Group
+              {brand.brandName}
             </Link>
             
             {/* Main Nav Links */}

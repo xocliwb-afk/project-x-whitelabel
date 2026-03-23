@@ -15,10 +15,7 @@ export function getCrmProvider(config: CRMConfig): CrmProvider {
     case 'webhook':
       return webhookProvider;
 
-    // For Epic 5, all other CRM types fall back to NullCrmProvider.
     case 'hubspot':
-    case 'gohighlevel':
-    case 'followupboss':
     case 'email':
     case 'null':
     default:
