@@ -14,7 +14,7 @@
 **Acceptance Criteria:**
 - [x] Repo deeply inspected (all apps, packages, config, scripts, tests, addendums)
 - [x] 9 planning docs created in `docs/planning/`
-- [x] Verification run: lint, build, typecheck, API tests — all pass
+- [x] Verification run: lint, build, typecheck, API tests — all pass *(Note: verification results are provisional from the OG repo and will be reconfirmed as part of Epic 1)*
 - [x] Brand coupling inventory documented
 - [x] Vendor leakage inventory documented
 - [x] Next epic identified and scoped
@@ -39,7 +39,7 @@
    - `components/Footer.tsx`
    - `components/Navbar.tsx`
 4. Replace `talk-to-brandon` → `talk-to-agent` (generic intent)
-5. Remove/deprecate GoHighLevel lead provider
+5. Remove GoHighLevel lead provider
 6. Remove hardcoded Michigan neighborhood slugs from `next.config.js` (make config-driven or remove)
 7. Add `BrandConfig`, `ThemeConfig` types to shared-types
 8. Verify all gates still pass
@@ -47,7 +47,7 @@
 **Acceptance Criteria:**
 - [ ] No hardcoded "Brandon" / "Wilcox" / "BWHG" in product code (web components, layout)
 - [ ] Brand name, contact info, logo sourced from config
-- [ ] GoHighLevel provider removed or clearly deprecated
+- [ ] GoHighLevel provider removed (not deprecated — fully deleted)
 - [ ] Neighborhood slugs not hardcoded in next.config.js
 - [ ] BrandConfig type exists in shared-types
 - [ ] All tests pass
@@ -132,6 +132,8 @@
 **Status:** Not Started
 **Goal:** Make apps/mobile a real Flutter app
 
+> **Note:** Mobile shared contracts and API expectations are DESIGNED in Epics 1-2 (BrandConfig type, shared-types). Flutter implementation begins in Epic 6.
+
 **Scope:**
 - Flutter project setup with dependencies
 - Navigation, API client, state management
@@ -146,6 +148,8 @@
 **Branch:** TBD
 **Status:** Not Started
 **Goal:** Tour Engine to production quality
+
+> **Note:** Tour domain models already exist in shared-types (Tour, TourStop, PlanTourRequest). Epic 7 enhances and hardens them — it does not start from zero.
 
 **Scope:**
 - Route/direction integration

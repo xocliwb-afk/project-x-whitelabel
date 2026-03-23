@@ -6,6 +6,8 @@
 
 ## 1. Current State
 
+> **`config/brand.json` is the canonical brand config.** `config/theme.json` is legacy and will be superseded in Epic 1.
+
 Brand identity is currently split across:
 
 | Location | What's There | Problem |

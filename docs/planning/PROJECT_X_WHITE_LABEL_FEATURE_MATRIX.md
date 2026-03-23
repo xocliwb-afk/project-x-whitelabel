@@ -35,7 +35,7 @@
 | SimplyRETS listing provider | ✅ Built | NOW | Full normalization, bbox, filters |
 | Mock listing provider | ✅ Built | NOW | Dev-safe fallback |
 | Listing caching | ✅ Built | NOW | TTL-based, configurable |
-| Compliance/attribution | ⚠️ Stub | NOW | `applyListingCompliance` is passthrough |
+| Compliance/attribution | ⚠️ Stub | NOW | BLOCKER: `applyListingCompliance` is a stub passthrough — must be hardened before any live/production deployment. Tracked in Epic 3. |
 | Mapbox geocoding | ✅ Built | NOW | Server-side, cached, rate-limited |
 
 ## Lead / Contact
@@ -47,7 +47,7 @@
 | Captcha verification | ✅ Built | NOW | reCAPTCHA |
 | Rate limiting | ✅ Built | NOW | Per-IP RPM + daily limits |
 | Lead validation/normalization | ✅ Built | NOW | In LeadService |
-| GoHighLevel integration | ⚠️ Present | DEPRECATE | Dead — remove in Phase 1 |
+| GoHighLevel integration | ❌ Removed | REMOVE in Epic 1 | Dead — removed, not deprecated |
 
 ## White-Label / Brand
 

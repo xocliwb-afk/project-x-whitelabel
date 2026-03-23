@@ -1,6 +1,7 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
+const brand = require('../../config/brand.json');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -39,17 +40,7 @@ const nextConfig = {
 
     const apiBase = apiTarget.replace(/\/+$/, '');
 
-    const neighborhoodSlugs = [
-      'grand-rapids',
-      'ada',
-      'byron-center',
-      'caledonia',
-      'east-grand-rapids',
-      'grandville',
-      'kentwood',
-      'rockford',
-      'wyoming',
-    ];
+    const neighborhoodSlugs = (brand.neighborhoods || []).map((n) => n.slug);
 
     return {
       beforeFiles: [

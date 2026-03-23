@@ -66,7 +66,7 @@ export default function LeadForm({
         ? `I have questions about ${address}`
         : "I'm interested in learning more about available properties.";
     }
-    // talk-to-brandon
+    // talk-to-agent
     return interest ? `I'd like to discuss ${interest}` : "I'd like to discuss my real estate needs.";
   };
 
@@ -94,7 +94,7 @@ export default function LeadForm({
 
   const getFieldErrorId = (fieldName: LeadFormFieldName) => `lead-form-error-${fieldName}`;
   const isEmailValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const showInterestFields = intent === "talk-to-brandon";
+  const showInterestFields = intent === "talk-to-agent";
   const getFieldError = (
     fieldName: LeadFormFieldName,
     value: string,
@@ -151,7 +151,7 @@ export default function LeadForm({
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
     if (name === "message") setMessageAuto(false);
-    if (name === "interest" && intent === "talk-to-brandon" && messageAuto) {
+    if (name === "interest" && intent === "talk-to-agent" && messageAuto) {
       setFormState((prev) => ({
         ...prev,
         message: getInitialMessage(intent, listingAddress, value),

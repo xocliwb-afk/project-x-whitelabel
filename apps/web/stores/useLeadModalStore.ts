@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { trackEvent } from "@/lib/analytics";
 
-export type Intent = "schedule-showing" | "get-details" | "talk-to-brandon";
+export type Intent = "schedule-showing" | "get-details" | "talk-to-agent";
 
 type LeadModalState = {
   isOpen: boolean;
