@@ -53,10 +53,10 @@
 
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
-| Theme JSON → Tailwind tokens | ✅ Built | NOW | Works via config/theme.json |
-| Brand name in config | ⚠️ Partial | NOW | In theme.json but not consumed by components |
-| Brand config system | ❌ Missing | DESIGN NOW | Need BrandConfig type, loading path |
-| Dynamic brand-driven components | ❌ Missing | NOW (Phase 4-5) | Components still hardcoded |
+| Theme JSON → Tailwind tokens | ✅ Built | NOW | Works via config/brand.json (theme.json removed in Epic 4) |
+| Brand name in config | ✅ Built | NOW | In brand.json, consumed by all components via lib/brand.ts |
+| Brand config system | ✅ Built | NOW | BrandConfig type in shared-types, brand.json canonical, /api/brand endpoint |
+| Dynamic brand-driven components | ✅ Built | NOW | Layout, Header, Footer, Navbar, LeadModal all config-driven |
 | Multi-tenant support | ❌ Missing | NOT NOW | V1 is single-tenant |
 
 ## Tour Engine
