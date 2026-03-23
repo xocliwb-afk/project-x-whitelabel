@@ -7,6 +7,7 @@ import leadsRouter from "./routes/leads.route";
 import toursRouter from "./routes/tours.route";
 import aiRouter from "./routes/ai.route";
 import geoRouter from "./routes/geo.route";
+import brandRouter from "./routes/brand.route";
 import { getListingProvider } from "./utils/provider.factory";
 import { CaptchaService } from "./services/captcha.service";
 
@@ -106,6 +107,7 @@ app.use("/api/tours", toursRouter);
 app.use("/api/v1/tours", toursRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/geo", geoRouter);
+app.use("/api/brand", brandRouter);
 
 app.get("/health", (req, res) => {
   res.status(200).json({
