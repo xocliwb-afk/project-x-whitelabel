@@ -1,16 +1,17 @@
-import { jwtVerify } from 'jose';
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 
-let secret: Uint8Array | null = null;
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-function getSecret(): Uint8Array {
-  if (!secret) {
-    const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!SUPABASE_JWT_SECRET) {
-      throw new Error('Missing SUPABASE_JWT_SECRET env var');
+function getJWKS() {
+  if (!jwks) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error('Missing SUPABASE_URL env var');
     }
-    secret = new TextEncoder().encode(SUPABASE_JWT_SECRET);
+    const baseUrl = supabaseUrl.replace(/\/+$/, '');
+    jwks = createRemoteJWKSet(new URL(`${baseUrl}/auth/v1/.well-known/jwks.json`));
   }
-  return secret;
+  return jwks;
 }
 
 export interface VerifiedToken {
@@ -22,7 +23,7 @@ export interface VerifiedToken {
 }
 
 export async function verifySupabaseToken(token: string): Promise<VerifiedToken> {
-  const { payload } = await jwtVerify(token, getSecret(), {
+  const { payload } = await jwtVerify(token, getJWKS(), {
     issuer: `https://${process.env.SUPABASE_URL?.replace('https://', '')}/auth/v1`,
   });
 
