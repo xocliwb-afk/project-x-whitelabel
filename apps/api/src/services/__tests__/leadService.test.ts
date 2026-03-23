@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from "vitest";
 import { getMockLeadLog } from "../../providers/lead/mock-lead.provider";
 
 // Set env before importing LeadService (CaptchaService reads env in constructor)
@@ -6,10 +6,15 @@ vi.stubEnv("CAPTCHA_DISABLED", "true");
 vi.stubEnv("LEAD_PROVIDER", "mock");
 vi.stubEnv("NODE_ENV", "test");
 
-const { LeadService } = await import("../lead.service");
-
+// Use dynamic import inside describe to avoid top-level await (commonjs tsconfig)
 describe("LeadService", () => {
+  let LeadService: typeof import("../lead.service").LeadService;
   let service: InstanceType<typeof LeadService>;
+
+  beforeAll(async () => {
+    const mod = await import("../lead.service");
+    LeadService = mod.LeadService;
+  });
 
   beforeEach(() => {
     service = new LeadService();
