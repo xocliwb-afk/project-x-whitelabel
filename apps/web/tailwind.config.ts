@@ -1,8 +1,10 @@
 import type { Config } from "tailwindcss";
-import theme from "../../config/theme.json";
+import brand from "../../config/brand.json";
+
+const { colors, typography, radius } = brand.theme;
 
 const config: Config = {
-  darkMode: "media", // This makes it follow system preference automatically
+  darkMode: "media",
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,31 +12,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: theme.colors.primary,
-        "primary-foreground": theme.colors.primaryForeground,
-        "primary-accent": theme.colors.primaryAccent,
-        background: theme.colors.background,
+        primary: colors.primary,
+        "primary-foreground": colors.primaryForeground,
+        "primary-accent": colors.primaryAccent,
+        background: colors.background,
         surface: {
-          DEFAULT: theme.colors.surface,
-          muted: theme.colors.surfaceMuted,
-          accent: theme.colors.surfaceAccent,
+          DEFAULT: colors.surface,
+          muted: colors.surfaceMuted,
+          accent: colors.surfaceAccent,
         },
         text: {
-          secondary: theme.colors.textSecondary,
+          secondary: colors.textSecondary,
         },
-        "text-main": theme.colors.textMain,
-        "text-muted": theme.colors.textMuted,
-        border: theme.colors.border,
-        danger: theme.colors.danger,
-        success: theme.colors.success,
+        "text-main": colors.textMain,
+        "text-muted": colors.textMuted,
+        border: colors.border,
+        danger: colors.danger,
+        success: colors.success,
       },
       fontFamily: {
-        sans: theme.typography.fontFamily.split(",").map((s) => s.trim()),
+        sans: typography.fontFamily.split(",").map((s: string) => s.trim()),
       },
       borderRadius: {
-        card: `${theme.radius.card}px`,
-        button: `${theme.radius.button}px`,
-        input: `${theme.radius.input}px`,
+        card: `${radius.card}px`,
+        button: `${radius.button}px`,
+        input: `${radius.input}px`,
       },
     },
   },
