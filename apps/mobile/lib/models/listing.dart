@@ -158,7 +158,8 @@ class ListingMeta {
 
 @JsonSerializable()
 class ListingAgent {
-  final String? id;
+  /// May be String or int from the API (TS type: string | number | null).
+  final dynamic id;
   final String? firstName;
   final String? lastName;
   final String? email;
@@ -182,7 +183,8 @@ class ListingAgent {
 
 @JsonSerializable()
 class ListingOffice {
-  final String? id;
+  /// May be String or int from the API (TS type: string | number | null).
+  final dynamic id;
   final String? name;
   final String? phone;
   final String? email;
@@ -204,7 +206,8 @@ class ListingOffice {
 class ListingTax {
   final double? annualAmount;
   final int? year;
-  final String? assessmentId;
+  /// May be String or int from the API (TS type: string | number | null).
+  final dynamic assessmentId;
 
   const ListingTax({
     this.annualAmount,

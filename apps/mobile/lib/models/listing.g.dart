@@ -149,7 +149,7 @@ Map<String, dynamic> _$ListingMetaToJson(ListingMeta instance) =>
 
 ListingAgent _$ListingAgentFromJson(Map<String, dynamic> json) =>
     ListingAgent(
-      id: json['id'] as String?,
+      id: json['id'],
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
       email: json['email'] as String?,
@@ -169,7 +169,7 @@ Map<String, dynamic> _$ListingAgentToJson(ListingAgent instance) =>
 
 ListingOffice _$ListingOfficeFromJson(Map<String, dynamic> json) =>
     ListingOffice(
-      id: json['id'] as String?,
+      id: json['id'],
       name: json['name'] as String?,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
@@ -186,7 +186,7 @@ Map<String, dynamic> _$ListingOfficeToJson(ListingOffice instance) =>
 ListingTax _$ListingTaxFromJson(Map<String, dynamic> json) => ListingTax(
       annualAmount: (json['annualAmount'] as num?)?.toDouble(),
       year: (json['year'] as num?)?.toInt(),
-      assessmentId: json['assessmentId'] as String?,
+      assessmentId: json['assessmentId'],
     );
 
 Map<String, dynamic> _$ListingTaxToJson(ListingTax instance) =>
