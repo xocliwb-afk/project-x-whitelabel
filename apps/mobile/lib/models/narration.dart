@@ -7,6 +7,8 @@ part 'narration.g.dart';
 class NarrationPayload {
   final String tourStopId;
   final String listingId;
+  /// Valid values: "approaching", "arrived", "departed", "manual".
+  /// Mirrors NarrationTrigger from shared-types.
   final String trigger;
   final String narrationText;
   final NarrationListingSummary? listingSummary;
@@ -75,6 +77,8 @@ class ProximityEvent {
   final String tourId;
   final String tourStopId;
   final String listingId;
+  /// Valid values: "approaching", "arrived", "departed".
+  /// Mirrors ProximityEventType from shared-types.
   final String type;
   final ProximityLocation location;
   final int distanceMeters;

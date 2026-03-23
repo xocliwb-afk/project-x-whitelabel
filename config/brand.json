@@ -40,6 +40,14 @@
       "input": 9999
     }
   },
+  "navItems": [
+    { "label": "Home", "href": "/" },
+    { "label": "Search", "href": "/search" },
+    { "label": "Buy Smarter", "href": "/buy" },
+    { "label": "Sell with Clarity", "href": "/sell" },
+    { "label": "Build", "href": "/build" },
+    { "label": "About", "href": "/about" }
+  ],
   "neighborhoods": [
     { "label": "Grand Rapids", "slug": "grand-rapids" },
     { "label": "Ada", "slug": "ada" },

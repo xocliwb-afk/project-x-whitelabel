@@ -6,9 +6,24 @@
 
 ## 1. Current State
 
-**No narration, geofence, proximity, or Android Auto code exists in the repo.**
+### API (built in Epics 7-8)
+- **Narration service** (`apps/api/src/services/narration.service.ts`): generates rich narration text from listing data (price, beds, baths, sqft, property type, year built, DOM, highlights)
+- **Narration endpoint** (`GET /api/tours/:id/narrations`): returns narration payloads enriched with listing data
+- **Tour planning** generates narration payloads automatically during `planTour()`
+- **Shared types** include `NarrationPayload`, `ProximityEvent`, `NarrationTrigger`, `ProximityEventType`
 
-The Tour Engine domain models provide the foundation (Tour, TourStop with lat/lng), but no arrival detection, narration payload, or Android Auto surface work has been started.
+### Flutter (built in Epic 8 — stubs/interfaces)
+- **NarrationService** (`apps/mobile/lib/services/narration_service.dart`): fetches narrations from API, `TtsEngine` abstract interface, `NoOpTtsEngine` for dev
+- **ProximityService** (`apps/mobile/lib/services/proximity_service.dart`): `registerGeofences`, `unregisterAll`, `simulateArrival`, `simulateApproaching` — documents native requirements in comments
+- **AndroidAutoService** (`apps/mobile/lib/features/android_auto/android_auto_service.dart`): `TourDriveState`, `AutoEvent` enum, `pushTourState`, `navigateToStop`, `simulateConnect/Disconnect`
+- **Dart models**: `NarrationPayload`, `ProximityEvent`, `ProximityLocation` in `models/narration.dart`
+
+### Not yet built
+- Native Android geofence plugin (Kotlin)
+- Native Android Auto CarAppService (Kotlin)
+- Flutter TTS integration (flutter_tts)
+- Real location tracking during tours
+- Platform channel bridge (Dart ↔ Kotlin)
 
 ## 2. Concept Overview
 

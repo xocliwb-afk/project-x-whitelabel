@@ -69,6 +69,9 @@ export interface BrandConfig {
   /** Visual theme */
   theme: ThemeConfig;
 
+  /** Primary navigation items (label + href, rendered in header) */
+  navItems?: Array<{ label: string; href: string }>;
+
   /** Neighborhood pages (label + slug used for nav and routing) */
   neighborhoods?: Array<{ label: string; slug: string }>;
 

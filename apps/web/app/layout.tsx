@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Header from "@/components/Header";
-import { ThemeProvider } from "@/context/ThemeContext";
+import { MapLayoutProvider } from "@/context/MapLayoutContext";
 import LeadModalContainer from "@/components/LeadModalContainer";
 import DevAnalyticsPanel from "@/components/DevAnalyticsPanel";
 import brand from "@/lib/brand";
@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col overflow-x-hidden bg-surface text-text-main antialiased font-sans transition-colors duration-300">
-        <ThemeProvider>
+        <MapLayoutProvider>
           <Header />
           <LeadModalContainer />
           <main className="relative flex-1 overflow-x-hidden">{children}</main>
@@ -31,7 +31,7 @@ export default function RootLayout({
           process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === "1" ? (
             <DevAnalyticsPanel />
           ) : null}
-        </ThemeProvider>
+        </MapLayoutProvider>
       </body>
     </html>
   );

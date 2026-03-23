@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'narration.dart';
 
 part 'tour.g.dart';
 
@@ -45,6 +46,10 @@ class Tour {
   final int defaultBufferMinutes;
   final List<TourStop> stops;
 
+  /// Narration payloads for each stop, generated during tour planning.
+  /// Mirrors Tour.narrationPayloads from shared-types.
+  final List<NarrationPayload>? narrationPayloads;
+
   const Tour({
     required this.id,
     required this.title,
@@ -54,6 +59,7 @@ class Tour {
     required this.defaultDurationMinutes,
     required this.defaultBufferMinutes,
     required this.stops,
+    this.narrationPayloads,
   });
 
   factory Tour.fromJson(Map<String, dynamic> json) => _$TourFromJson(json);

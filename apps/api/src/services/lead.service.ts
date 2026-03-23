@@ -39,7 +39,7 @@ export class LeadService {
 
     let status: number | undefined;
     if (!result.success) {
-      if (result.message?.includes("not configured")) {
+      if (result.code === "NOT_CONFIGURED") {
         status = 503;
       } else {
         status = 500;
@@ -104,7 +104,7 @@ export class LeadService {
       phone: normalizePhone(payload.phone),
       brokerId: trimmed(payload.brokerId)!,
       agentId: trimmed(payload.agentId),
-      source: trimmed(payload.source) || "project-x-web",
+      source: trimmed(payload.source) || process.env.LEAD_DEFAULT_SOURCE || "web",
       createdAt: new Date().toISOString(),
     };
   }

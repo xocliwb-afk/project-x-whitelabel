@@ -5,14 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useTheme } from "@/context/ThemeContext";
+import { useMapLayout } from "@/context/MapLayoutContext";
 import SearchFiltersBar, { SortButton } from "@/components/SearchFiltersBar";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
 import brand from "@/lib/brand";
 
 export default function Header() {
-  const { mapSide, paneDominance, setMapSide, setPaneDominance } = useTheme();
+  const { mapSide, paneDominance, setMapSide, setPaneDominance } = useMapLayout();
   const pathname = usePathname();
   const isSearchPage = pathname?.startsWith("/search");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -28,14 +28,12 @@ export default function Header() {
     href: `/${n.slug}`,
   }));
 
-  const navItems = [
+  const defaultNavItems = [
     { label: "Home", href: "/" },
     { label: "Search", href: "/search" },
-    { label: "Buy Smarter", href: "/buy" },
-    { label: "Sell with Clarity", href: "/sell" },
-    { label: "Build", href: "/build" },
     { label: "About", href: "/about" },
   ];
+  const navItems = (brand.navItems ?? defaultNavItems);
 
   const isNeighborhoodPath = (path?: string | null) => {
     if (!path) return false;
