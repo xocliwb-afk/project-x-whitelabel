@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useRef,
+  useMemo,
   useTransition,
   useCallback,
   type MutableRefObject,
@@ -12,6 +13,9 @@ import React, {
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { geocodeLocation } from "@/lib/geocode-client";
 import { smartSubmit } from "@/lib/search/smartSubmit";
+import SaveSearchModal from "@/components/SaveSearchModal";
+import { extractSavedSearchFilters, hasSavedSearchFilters } from "@/lib/saved-search-filters";
+import { useAuthStore } from "@/stores/auth-store";
 
 type ActiveFilter =
   | null
@@ -93,8 +97,13 @@ export default function SearchFiltersBar({ layout = "inline" }: SearchFiltersBar
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const { user, isInitialized } = useAuthStore((state) => ({
+    user: state.user,
+    isInitialized: state.isInitialized,
+  }));
 
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>(null);
+  const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
   const [dropdownLeft, setDropdownLeft] = useState<number | null>(null);
   const chipRefs: MutableRefObject<Record<string, HTMLButtonElement | null>> =
@@ -132,6 +141,11 @@ export default function SearchFiltersBar({ layout = "inline" }: SearchFiltersBar
   const [brokers, setBrokers] = useState(searchParams.getAll("brokers").join(", ") || "");
   const [maxBeds, setMaxBeds] = useState(searchParams.get("maxBeds") || "");
   const [maxBaths, setMaxBaths] = useState(searchParams.get("maxBaths") || "");
+  const savedSearchFilters = useMemo(
+    () => extractSavedSearchFilters(searchParams),
+    [searchParams],
+  );
+  const canSaveSearch = hasSavedSearchFilters(savedSearchFilters);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -1008,6 +1022,26 @@ export default function SearchFiltersBar({ layout = "inline" }: SearchFiltersBar
           >
             More
           </button>
+          {canSaveSearch && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!isInitialized) {
+                  return;
+                }
+
+                if (!user) {
+                  router.push("/login");
+                  return;
+                }
+
+                setIsSaveSearchOpen(true);
+              }}
+              className={`${chipBase} border-primary bg-primary text-white hover:brightness-95`}
+            >
+              Save Search
+            </button>
+          )}
         </div>
       </div>
 
@@ -1028,6 +1062,11 @@ export default function SearchFiltersBar({ layout = "inline" }: SearchFiltersBar
           {activeFilter === "more" && renderMoreDropdown()}
         </div>
       )}
+      <SaveSearchModal
+        isOpen={isSaveSearchOpen}
+        filters={savedSearchFilters}
+        onClose={() => setIsSaveSearchOpen(false)}
+      />
     </div>
   );
 }
