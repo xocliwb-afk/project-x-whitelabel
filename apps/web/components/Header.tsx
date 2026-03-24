@@ -10,10 +10,11 @@ import SearchFiltersBar, { SortButton } from "@/components/SearchFiltersBar";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
 import { useAuthStore } from "@/stores/auth-store";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
-import brand from "@/lib/brand";
+import { useBrand } from "@/context/BrandContext";
 import UserMenu from "@/components/auth/user-menu";
 
 export default function Header() {
+  const brand = useBrand();
   const { mapSide, paneDominance, setMapSide, setPaneDominance } = useMapLayout();
   const pathname = usePathname();
   const isSearchPage = pathname?.startsWith("/search");

@@ -9,6 +9,11 @@ const MAX_TENANT_CACHE_ENTRIES = 250;
 let defaultTenantId: string | null = null;
 let defaultTenantExpiresAt = 0;
 
+function getHeaderTenantId(req: Request): string | null {
+  const headerTenantId = req.headers['x-tenant-id'];
+  return typeof headerTenantId === 'string' ? headerTenantId.trim() : null;
+}
+
 async function isValidTenant(tenantId: string): Promise<boolean> {
   const cached = tenantCache.get(tenantId);
   if (cached && cached.expiresAt > Date.now()) {
@@ -74,13 +79,12 @@ async function resolveDefaultTenantId(): Promise<string | null> {
  */
 export async function resolveTenant(req: Request, res: Response, next: NextFunction) {
   try {
-    const headerTenantId = req.headers['x-tenant-id'];
-    const tenantId = typeof headerTenantId === 'string' ? headerTenantId.trim() : null;
+    const tenantId = getHeaderTenantId(req);
 
     if (tenantId) {
       const valid = await isValidTenant(tenantId);
       if (!valid) {
-        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant' });
+        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT' });
       }
       req.tenantId = tenantId;
       return next();
@@ -89,10 +93,41 @@ export async function resolveTenant(req: Request, res: Response, next: NextFunct
     // No header — resolve default
     const fallback = await resolveDefaultTenantId();
     if (!fallback) {
-      return res.status(400).json({ error: true, message: 'No tenant available' });
+      return res.status(400).json({ error: true, message: 'No tenant available', code: 'NO_TENANT_AVAILABLE' });
     }
 
     req.tenantId = fallback;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
+ * Strict tenant resolution middleware.
+ * Reads x-tenant-id header and validates it without any fallback.
+ * Used for routes where missing tenant context must fail closed.
+ */
+export async function resolveRequiredTenant(req: Request, res: Response, next: NextFunction) {
+  try {
+    const tenantId = getHeaderTenantId(req);
+
+    if (!tenantId) {
+      return res.status(400).json({
+        error: true,
+        message: 'x-tenant-id header is required',
+        code: 'TENANT_REQUIRED',
+      });
+    }
+
+    const valid = await isValidTenant(tenantId);
+    if (!valid) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT' });
+    }
+
+    req.tenantId = tenantId;
     return next();
   } catch (error) {
     return next(error);

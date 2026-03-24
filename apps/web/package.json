@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "pnpm --dir ../../packages/shared-types build",
+    "prebuild": "pnpm --dir ../../packages/database build && pnpm --dir ../../packages/shared-types build",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "@project-x/database": "workspace:^",
     "@project-x/shared-types": "workspace:*",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.0",

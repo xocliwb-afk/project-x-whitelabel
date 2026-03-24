@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import brand from "@/lib/brand";
+import { useBrand } from "@/context/BrandContext";
 
 export default function Footer() {
+  const brand = useBrand();
   const currentYear = new Date().getFullYear();
   const compliance = brand.compliance;
 

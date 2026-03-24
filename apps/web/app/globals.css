@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-primary: 20 36 59;
+  --brand-primary-foreground: 255 255 255;
+  --brand-primary-accent: 199 133 91;
+  --brand-background: 255 255 255;
+  --brand-surface: 245 241 232;
+  --brand-surface-muted: 238 232 220;
+  --brand-surface-accent: 228 218 202;
+  --brand-text-main: 20 36 59;
+  --brand-text-secondary: 107 114 128;
+  --brand-text-muted: 107 114 128;
+  --brand-border: 230 231 232;
+  --brand-danger: 220 38 38;
+  --brand-success: 22 163 74;
+  --brand-font-family: Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --brand-radius-card: 16px;
+  --brand-radius-button: 9999px;
+  --brand-radius-input: 9999px;
+}
+
 html,
 body {
   overflow-x: hidden;
