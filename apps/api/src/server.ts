@@ -207,13 +207,13 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
             ? 'Resource not found'
             : err.message
         : err?.message || 'Request failed';
-  const code = typeof err?.code === 'string' ? err.code : undefined;
+  const code = typeof err?.code === 'string' ? err.code : 'INTERNAL_ERROR';
 
   res.status(status).json({
     error: true,
     message,
     status,
-    ...(code ? { code } : {}),
+    code,
   });
 });
 
