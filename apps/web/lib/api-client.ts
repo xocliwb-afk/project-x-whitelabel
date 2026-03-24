@@ -1,4 +1,16 @@
-import { Listing, ListingSearchParams, PlanTourRequest, PlannedTour } from '@project-x/shared-types';
+import {
+  CreateFavoriteResponse,
+  CreateSavedSearchRequest,
+  CreateSavedSearchResponse,
+  FavoriteIdsResponse,
+  ListFavoritesResponse,
+  ListSavedSearchesResponse,
+  Listing,
+  ListingSearchParams,
+  PlanTourRequest,
+  PlannedTour,
+  UpdateSavedSearchRequest,
+} from '@project-x/shared-types';
 
 /**
  * Web client listing params. Extends ListingSearchParams with
@@ -27,10 +39,58 @@ import { getApiBaseUrl } from "./getApiBaseUrl";
 const API_BASE_URL = getApiBaseUrl();
 const inflightListings = new Map<string, Promise<PaginatedListingsResponse>>();
 
-type AuthenticatedRequestOptions = {
+export type AuthenticatedRequestOptions = {
   accessToken: string;
   tenantId: string;
 };
+
+export class ApiClientError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiClientError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+async function authenticatedApiFetch<T>(
+  path: string,
+  auth: AuthenticatedRequestOptions,
+  init?: RequestInit,
+): Promise<T> {
+  if (!auth.tenantId.trim()) {
+    throw new Error('Missing tenant configuration for authenticated request.');
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      Authorization: `Bearer ${auth.accessToken}`,
+      'x-tenant-id': auth.tenantId,
+      ...init?.headers,
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiClientError(
+      typeof body?.message === 'string' ? body.message : `Request failed: ${res.status}`,
+      res.status,
+      typeof body?.code === 'string' ? body.code : undefined,
+    );
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  return (await res.json()) as T;
+}
 
 /**
  * Fetches a paginated list of listings from the backend API.
@@ -196,4 +256,95 @@ export async function planTourApi(
   }
 
   return (await res.json()) as PlannedTour;
+}
+
+export async function getSavedSearches(
+  auth: AuthenticatedRequestOptions,
+  page = 1,
+  limit = 20,
+): Promise<ListSavedSearchesResponse> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  return authenticatedApiFetch<ListSavedSearchesResponse>(
+    `/api/saved-searches?${searchParams.toString()}`,
+    auth,
+  );
+}
+
+export async function createSavedSearch(
+  input: CreateSavedSearchRequest,
+  auth: AuthenticatedRequestOptions,
+): Promise<CreateSavedSearchResponse> {
+  return authenticatedApiFetch<CreateSavedSearchResponse>('/api/saved-searches', auth, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateSavedSearch(
+  id: string,
+  patch: UpdateSavedSearchRequest,
+  auth: AuthenticatedRequestOptions,
+): Promise<{ savedSearch: CreateSavedSearchResponse['savedSearch'] }> {
+  return authenticatedApiFetch<{ savedSearch: CreateSavedSearchResponse['savedSearch'] }>(
+    `/api/saved-searches/${encodeURIComponent(id)}`,
+    auth,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    },
+  );
+}
+
+export async function deleteSavedSearch(
+  id: string,
+  auth: AuthenticatedRequestOptions,
+): Promise<void> {
+  await authenticatedApiFetch<void>(`/api/saved-searches/${encodeURIComponent(id)}`, auth, {
+    method: 'DELETE',
+  });
+}
+
+export async function getFavoriteIds(
+  auth: AuthenticatedRequestOptions,
+): Promise<FavoriteIdsResponse> {
+  return authenticatedApiFetch<FavoriteIdsResponse>('/api/favorites/ids', auth);
+}
+
+export async function getFavorites(
+  auth: AuthenticatedRequestOptions,
+  page = 1,
+  limit = 20,
+): Promise<ListFavoritesResponse> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  return authenticatedApiFetch<ListFavoritesResponse>(
+    `/api/favorites?${searchParams.toString()}`,
+    auth,
+  );
+}
+
+export async function addFavorite(
+  listingId: string,
+  auth: AuthenticatedRequestOptions,
+): Promise<CreateFavoriteResponse> {
+  return authenticatedApiFetch<CreateFavoriteResponse>('/api/favorites', auth, {
+    method: 'POST',
+    body: JSON.stringify({ listingId }),
+  });
+}
+
+export async function removeFavorite(
+  listingId: string,
+  auth: AuthenticatedRequestOptions,
+): Promise<void> {
+  await authenticatedApiFetch<void>(`/api/favorites/${encodeURIComponent(listingId)}`, auth, {
+    method: 'DELETE',
+  });
 }
