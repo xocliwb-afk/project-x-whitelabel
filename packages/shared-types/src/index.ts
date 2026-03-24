@@ -204,6 +204,7 @@ export function computePreviewSide(
 
 export * from './tour';
 export * from './brand';
+export * from './brand-schema';
 export * from './narration';
 export * from './auth';
 export * from './saved-search';

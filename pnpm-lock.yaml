@@ -169,6 +169,10 @@ importers:
         version: 5.9.3
 
   packages/shared-types:
+    dependencies:
+      zod:
+        specifier: ^4.3.5
+        version: 4.3.5
     devDependencies:
       typescript:
         specifier: ^5.3.3
