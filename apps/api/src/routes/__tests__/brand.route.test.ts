@@ -11,8 +11,27 @@ const mockBrand = {
     contact: { email: 'test@example.com' },
     logo: { url: '/logo.png', height: 40, alt: 'Test' },
     theme: {
-      colors: { primary: '#000' },
-      typography: { fontFamily: 'sans-serif' },
+      colors: {
+        primary: '#000000',
+        primaryForeground: '#FFFFFF',
+        primaryAccent: '#CC8844',
+        background: '#FFFFFF',
+        surface: '#F5F1E8',
+        surfaceMuted: '#EEE8DC',
+        surfaceAccent: '#E4DACA',
+        textMain: '#14243B',
+        textSecondary: '#6B7280',
+        textMuted: '#9CA3AF',
+        border: '#E6E7E8',
+        danger: '#DC2626',
+        success: '#16A34A',
+      },
+      typography: {
+        fontFamily: 'Montserrat, sans-serif',
+        baseSizePx: 16,
+        headingWeight: 600,
+        bodyWeight: 400,
+      },
       radius: { card: 8, button: 4, input: 4 },
     },
   },
@@ -194,6 +213,35 @@ describe('brand route', () => {
     expect(data.code).toBe('BRAND_NOT_FOUND');
     expect(data.error).toBe(true);
     expect(data.status).toBe(404);
+  });
+
+  it('returns 404 with BRAND_NOT_FOUND when the stored config is invalid', async () => {
+    mockFindUnique.mockResolvedValue({
+      ...mockBrand,
+      config: {
+        ...mockBrand.config,
+        theme: {
+          ...mockBrand.config.theme,
+          colors: {
+            ...mockBrand.config.theme.colors,
+            primary: 'not-a-color',
+          },
+        },
+      },
+    });
+    const { baseUrl } = await startServer();
+
+    const res = await fetch(`${baseUrl}/api/brand`, {
+      headers: { 'x-tenant-id': 'tenant-invalid-brand' },
+    });
+
+    expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({
+      error: true,
+      message: 'No brand configuration found for this tenant',
+      code: 'BRAND_NOT_FOUND',
+      status: 404,
+    });
   });
 
   it('returns refreshed brand data after the cache is cleared', async () => {

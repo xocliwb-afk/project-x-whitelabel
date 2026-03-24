@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@project-x/database';
 import { resolveRequiredTenant } from '../middleware/tenant';
 import type { BrandConfig } from '@project-x/shared-types';
+import { validateBrandConfig } from '../utils/brand-config-schema';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ async function getBrandForTenant(tenantId: string): Promise<{ config: BrandConfi
 
   // Deep-clone to avoid mutating the Prisma result, then merge overrides
   const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig | null;
-  if (!config || typeof config !== 'object' || !config.theme || !config.brandName) {
+  if (!config || typeof config !== 'object') {
     return { found: false, reason: 'BRAND_NOT_FOUND' };
   }
 
@@ -44,6 +45,12 @@ async function getBrandForTenant(tenantId: string): Promise<{ config: BrandConfi
   }
   if (brand.faviconUrl) {
     config.favicon = brand.faviconUrl;
+  }
+
+  const validation = validateBrandConfig(config);
+  if (!validation.valid) {
+    console.error(`[brand] Invalid brand config for tenant ${tenantId}:`, validation.errors);
+    return { found: false, reason: 'BRAND_NOT_FOUND' };
   }
 
   // Evict expired entries if cache is full
@@ -65,8 +72,8 @@ async function getBrandForTenant(tenantId: string): Promise<{ config: BrandConfi
     }
   }
 
-  brandCache.set(tenantId, { data: config, expiresAt: Date.now() + CACHE_TTL_MS });
-  return { config, found: true };
+  brandCache.set(tenantId, { data: validation.config, expiresAt: Date.now() + CACHE_TTL_MS });
+  return { config: validation.config, found: true };
 }
 
 /**
