@@ -2,6 +2,12 @@ import type { BrandConfig } from "@project-x/shared-types";
 import { prisma } from "@project-x/database";
 import brandJson from "../../../config/brand.json";
 
+const DEFAULT_FONT_FAMILY =
+  "Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+const DEFAULT_CARD_RADIUS = "16px";
+const DEFAULT_BUTTON_RADIUS = "9999px";
+const DEFAULT_INPUT_RADIUS = "9999px";
+
 /**
  * Returns the current brand configuration from the static brand.json file.
  * @deprecated Use fetchBrand() for runtime tenant-aware brand config.
@@ -124,6 +130,27 @@ export function hexToRgbChannels(hex: string): string {
   return `${r} ${g} ${b}`;
 }
 
+function sanitizeCssValue(value: string, fallback: string): string {
+  const sanitized = value
+    .replace(/<\/style/gi, "")
+    .replace(/[<>{};"'\\`]/g, "")
+    .trim();
+
+  return sanitized || fallback;
+}
+
+function toCssRadius(value: unknown, fallback: string): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${value}px`;
+  }
+
+  if (typeof value === "string") {
+    return sanitizeCssValue(value, fallback);
+  }
+
+  return fallback;
+}
+
 /** Generate a CSS string of :root custom properties from a BrandConfig */
 export function generateBrandCssVars(config: BrandConfig): string {
   const { colors, typography, radius } = config.theme;
@@ -141,10 +168,16 @@ export function generateBrandCssVars(config: BrandConfig): string {
     `--brand-border: ${hexToRgbChannels(colors.border)}`,
     `--brand-danger: ${hexToRgbChannels(colors.danger)}`,
     `--brand-success: ${hexToRgbChannels(colors.success)}`,
-    `--brand-font-family: ${typography.fontFamily}`,
-    `--brand-radius-card: ${radius.card}px`,
-    `--brand-radius-button: ${radius.button}px`,
-    `--brand-radius-input: ${radius.input}px`,
+    `--brand-font-family: ${sanitizeCssValue(
+      typography.fontFamily,
+      DEFAULT_FONT_FAMILY,
+    )}`,
+    `--brand-radius-card: ${toCssRadius(radius.card, DEFAULT_CARD_RADIUS)}`,
+    `--brand-radius-button: ${toCssRadius(
+      radius.button,
+      DEFAULT_BUTTON_RADIUS,
+    )}`,
+    `--brand-radius-input: ${toCssRadius(radius.input, DEFAULT_INPUT_RADIUS)}`,
   ];
   return `:root { ${vars.join("; ")} }`;
 }
