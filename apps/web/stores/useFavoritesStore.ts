@@ -34,6 +34,11 @@ async function getAuthenticatedRequestOptions(): Promise<AuthenticatedRequestOpt
   };
 }
 
+function currentUserKey(): string | null {
+  const user = useAuthStore.getState().user;
+  return user ? `${user.id}:${user.tenantId}` : null;
+}
+
 export const useFavoritesStore = create<FavoritesState>((set, get) => ({
   ids: new Set<string>(),
   isLoading: false,
@@ -46,17 +51,30 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       return;
     }
 
+    const userKey = currentUserKey();
     set({ isLoading: true });
 
     try {
       const auth = await getAuthenticatedRequestOptions();
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       const result = await getFavoriteIds(auth);
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       set({
         ids: new Set(result.listingIds),
         isLoaded: true,
         isLoading: false,
       });
     } catch (error) {
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       set({ isLoading: false });
       throw error;
     }
@@ -72,6 +90,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
       return;
     }
 
+    const userKey = currentUserKey();
     const wasFavorited = get().ids.has(normalizedListingId);
 
     set((state) => {
@@ -94,12 +113,23 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
     try {
       const auth = await getAuthenticatedRequestOptions();
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       if (wasFavorited) {
         await removeFavorite(normalizedListingId, auth);
       } else {
         await addFavorite(normalizedListingId, auth);
       }
+      if (currentUserKey() !== userKey) {
+        return;
+      }
     } catch (error) {
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       set((state) => {
         const rollbackIds = new Set(state.ids);
         if (wasFavorited) {
@@ -117,6 +147,10 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         };
       });
       throw error;
+    }
+
+    if (currentUserKey() !== userKey) {
+      return;
     }
 
     set((state) => {

@@ -46,6 +46,11 @@ async function getAuthenticatedRequestOptions(): Promise<AuthenticatedRequestOpt
   };
 }
 
+function currentUserKey(): string | null {
+  const user = useAuthStore.getState().user;
+  return user ? `${user.id}:${user.tenantId}` : null;
+}
+
 function sortByUpdatedAtDesc(items: SavedSearchRecord[]): SavedSearchRecord[] {
   return [...items].sort((a, b) => {
     const aTime = new Date(a.updatedAt).getTime();
@@ -74,11 +79,20 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
       return;
     }
 
+    const userKey = currentUserKey();
     set({ isLoading: true, error: null });
 
     try {
       const auth = await getAuthenticatedRequestOptions();
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       const result = await getSavedSearches(auth, page, limit);
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       set({
         items: result.savedSearches,
         isLoaded: true,
@@ -86,6 +100,10 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
         error: null,
       });
     } catch (error) {
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : 'Failed to load saved searches.';
       set({
@@ -97,11 +115,20 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
   },
 
   create: async (input) => {
+    const userKey = currentUserKey();
     set({ isLoading: true, error: null });
 
     try {
       const auth = await getAuthenticatedRequestOptions();
+      if (currentUserKey() !== userKey) {
+        throw new Error('User context changed');
+      }
+
       const result = await createSavedSearch(input, auth);
+      if (currentUserKey() !== userKey) {
+        return result;
+      }
+
       set((state) => ({
         items: upsertSavedSearch(state.items, result.savedSearch),
         isLoaded: true,
@@ -110,6 +137,10 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
       }));
       return result;
     } catch (error) {
+      if (currentUserKey() !== userKey) {
+        throw error;
+      }
+
       const message =
         error instanceof Error ? error.message : 'Failed to save search.';
       set({
@@ -121,11 +152,20 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
   },
 
   update: async (id, patch) => {
+    const userKey = currentUserKey();
     set({ isLoading: true, error: null });
 
     try {
       const auth = await getAuthenticatedRequestOptions();
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       const result = await updateSavedSearch(id, patch, auth);
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       set((state) => ({
         items: upsertSavedSearch(state.items, result.savedSearch),
         isLoading: false,
@@ -133,6 +173,10 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
         error: null,
       }));
     } catch (error) {
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : 'Failed to update saved search.';
       set({
@@ -144,17 +188,30 @@ export const useSavedSearchesStore = create<SavedSearchesState>((set, get) => ({
   },
 
   remove: async (id) => {
+    const userKey = currentUserKey();
     set({ isLoading: true, error: null });
 
     try {
       const auth = await getAuthenticatedRequestOptions();
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       await deleteSavedSearch(id, auth);
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       set((state) => ({
         items: state.items.filter((item) => item.id !== id),
         isLoading: false,
         error: null,
       }));
     } catch (error) {
+      if (currentUserKey() !== userKey) {
+        return;
+      }
+
       const message =
         error instanceof Error ? error.message : 'Failed to delete saved search.';
       set({
