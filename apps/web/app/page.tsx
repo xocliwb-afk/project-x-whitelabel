@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { fetchBrandDirect } from "@/lib/brand";
 
+export const dynamic = "force-dynamic";
+
 export default async function OverviewPage() {
   try {
     const brand = await fetchBrandDirect();

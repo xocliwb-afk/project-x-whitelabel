@@ -9,6 +9,8 @@ import DevAnalyticsPanel from "@/components/DevAnalyticsPanel";
 import AuthInitializer from "@/components/auth/auth-initializer";
 import { fetchBrandDirect, generateBrandCssVars } from "@/lib/brand";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const brand = await fetchBrandDirect();
