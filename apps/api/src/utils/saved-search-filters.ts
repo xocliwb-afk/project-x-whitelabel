@@ -95,6 +95,12 @@ function normalizeArray(value: unknown): string[] | null {
   return cleaned.length > 0 ? cleaned : null;
 }
 
+function validateNoUnknownKeys(raw: Record<string, unknown>): string[] {
+  return Object.keys(raw).filter(
+    (key) => !ALLOWED_KEYS.has(key as keyof SavedSearchFilters),
+  );
+}
+
 export function canonicalizeFilters(raw: Record<string, unknown>): SavedSearchFilters {
   const canonical: Partial<SavedSearchFilters> = {};
 
@@ -157,6 +163,14 @@ export function validateFilters(
 ): { valid: true; filters: SavedSearchFilters } | { valid: false; error: string } {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { valid: false, error: 'Filters must be an object' };
+  }
+
+  const unknownKeys = validateNoUnknownKeys(raw as Record<string, unknown>);
+  if (unknownKeys.length > 0) {
+    return {
+      valid: false,
+      error: `Unknown filter keys: ${unknownKeys.join(', ')}`,
+    };
   }
 
   const canonical = canonicalizeFilters(raw as Record<string, unknown>);
