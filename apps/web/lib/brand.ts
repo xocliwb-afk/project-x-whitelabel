@@ -103,10 +103,15 @@ export async function fetchBrandDirect(tenantId = process.env.NEXT_PUBLIC_TENANT
         logoUrl: true,
         faviconUrl: true,
         active: true,
+        tenant: {
+          select: {
+            active: true,
+          },
+        },
       },
     });
 
-    if (!brand || !brand.active) {
+    if (!brand || !brand.active || !brand.tenant?.active) {
       throw new Error("[brand] No active brand configuration found for tenant");
     }
 
