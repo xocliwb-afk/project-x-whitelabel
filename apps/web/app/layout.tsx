@@ -7,11 +7,11 @@ import { BrandProvider } from "@/context/BrandContext";
 import LeadModalContainer from "@/components/LeadModalContainer";
 import DevAnalyticsPanel from "@/components/DevAnalyticsPanel";
 import AuthInitializer from "@/components/auth/auth-initializer";
-import { fetchBrand, generateBrandCssVars } from "@/lib/brand";
+import { fetchBrandDirect, generateBrandCssVars } from "@/lib/brand";
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const brand = await fetchBrand();
+    const brand = await fetchBrandDirect();
     return {
       title: {
         default: brand.brandName,
@@ -49,7 +49,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   try {
-    const brand = await fetchBrand();
+    const brand = await fetchBrandDirect();
     const brandCssVars = generateBrandCssVars(brand);
 
     return (

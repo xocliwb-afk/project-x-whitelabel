@@ -1,4 +1,5 @@
 import type { BrandConfig } from "@project-x/shared-types";
+import { prisma } from "@project-x/database";
 import brandJson from "../../../config/brand.json";
 
 /**
@@ -14,7 +15,8 @@ const brand: BrandConfig = getBrand();
 export default brand;
 
 /**
- * Fetch brand config from the API (server-side).
+ * Fetch brand config from the API over HTTP.
+ * Not used in SSR; kept for client-side and future non-SSR callers.
  * Uses NEXT_PUBLIC_TENANT_ID as x-tenant-id header if set.
  * Falls back to static brand.json only in local development.
  */
@@ -59,6 +61,57 @@ export async function fetchBrand(): Promise<BrandConfig> {
       return getBrand();
     }
     throw err;
+  }
+}
+
+function mergeBrandConfig(
+  brand: { config: unknown; logoUrl: string | null; faviconUrl: string | null },
+): BrandConfig {
+  const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig;
+
+  if (brand.logoUrl && config.logo) {
+    config.logo.url = brand.logoUrl;
+  }
+
+  if (brand.faviconUrl) {
+    config.favicon = brand.faviconUrl;
+  }
+
+  return config;
+}
+
+export async function fetchBrandDirect(tenantId = process.env.NEXT_PUBLIC_TENANT_ID?.trim()): Promise<BrandConfig> {
+  if (!tenantId) {
+    if (process.env.NODE_ENV === "development") {
+      return getBrand();
+    }
+
+    throw new Error("[brand] Missing NEXT_PUBLIC_TENANT_ID for direct brand lookup");
+  }
+
+  try {
+    const brand = await prisma.brand.findUnique({
+      where: { tenantId },
+      select: {
+        config: true,
+        logoUrl: true,
+        faviconUrl: true,
+        active: true,
+      },
+    });
+
+    if (!brand || !brand.active) {
+      throw new Error("[brand] No active brand configuration found for tenant");
+    }
+
+    return mergeBrandConfig(brand);
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[brand] Error loading brand directly, using static fallback:", error);
+      return getBrand();
+    }
+
+    throw error;
   }
 }
 

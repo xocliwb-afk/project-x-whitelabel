@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { fetchBrand } from "@/lib/brand";
+import { fetchBrandDirect } from "@/lib/brand";
 
 export default async function OverviewPage() {
   try {
-    const brand = await fetchBrand();
+    const brand = await fetchBrandDirect();
 
     return (
       <div className="h-full w-full overflow-y-auto bg-surface">
