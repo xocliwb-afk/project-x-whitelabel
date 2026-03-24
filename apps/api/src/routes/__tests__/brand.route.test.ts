@@ -100,6 +100,7 @@ describe('brand route', () => {
       error: true,
       message: 'x-tenant-id header is required',
       code: 'TENANT_REQUIRED',
+      status: 400,
     });
   });
 

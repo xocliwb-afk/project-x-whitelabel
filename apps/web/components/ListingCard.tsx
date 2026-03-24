@@ -17,6 +17,7 @@ import {
   getStatusBadgeClasses,
   getThumbnailUrl,
 } from '@/lib/listingFormat';
+import FavoriteButton from '@/components/FavoriteButton';
 
 interface ListingCardProps {
   listing: Listing;
@@ -116,6 +117,9 @@ export function ListingCard({
       aria-label={`${fullAddress} — ${priceText}, ${bedsLabel} bed, ${bathsLabel} bath. View details.`}
     >
       <div className="relative w-full overflow-hidden bg-slate-200 dark:bg-slate-700 aspect-[4/3] md:aspect-[16/9]">
+        <div className="absolute right-3 top-3 z-10">
+          <FavoriteButton listingId={listing.id} />
+        </div>
         <Image
           src={currentImageUrl}
           alt={`Image of ${fullAddress}`}

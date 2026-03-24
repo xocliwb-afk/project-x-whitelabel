@@ -180,6 +180,16 @@ export default function Header() {
                 {aboutNavItem.label}
               </Link>
             )}
+            {isAuthInitialized && authUser ? (
+              <>
+                <Link href="/favorites" className={navLinkClass("/favorites")}>
+                  Favorites
+                </Link>
+                <Link href="/saved-searches" className={navLinkClass("/saved-searches")}>
+                  Saved Searches
+                </Link>
+              </>
+            ) : null}
             <button
               type="button"
               onClick={() =>
@@ -269,6 +279,28 @@ export default function Header() {
                 </ul>
               )}
             </li>
+            {authUser ? (
+              <li>
+                <Link
+                  href="/favorites"
+                  className={navLinkClass("/favorites")}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Favorites
+                </Link>
+              </li>
+            ) : null}
+            {authUser ? (
+              <li>
+                <Link
+                  href="/saved-searches"
+                  className={navLinkClass("/saved-searches")}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Saved Searches
+                </Link>
+              </li>
+            ) : null}
             <li>
               <button
                 type="button"

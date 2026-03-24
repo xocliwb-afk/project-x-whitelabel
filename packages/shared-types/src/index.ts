@@ -206,3 +206,5 @@ export * from './tour';
 export * from './brand';
 export * from './narration';
 export * from './auth';
+export * from './saved-search';
+export * from './favorite';

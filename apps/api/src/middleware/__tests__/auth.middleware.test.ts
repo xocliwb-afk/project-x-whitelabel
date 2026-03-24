@@ -56,6 +56,7 @@ describe('auth middleware', () => {
       error: true,
       message: 'User not provisioned',
       code: 'USER_NOT_PROVISIONED',
+      status: 401,
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -95,6 +96,7 @@ describe('auth middleware', () => {
       error: true,
       message: 'Tenant mismatch',
       code: 'TENANT_MISMATCH',
+      status: 403,
     });
     expect(next).not.toHaveBeenCalled();
   });

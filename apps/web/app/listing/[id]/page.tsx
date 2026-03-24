@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import BackButton from '@/components/BackButton';
+import FavoriteButton from '@/components/FavoriteButton';
 import ListingImageGallery from '@/components/ListingImageGallery';
 import ContactAgentPanel from '@/components/listing-detail/ContactAgentPanel';
 import SiteFooter from '@/components/footer/SiteFooter';
@@ -159,6 +160,7 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <BackButton />
+          <FavoriteButton listingId={listing.id} />
         </div>
 
         <div className="space-y-4 rounded-2xl border border-border bg-white/80 p-4 shadow-sm">

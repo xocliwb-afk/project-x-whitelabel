@@ -49,7 +49,8 @@ function toAuthUser(user: {
 function respondAuthFailure(res: Response, error: unknown) {
   const message =
     error instanceof AuthTokenError ? error.message : 'Invalid or expired token';
-  return res.status(401).json({ error: true, message });
+  const code = message.toLowerCase().includes('expired') ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID';
+  return res.status(401).json({ error: true, message, code, status: 401 });
 }
 
 function respondAccessFailure(
@@ -58,7 +59,7 @@ function respondAccessFailure(
   message: string,
   code: string,
 ) {
-  return res.status(status).json({ error: true, message, code });
+  return res.status(status).json({ error: true, message, code, status });
 }
 
 function hasTokenTenantMismatch(req: Request): boolean {
@@ -84,7 +85,12 @@ export async function requireVerifiedToken(
 ) {
   const token = extractBearerToken(req);
   if (!token) {
-    return res.status(401).json({ error: true, message: 'Authentication required' });
+    return res.status(401).json({
+      error: true,
+      message: 'Authentication required',
+      code: 'UNAUTHENTICATED',
+      status: 401,
+    });
   }
 
   try {
@@ -168,7 +174,12 @@ export async function attachAuth(req: Request, _res: Response, next: NextFunctio
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = extractBearerToken(req);
   if (!token) {
-    return res.status(401).json({ error: true, message: 'Authentication required' });
+    return res.status(401).json({
+      error: true,
+      message: 'Authentication required',
+      code: 'UNAUTHENTICATED',
+      status: 401,
+    });
   }
 
   try {
