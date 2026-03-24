@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   findMany: vi.fn(),
   create: vi.fn(),
-  update: vi.fn(),
+  updateMany: vi.fn(),
   deleteMany: vi.fn(),
 }));
 
@@ -15,7 +15,7 @@ vi.mock('@project-x/database', () => ({
       findFirst: mocks.findFirst,
       findMany: mocks.findMany,
       create: mocks.create,
-      update: mocks.update,
+      updateMany: mocks.updateMany,
       deleteMany: mocks.deleteMany,
     },
   },
@@ -76,4 +76,52 @@ describe('tour.repository access scoping', () => {
       });
     },
   );
+
+  it('updates tours atomically within the scoped tenant and user boundary', async () => {
+    const updatedTour = {
+      id: 'tour-1',
+      tenantId: 'tenant-1',
+      userId: 'consumer-1',
+      stops: [],
+    };
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+    mocks.findFirst.mockResolvedValue(updatedTour);
+
+    const result = await tourRepository.update(
+      'tour-1',
+      {
+        tenantId: 'tenant-1',
+        userId: 'consumer-1',
+        role: 'CONSUMER',
+      },
+      {
+        title: 'Updated title',
+      },
+    );
+
+    expect(mocks.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'tour-1',
+        tenantId: 'tenant-1',
+        userId: 'consumer-1',
+      },
+      data: {
+        title: 'Updated title',
+        narrationPayloads: undefined,
+      },
+    });
+    expect(mocks.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'tour-1',
+        tenantId: 'tenant-1',
+        userId: 'consumer-1',
+      },
+      include: {
+        stops: {
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+    expect(result).toEqual(updatedTour);
+  });
 });

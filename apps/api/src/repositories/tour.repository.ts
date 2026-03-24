@@ -97,24 +97,28 @@ export async function update(
   },
   db: TourDbClient = prisma,
 ): Promise<TourWithStops | null> {
-  const existing = await db.tour.findFirst({
-    where: {
-      id,
-      ...buildScopedWhere(scope),
-    },
-  });
-  if (!existing) return null;
-
   const { narrationPayloads, ...tourFields } = data;
+  const where = {
+    id,
+    ...buildScopedWhere(scope),
+  };
 
-  return db.tour.update({
-    where: { id },
+  const result = await db.tour.updateMany({
+    where,
     data: {
       ...tourFields,
       narrationPayloads: narrationPayloads !== undefined
         ? (narrationPayloads != null ? JSON.parse(JSON.stringify(narrationPayloads)) : null)
         : undefined,
     },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  return db.tour.findFirst({
+    where,
     include: INCLUDE_STOPS,
   });
 }

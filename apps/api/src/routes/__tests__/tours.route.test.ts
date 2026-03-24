@@ -16,7 +16,7 @@ describe('tours routes', () => {
 
   beforeAll(async () => {
     vi.doMock('../../middleware/tenant', () => ({
-      resolveTenant: (req: any, _res: any, next: any) => {
+      resolveRequiredTenant: (req: any, _res: any, next: any) => {
         req.tenantId = 'tenant-1';
         next();
       },

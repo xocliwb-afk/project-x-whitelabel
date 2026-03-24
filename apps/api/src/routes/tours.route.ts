@@ -3,7 +3,7 @@ import { PlanTourRequest, PlannedTour, NormalizedListing } from '@project-x/shar
 import { planTour, getTourById, updateTour, deleteTour, listTours } from '../services/tour.service';
 import { generateTourNarrations } from '../services/narration.service';
 import { getListingProvider } from '../utils/provider.factory';
-import { resolveTenant } from '../middleware/tenant';
+import { resolveRequiredTenant } from '../middleware/tenant';
 import { requireAuth } from '../middleware/auth';
 import { asyncHandler } from '../utils/async-handler';
 
@@ -26,7 +26,7 @@ function isPlanTourRequest(body: unknown): body is PlanTourRequest {
 }
 
 // Apply tenant + required auth to all persisted tour routes.
-router.use(resolveTenant);
+router.use(resolveRequiredTenant);
 router.use(requireAuth);
 
 /**
