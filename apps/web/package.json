@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "pnpm --dir ../../packages/database build && pnpm --dir ../../packages/shared-types build",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
