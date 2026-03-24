@@ -23,7 +23,10 @@ export default function Header() {
   const [neighborhoodsOpen, setNeighborhoodsOpen] = useState(false);
   const [neighborhoodsMobileOpen, setNeighborhoodsMobileOpen] = useState(false);
   const openLeadModal = useLeadModalStore((s) => s.open);
-  const authUser = useAuthStore((s) => s.user);
+  const { authUser, isAuthInitialized } = useAuthStore((s) => ({
+    authUser: s.user,
+    isAuthInitialized: s.isInitialized,
+  }));
   const neighborhoodsMenuRef = useRef<HTMLDivElement | null>(null);
 
   const neighborhoods = (brand.neighborhoods ?? []).map((n) => ({
@@ -185,7 +188,9 @@ export default function Header() {
             >
               Contact
             </button>
-            {authUser ? (
+            {!isAuthInitialized ? (
+              <div className="h-9 w-24 rounded-full border border-white/40 bg-white/30" aria-hidden="true" />
+            ) : authUser ? (
               <UserMenu />
             ) : (
               <Link href="/login" className={styles.navLink}>

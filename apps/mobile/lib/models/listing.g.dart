@@ -11,15 +11,13 @@ Listing _$ListingFromJson(Map<String, dynamic> json) => Listing(
       mlsId: json['mlsId'] as String,
       listPrice: (json['listPrice'] as num).toInt(),
       listPriceFormatted: json['listPriceFormatted'] as String,
-      address:
-          ListingAddress.fromJson(json['address'] as Map<String, dynamic>),
+      address: ListingAddress.fromJson(json['address'] as Map<String, dynamic>),
       media: ListingMedia.fromJson(json['media'] as Map<String, dynamic>),
       attribution: json['attribution'] == null
           ? null
           : ListingAttribution.fromJson(
               json['attribution'] as Map<String, dynamic>),
-      details:
-          ListingDetails.fromJson(json['details'] as Map<String, dynamic>),
+      details: ListingDetails.fromJson(json['details'] as Map<String, dynamic>),
       meta: ListingMeta.fromJson(json['meta'] as Map<String, dynamic>),
       agent: json['agent'] == null
           ? null
@@ -44,17 +42,17 @@ Map<String, dynamic> _$ListingToJson(Listing instance) => <String, dynamic>{
       'mlsId': instance.mlsId,
       'listPrice': instance.listPrice,
       'listPriceFormatted': instance.listPriceFormatted,
-      'address': instance.address.toJson(),
-      'media': instance.media.toJson(),
-      'attribution': instance.attribution?.toJson(),
-      'details': instance.details.toJson(),
-      'meta': instance.meta.toJson(),
-      'agent': instance.agent?.toJson(),
-      'coAgent': instance.coAgent?.toJson(),
-      'office': instance.office?.toJson(),
+      'address': instance.address,
+      'media': instance.media,
+      'attribution': instance.attribution,
+      'details': instance.details,
+      'meta': instance.meta,
+      'agent': instance.agent,
+      'coAgent': instance.coAgent,
+      'office': instance.office,
       'description': instance.description,
-      'tax': instance.tax?.toJson(),
-      'school': instance.school?.toJson(),
+      'tax': instance.tax,
+      'school': instance.school,
     };
 
 ListingAddress _$ListingAddressFromJson(Map<String, dynamic> json) =>
@@ -83,8 +81,7 @@ Map<String, dynamic> _$ListingAddressToJson(ListingAddress instance) =>
       'lng': instance.lng,
     };
 
-ListingMedia _$ListingMediaFromJson(Map<String, dynamic> json) =>
-    ListingMedia(
+ListingMedia _$ListingMediaFromJson(Map<String, dynamic> json) => ListingMedia(
       photos:
           (json['photos'] as List<dynamic>).map((e) => e as String).toList(),
       thumbnailUrl: json['thumbnailUrl'] as String?,
@@ -147,8 +144,7 @@ Map<String, dynamic> _$ListingMetaToJson(ListingMeta instance) =>
       'mlsName': instance.mlsName,
     };
 
-ListingAgent _$ListingAgentFromJson(Map<String, dynamic> json) =>
-    ListingAgent(
+ListingAgent _$ListingAgentFromJson(Map<String, dynamic> json) => ListingAgent(
       id: json['id'],
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,

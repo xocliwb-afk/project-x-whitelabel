@@ -24,10 +24,3 @@ export function getSupabaseAdmin(): SupabaseClient {
   }
   return _client;
 }
-
-/** Convenience re-export for backward compat */
-export const supabaseAdmin = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    return (getSupabaseAdmin() as any)[prop];
-  },
-});

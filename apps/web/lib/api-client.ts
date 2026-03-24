@@ -27,6 +27,11 @@ import { getApiBaseUrl } from "./getApiBaseUrl";
 const API_BASE_URL = getApiBaseUrl();
 const inflightListings = new Map<string, Promise<PaginatedListingsResponse>>();
 
+type AuthenticatedRequestOptions = {
+  accessToken: string;
+  tenantId: string;
+};
+
 /**
  * Fetches a paginated list of listings from the backend API.
  * Safe for both server and client components (uses GET with query params).
@@ -156,12 +161,23 @@ export async function fetchListing(id: string): Promise<{ listing: Listing }> {
   return (await res.json()) as { listing: Listing };
 }
 
-export async function planTourApi(payload: PlanTourRequest): Promise<PlannedTour> {
+export async function planTourApi(
+  payload: PlanTourRequest,
+  auth?: AuthenticatedRequestOptions,
+): Promise<PlannedTour> {
   const url = `${API_BASE_URL}/api/tours`;
+
+  if (auth && auth.tenantId.trim().length === 0) {
+    throw new Error('Missing tenant configuration for authenticated tour request.');
+  }
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(auth ? { Authorization: `Bearer ${auth.accessToken}` } : {}),
+      ...(auth?.tenantId ? { 'x-tenant-id': auth.tenantId } : {}),
+    },
     body: JSON.stringify(payload),
     cache: 'no-store',
   });

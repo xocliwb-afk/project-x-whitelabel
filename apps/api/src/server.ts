@@ -12,6 +12,7 @@ import brandRouter from "./routes/brand.route";
 import authRouter from "./routes/auth.route";
 import { getListingProvider } from "./utils/provider.factory";
 import { CaptchaService } from "./services/captcha.service";
+import { Prisma } from "@project-x/database";
 
 dotenv.config();
 
@@ -178,9 +179,37 @@ app.get("/ready", (req, res) => {
 // Global JSON error handler — must be after all routes
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[API] Unhandled error:', err);
-  const status = err.status || err.statusCode || 500;
-  const message = status < 500 ? err.message : 'Internal server error';
-  res.status(status).json({ error: true, message });
+  const explicitStatus = Number(err?.status ?? err?.statusCode);
+  const prismaStatus =
+    err instanceof Prisma.PrismaClientKnownRequestError
+      ? err.code === 'P2002'
+        ? 409
+        : err.code === 'P2025'
+          ? 404
+          : undefined
+      : undefined;
+  const status =
+    Number.isFinite(explicitStatus) && explicitStatus > 0
+      ? explicitStatus
+      : prismaStatus ?? 500;
+
+  const message =
+    status >= 500
+      ? 'Internal server error'
+      : err instanceof Prisma.PrismaClientKnownRequestError
+        ? status === 409
+          ? 'Resource already exists'
+          : status === 404
+            ? 'Resource not found'
+            : err.message
+        : err?.message || 'Request failed';
+  const code = typeof err?.code === 'string' ? err.code : undefined;
+
+  res.status(status).json({
+    error: true,
+    message,
+    ...(code ? { code } : {}),
+  });
 });
 
 app.listen(PORT, () => {

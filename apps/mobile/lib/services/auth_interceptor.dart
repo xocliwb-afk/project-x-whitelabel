@@ -1,47 +1,81 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+
 import 'auth_service.dart';
 
 /// Dio interceptor that automatically attaches the Supabase access token
 /// to every outgoing request and handles 401 token refresh.
 class AuthInterceptor extends Interceptor {
   final AuthService _authService;
+  final Dio _dio;
 
-  /// Header key used to mark a request as already retried (prevent loops).
-  static const _retriedKey = 'x-auth-retried';
+  /// Marker used to prevent retry loops on the same request.
+  static const _retriedKey = 'auth_retried';
 
-  AuthInterceptor(this._authService);
+  Completer<String?>? _refreshCompleter;
+
+  AuthInterceptor(this._authService, this._dio);
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final token = _authService.currentAccessToken;
-    if (token != null) {
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
   }
 
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
-    // Only attempt refresh on 401 and only once per request.
-    if (err.response?.statusCode == 401 &&
-        err.requestOptions.headers[_retriedKey] != true) {
-      final newToken = await _authService.refreshSession();
-
-      if (newToken != null) {
-        // Mark the retry so we don't loop.
-        err.requestOptions.headers[_retriedKey] = true;
-        err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
-
-        try {
-          // Retry the original request with the fresh token.
-          final response = await Dio().fetch(err.requestOptions);
-          return handler.resolve(response);
-        } on DioException catch (retryError) {
-          return handler.next(retryError);
-        }
-      }
+  Future<String?> _refreshAccessToken() async {
+    if (_refreshCompleter != null) {
+      return _refreshCompleter!.future;
     }
 
-    handler.next(err);
+    final completer = Completer<String?>();
+    _refreshCompleter = completer;
+
+    try {
+      completer.complete(await _authService.refreshSession());
+    } catch (_) {
+      completer.complete(null);
+    } finally {
+      _refreshCompleter = null;
+    }
+
+    return completer.future;
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    final requestOptions = err.requestOptions;
+    final alreadyRetried = requestOptions.extra[_retriedKey] == true;
+
+    if (err.response?.statusCode != 401 || alreadyRetried) {
+      handler.next(err);
+      return;
+    }
+
+    final newToken = await _refreshAccessToken();
+    if (newToken == null || newToken.isEmpty) {
+      handler.next(err);
+      return;
+    }
+
+    final headers = Map<String, dynamic>.from(requestOptions.headers)
+      ..['Authorization'] = 'Bearer $newToken';
+    final extra = Map<String, dynamic>.from(requestOptions.extra)
+      ..[_retriedKey] = true;
+
+    try {
+      final response = await _dio.fetch<dynamic>(
+        requestOptions.copyWith(
+          headers: headers,
+          extra: extra,
+        ),
+      );
+      handler.resolve(response);
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    }
   }
 }

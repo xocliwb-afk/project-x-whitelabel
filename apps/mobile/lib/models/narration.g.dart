@@ -28,8 +28,8 @@ Map<String, dynamic> _$NarrationPayloadToJson(NarrationPayload instance) =>
       'listingId': instance.listingId,
       'trigger': instance.trigger,
       'narrationText': instance.narrationText,
-      'listingSummary': instance.listingSummary?.toJson(),
-      'navigationContext': instance.navigationContext?.toJson(),
+      'listingSummary': instance.listingSummary,
+      'navigationContext': instance.navigationContext,
     };
 
 NarrationListingSummary _$NarrationListingSummaryFromJson(
@@ -78,8 +78,8 @@ ProximityEvent _$ProximityEventFromJson(Map<String, dynamic> json) =>
       tourStopId: json['tourStopId'] as String,
       listingId: json['listingId'] as String,
       type: json['type'] as String,
-      location: ProximityLocation.fromJson(
-          json['location'] as Map<String, dynamic>),
+      location:
+          ProximityLocation.fromJson(json['location'] as Map<String, dynamic>),
       distanceMeters: (json['distanceMeters'] as num).toInt(),
       timestamp: json['timestamp'] as String,
     );
@@ -90,7 +90,7 @@ Map<String, dynamic> _$ProximityEventToJson(ProximityEvent instance) =>
       'tourStopId': instance.tourStopId,
       'listingId': instance.listingId,
       'type': instance.type,
-      'location': instance.location.toJson(),
+      'location': instance.location,
       'distanceMeters': instance.distanceMeters,
       'timestamp': instance.timestamp,
     };

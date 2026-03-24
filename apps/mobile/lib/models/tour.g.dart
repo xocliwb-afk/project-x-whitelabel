@@ -36,10 +36,8 @@ Tour _$TourFromJson(Map<String, dynamic> json) => Tour(
       clientName: json['clientName'] as String,
       date: json['date'] as String,
       startTime: json['startTime'] as String,
-      defaultDurationMinutes:
-          (json['defaultDurationMinutes'] as num).toInt(),
-      defaultBufferMinutes:
-          (json['defaultBufferMinutes'] as num).toInt(),
+      defaultDurationMinutes: (json['defaultDurationMinutes'] as num).toInt(),
+      defaultBufferMinutes: (json['defaultBufferMinutes'] as num).toInt(),
       stops: (json['stops'] as List<dynamic>)
           .map((e) => TourStop.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -56,9 +54,8 @@ Map<String, dynamic> _$TourToJson(Tour instance) => <String, dynamic>{
       'startTime': instance.startTime,
       'defaultDurationMinutes': instance.defaultDurationMinutes,
       'defaultBufferMinutes': instance.defaultBufferMinutes,
-      'stops': instance.stops.map((e) => e.toJson()).toList(),
-      'narrationPayloads':
-          instance.narrationPayloads?.map((e) => e.toJson()).toList(),
+      'stops': instance.stops,
+      'narrationPayloads': instance.narrationPayloads,
     };
 
 TourStopInput _$TourStopInputFromJson(Map<String, dynamic> json) =>
@@ -85,10 +82,8 @@ PlanTourRequest _$PlanTourRequestFromJson(Map<String, dynamic> json) =>
           .map((e) => TourStopInput.fromJson(e as Map<String, dynamic>))
           .toList(),
       startTime: json['startTime'] as String,
-      defaultDurationMinutes:
-          (json['defaultDurationMinutes'] as num).toInt(),
-      defaultBufferMinutes:
-          (json['defaultBufferMinutes'] as num).toInt(),
+      defaultDurationMinutes: (json['defaultDurationMinutes'] as num).toInt(),
+      defaultBufferMinutes: (json['defaultBufferMinutes'] as num).toInt(),
       timeZone: json['timeZone'] as String?,
     );
 
@@ -96,7 +91,7 @@ Map<String, dynamic> _$PlanTourRequestToJson(PlanTourRequest instance) =>
     <String, dynamic>{
       'date': instance.date,
       'clientName': instance.clientName,
-      'stops': instance.stops.map((e) => e.toJson()).toList(),
+      'stops': instance.stops,
       'startTime': instance.startTime,
       'defaultDurationMinutes': instance.defaultDurationMinutes,
       'defaultBufferMinutes': instance.defaultBufferMinutes,

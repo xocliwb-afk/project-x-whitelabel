@@ -4,69 +4,81 @@ import { planTour, getTourById, updateTour, deleteTour, listTours } from '../ser
 import { generateTourNarrations } from '../services/narration.service';
 import { getListingProvider } from '../utils/provider.factory';
 import { resolveTenant } from '../middleware/tenant';
-import { attachAuth } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
+import { asyncHandler } from '../utils/async-handler';
 
 const router = express.Router();
 
-// Apply tenant + optional auth to all tour routes
+function isPlanTourRequest(body: unknown): body is PlanTourRequest {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return false;
+  }
+
+  const value = body as Record<string, unknown>;
+  return (
+    typeof value.date === 'string' &&
+    typeof value.startTime === 'string' &&
+    typeof value.defaultDurationMinutes === 'number' &&
+    typeof value.defaultBufferMinutes === 'number' &&
+    Array.isArray(value.stops) &&
+    value.stops.length > 0
+  );
+}
+
+// Apply tenant + required auth to all persisted tour routes.
 router.use(resolveTenant);
-router.use(attachAuth);
+router.use(requireAuth);
 
 /**
  * GET /api/tours
  * List tours for the current tenant.
  */
-router.get('/', async (req, res, next) => {
-  try {
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
     const tours = await listTours({
       tenantId: req.tenantId!,
-      userId: req.user?.id ?? null,
+      userId: req.user!.id,
+      role: req.user!.role,
     });
     return res.status(200).json({ tours });
-  } catch (err) {
-    return next(err);
-  }
-});
+  }),
+);
 
 /**
  * POST /api/tours
  * Plan a new tour with scheduled stop times.
  */
-router.post('/', async (req, res, next) => {
-  try {
-    const body = req.body as PlanTourRequest;
-
-    if (
-      !body ||
-      !body.date ||
-      !body.startTime ||
-      typeof body.defaultDurationMinutes !== 'number' ||
-      typeof body.defaultBufferMinutes !== 'number' ||
-      !Array.isArray(body.stops) ||
-      body.stops.length === 0
-    ) {
+router.post(
+  '/',
+  asyncHandler(async (req, res) => {
+    if (!isPlanTourRequest(req.body)) {
       return res
         .status(400)
         .json({ error: true, message: 'Invalid tour planning request' });
     }
 
-    const planned: PlannedTour = await planTour(body, {
+    const planned: PlannedTour = await planTour(req.body, {
       tenantId: req.tenantId!,
-      userId: req.user?.id ?? null,
+      userId: req.user!.id,
+      role: req.user!.role,
     });
     return res.status(200).json(planned);
-  } catch (err) {
-    return next(err);
-  }
-});
+  }),
+);
 
 /**
  * GET /api/tours/:id/narrations
  * Returns narration payloads for a tour, enriched with listing data.
  */
-router.get('/:id/narrations', async (req, res, next) => {
-  try {
-    const tour = await getTourById(req.params.id, req.tenantId!);
+router.get(
+  '/:id/narrations',
+  asyncHandler(async (req, res) => {
+    const tour = await getTourById(req.params.id, {
+      tenantId: req.tenantId!,
+      userId: req.user!.id,
+      role: req.user!.role,
+    });
     if (!tour) {
       return res.status(404).json({ error: true, message: 'Tour not found' });
     }
@@ -89,57 +101,64 @@ router.get('/:id/narrations', async (req, res, next) => {
 
     const narrations = generateTourNarrations(tour, listings);
     return res.status(200).json({ tourId: tour.id, narrations });
-  } catch (err) {
-    return next(err);
-  }
-});
+  }),
+);
 
 /**
  * GET /api/tours/:id
  * Get a single tour by ID.
  */
-router.get('/:id', async (req, res, next) => {
-  try {
-    const tour = await getTourById(req.params.id, req.tenantId!);
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const tour = await getTourById(req.params.id, {
+      tenantId: req.tenantId!,
+      userId: req.user!.id,
+      role: req.user!.role,
+    });
     if (!tour) {
       return res.status(404).json({ error: true, message: 'Tour not found' });
     }
     return res.status(200).json(tour);
-  } catch (err) {
-    return next(err);
-  }
-});
+  }),
+);
 
 /**
  * PUT /api/tours/:id
  * Update an existing tour (reorder stops, change times, add/remove stops).
  */
-router.put('/:id', async (req, res, next) => {
-  try {
-    const updated = await updateTour(req.params.id, req.tenantId!, req.body);
+router.put(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const updated = await updateTour(req.params.id, {
+      tenantId: req.tenantId!,
+      userId: req.user!.id,
+      role: req.user!.role,
+    }, req.body);
     if (!updated) {
       return res.status(404).json({ error: true, message: 'Tour not found' });
     }
     return res.status(200).json(updated);
-  } catch (err) {
-    return next(err);
-  }
-});
+  }),
+);
 
 /**
  * DELETE /api/tours/:id
  * Delete a tour.
  */
-router.delete('/:id', async (req, res, next) => {
-  try {
-    const deleted = await deleteTour(req.params.id, req.tenantId!);
+router.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const deleted = await deleteTour(req.params.id, {
+      tenantId: req.tenantId!,
+      userId: req.user!.id,
+      role: req.user!.role,
+    });
     if (!deleted) {
       return res.status(404).json({ error: true, message: 'Tour not found' });
     }
     return res.status(204).send();
-  } catch (err) {
-    return next(err);
-  }
-});
+  }),
+);
 
 export default router;

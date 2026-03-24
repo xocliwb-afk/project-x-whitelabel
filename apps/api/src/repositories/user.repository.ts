@@ -19,6 +19,20 @@ export async function create(data: {
   return prisma.user.create({ data });
 }
 
+export async function upsertBySupabaseId(data: {
+  supabaseId: string;
+  tenantId: string;
+  email: string;
+  displayName?: string | null;
+  phone?: string | null;
+}): Promise<User> {
+  return prisma.user.upsert({
+    where: { supabaseId: data.supabaseId },
+    update: {},
+    create: data,
+  });
+}
+
 export async function update(id: string, data: {
   displayName?: string | null;
   phone?: string | null;

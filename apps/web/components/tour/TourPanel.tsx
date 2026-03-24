@@ -10,11 +10,12 @@ type TourPanelProps = {
 };
 
 export function TourPanel({ isOpen, onClose }: TourPanelProps) {
-  const { tour, actions, isPlanning, planError } = useTourStore((state) => ({
+  const { tour, actions, isPlanning, planError, planNotice } = useTourStore((state) => ({
     tour: state.tour,
     actions: state.actions,
     isPlanning: state.isPlanning,
     planError: state.planError,
+    planNotice: state.planNotice,
   }));
 
   const sortedStops = useMemo(
@@ -138,6 +139,7 @@ export function TourPanel({ isOpen, onClose }: TourPanelProps) {
           {isPlanning ? 'Planning…' : 'Compute schedule'}
         </button>
         {planError && <p className="text-sm text-red-500">{planError}</p>}
+        {planNotice && <p className="text-sm text-text-muted">{planNotice}</p>}
         <button
           type="button"
           className="rounded-full bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"

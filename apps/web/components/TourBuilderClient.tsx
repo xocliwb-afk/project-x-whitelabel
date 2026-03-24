@@ -11,10 +11,11 @@ function formatTime(value?: string) {
 }
 
 export default function TourBuilderClient() {
-  const { tour, isPlanning, planError, actions } = useTourStore((state) => ({
+  const { tour, isPlanning, planError, planNotice, actions } = useTourStore((state) => ({
     tour: state.tour,
     isPlanning: state.isPlanning,
     planError: state.planError,
+    planNotice: state.planNotice,
     actions: state.actions,
   }));
 
@@ -186,9 +187,8 @@ export default function TourBuilderClient() {
           </ul>
         )}
 
-        {planError && (
-          <p className="mt-3 text-sm text-red-500">{planError}</p>
-        )}
+        {planError && <p className="mt-3 text-sm text-red-500">{planError}</p>}
+        {planNotice && <p className="mt-3 text-sm text-text-muted">{planNotice}</p>}
       </div>
     </div>
   );

@@ -17,10 +17,11 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 /// Riverpod provider for the API client (with auth interceptor).
 final apiClientProvider = Provider<ApiClient>((ref) {
   final authSvc = ref.watch(authServiceProvider);
-  return ApiClient(
+  final apiClient = ApiClient(
     baseUrl: AppConfig.apiBaseUrl,
-    interceptors: [AuthInterceptor(authSvc)],
   );
+  apiClient.addInterceptor(AuthInterceptor(authSvc, apiClient.dio));
+  return apiClient;
 });
 
 /// Riverpod provider that fetches brand config on app startup.
