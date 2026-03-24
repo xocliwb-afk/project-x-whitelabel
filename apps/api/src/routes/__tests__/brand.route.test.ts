@@ -37,22 +37,18 @@ vi.mock('@project-x/database', () => ({
 
 describe('brand route', () => {
   let router: express.Router;
+  let clearBrandCache: () => void;
   let serverInfo: { baseUrl: string; close: () => Promise<void> } | null = null;
 
   beforeAll(async () => {
-    vi.doMock('../../middleware/tenant', () => ({
-      resolveRequiredTenant: (req: any, _res: any, next: any) => {
-        const tenantId = req.headers['x-tenant-id'] || 'tenant-1';
-        req.tenantId = tenantId;
-        next();
-      },
-    }));
-
-    router = (await import('../brand.route')).default;
+    const brandRouteModule = await import('../brand.route');
+    router = brandRouteModule.default;
+    clearBrandCache = brandRouteModule.clearBrandCache;
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearBrandCache();
   });
 
   afterEach(async () => {
@@ -93,6 +89,20 @@ describe('brand route', () => {
     return info;
   }
 
+  it('returns 400 with TENANT_REQUIRED when x-tenant-id is missing', async () => {
+    const { baseUrl } = await startServer();
+
+    const res = await fetch(`${baseUrl}/api/brand`);
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data).toEqual({
+      error: true,
+      message: 'x-tenant-id header is required',
+      code: 'TENANT_REQUIRED',
+    });
+  });
+
   it('returns brand config for valid tenant', async () => {
     mockFindUnique.mockResolvedValue(mockBrand);
     const { baseUrl } = await startServer();
@@ -106,6 +116,44 @@ describe('brand route', () => {
     expect(data.brandName).toBe('Test Brand');
     expect(res.headers.get('cache-control')).toBe('public, max-age=300, stale-while-revalidate=60');
     expect(res.headers.get('vary')).toContain('x-tenant-id');
+  });
+
+  it('keeps cache isolated per tenant', async () => {
+    mockFindUnique.mockImplementation(async ({ where: { tenantId } }: { where: { tenantId: string } }) => {
+      if (tenantId === 'tenant-1') {
+        return mockBrand;
+      }
+
+      if (tenantId === 'tenant-2') {
+        return {
+          ...mockBrand,
+          id: 'brand-2',
+          tenantId: 'tenant-2',
+          config: {
+            ...mockBrand.config,
+            brandName: 'Tenant Two Brand',
+          },
+        };
+      }
+
+      return null;
+    });
+
+    const { baseUrl } = await startServer();
+
+    const tenantOneRes = await fetch(`${baseUrl}/api/brand`, {
+      headers: { 'x-tenant-id': 'tenant-1' },
+    });
+    const tenantOneData = await tenantOneRes.json();
+
+    const tenantTwoRes = await fetch(`${baseUrl}/api/brand`, {
+      headers: { 'x-tenant-id': 'tenant-2' },
+    });
+    const tenantTwoData = await tenantTwoRes.json();
+
+    expect(tenantOneData.brandName).toBe('Test Brand');
+    expect(tenantTwoData.brandName).toBe('Tenant Two Brand');
+    expect(mockFindUnique).toHaveBeenCalledTimes(2);
   });
 
   it('overrides logo.url when logoUrl is set on Brand row', async () => {
@@ -144,6 +192,33 @@ describe('brand route', () => {
     const data = await res.json();
     expect(data.code).toBe('BRAND_NOT_FOUND');
     expect(data.error).toBe(true);
+  });
+
+  it('returns refreshed brand data after the cache is cleared', async () => {
+    const { baseUrl } = await startServer();
+
+    mockFindUnique.mockResolvedValue(mockBrand);
+
+    const firstRes = await fetch(`${baseUrl}/api/brand`, {
+      headers: { 'x-tenant-id': 'tenant-1' },
+    });
+    const firstData = await firstRes.json();
+    expect(firstData.brandName).toBe('Test Brand');
+
+    mockFindUnique.mockResolvedValue({
+      ...mockBrand,
+      config: {
+        ...mockBrand.config,
+        brandName: 'Updated Brand Name',
+      },
+    });
+    clearBrandCache();
+
+    const secondRes = await fetch(`${baseUrl}/api/brand`, {
+      headers: { 'x-tenant-id': 'tenant-1' },
+    });
+    const secondData = await secondRes.json();
+    expect(secondData.brandName).toBe('Updated Brand Name');
   });
 
   it('returns 404 with BRAND_INACTIVE when brand is inactive', async () => {

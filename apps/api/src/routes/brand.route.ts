@@ -10,6 +10,10 @@ const brandCache = new Map<string, { data: BrandConfig; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_BRAND_CACHE_ENTRIES = 250;
 
+export function clearBrandCache() {
+  brandCache.clear();
+}
+
 async function getBrandForTenant(tenantId: string): Promise<{ config: BrandConfig; found: true } | { found: false; reason: 'BRAND_NOT_FOUND' | 'BRAND_INACTIVE' }> {
   // Check cache
   const cached = brandCache.get(tenantId);
