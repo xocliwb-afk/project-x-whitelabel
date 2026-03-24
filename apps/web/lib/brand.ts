@@ -16,7 +16,7 @@ export default brand;
 /**
  * Fetch brand config from the API (server-side).
  * Uses NEXT_PUBLIC_TENANT_ID as x-tenant-id header if set.
- * Falls back to static brand.json on fetch failure for resilience.
+ * Falls back to static brand.json only in local development.
  */
 export async function fetchBrand(): Promise<BrandConfig> {
   const apiBase =
@@ -42,16 +42,23 @@ export async function fetchBrand(): Promise<BrandConfig> {
     });
 
     if (!res.ok) {
-      console.error(
-        `[brand] Failed to fetch brand config: ${res.status} ${res.statusText}`
+      const error = new Error(
+        `[brand] Failed to fetch brand config: ${res.status} ${res.statusText}`,
       );
-      return getBrand();
+      console.error(error.message);
+      if (process.env.NODE_ENV === "development") {
+        return getBrand();
+      }
+      throw error;
     }
 
     return (await res.json()) as BrandConfig;
   } catch (err) {
-    console.error("[brand] Error fetching brand config, using static fallback:", err);
-    return getBrand();
+    if (process.env.NODE_ENV === "development") {
+      console.error("[brand] Error fetching brand config, using static fallback:", err);
+      return getBrand();
+    }
+    throw err;
   }
 }
 
