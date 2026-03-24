@@ -9,6 +9,7 @@ import toursRouter from "./routes/tours.route";
 import aiRouter from "./routes/ai.route";
 import geoRouter from "./routes/geo.route";
 import brandRouter from "./routes/brand.route";
+import adminBrandRouter from "./routes/admin-brand.route";
 import authRouter from "./routes/auth.route";
 import savedSearchesRouter from "./routes/saved-searches.route";
 import favoritesRouter from "./routes/favorites.route";
@@ -113,6 +114,7 @@ app.use("/api/v1/tours", toursRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/brand", brandRouter);
+app.use("/api/admin/brand", adminBrandRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/saved-searches", savedSearchesRouter);
 app.use("/api/favorites", favoritesRouter);
@@ -214,6 +216,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     message,
     status,
     code,
+    ...(Array.isArray(err?.validationErrors) ? { validationErrors: err.validationErrors } : {}),
   });
 });
 
