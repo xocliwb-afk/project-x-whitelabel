@@ -34,8 +34,12 @@ async function getBrandForTenant(tenantId: string): Promise<{ config: BrandConfi
   }
 
   // Deep-clone to avoid mutating the Prisma result, then merge overrides
-  const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig;
-  if (brand.logoUrl && config.logo) {
+  const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig | null;
+  if (!config || typeof config !== 'object' || !config.theme || !config.brandName) {
+    return { found: false, reason: 'BRAND_NOT_FOUND' };
+  }
+
+  if (brand.logoUrl && config.logo && typeof config.logo === 'object') {
     config.logo.url = brand.logoUrl;
   }
   if (brand.faviconUrl) {

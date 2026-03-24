@@ -73,9 +73,13 @@ export async function fetchBrand(): Promise<BrandConfig> {
 function mergeBrandConfig(
   brand: { config: unknown; logoUrl: string | null; faviconUrl: string | null },
 ): BrandConfig {
-  const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig;
+  const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig | null;
 
-  if (brand.logoUrl && config.logo) {
+  if (!config || typeof config !== "object" || !config.theme || !config.brandName) {
+    throw new Error("[brand] Brand config is missing or malformed");
+  }
+
+  if (brand.logoUrl && config.logo && typeof config.logo === "object") {
     config.logo.url = brand.logoUrl;
   }
 
