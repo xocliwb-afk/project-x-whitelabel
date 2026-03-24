@@ -59,10 +59,22 @@ function ensureFilters(filters: unknown): SavedSearchFilters {
 }
 
 function toSavedSearchRecord(savedSearch: SavedSearch): SavedSearchRecord {
+  let filters: SavedSearchFilters;
+
+  if (
+    savedSearch.filters &&
+    typeof savedSearch.filters === 'object' &&
+    !Array.isArray(savedSearch.filters)
+  ) {
+    filters = savedSearch.filters as SavedSearchFilters;
+  } else {
+    filters = {} as SavedSearchFilters;
+  }
+
   return {
     id: savedSearch.id,
     name: savedSearch.name,
-    filters: savedSearch.filters as SavedSearchFilters,
+    filters,
     notifyNew: savedSearch.notifyNew,
     createdAt: savedSearch.createdAt.toISOString(),
     updatedAt: savedSearch.updatedAt.toISOString(),
