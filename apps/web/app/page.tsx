@@ -1,7 +1,9 @@
 import Link from "next/link";
-import brand from "@/lib/brand";
+import { fetchBrand } from "@/lib/brand";
 
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  const brand = await fetchBrand();
+
   return (
     <div className="h-full w-full overflow-y-auto bg-surface">
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">

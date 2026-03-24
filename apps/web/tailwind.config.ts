@@ -1,7 +1,9 @@
 import type { Config } from "tailwindcss";
-import brand from "../../config/brand.json";
 
-const { colors, typography, radius } = brand.theme;
+/** Helper: reference a CSS custom property as an RGB color with Tailwind opacity support */
+function brandColor(varName: string) {
+  return `rgb(var(${varName}) / <alpha-value>)`;
+}
 
 const config: Config = {
   darkMode: "media",
@@ -12,31 +14,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: colors.primary,
-        "primary-foreground": colors.primaryForeground,
-        "primary-accent": colors.primaryAccent,
-        background: colors.background,
+        primary: brandColor("--brand-primary"),
+        "primary-foreground": brandColor("--brand-primary-foreground"),
+        "primary-accent": brandColor("--brand-primary-accent"),
+        background: brandColor("--brand-background"),
         surface: {
-          DEFAULT: colors.surface,
-          muted: colors.surfaceMuted,
-          accent: colors.surfaceAccent,
+          DEFAULT: brandColor("--brand-surface"),
+          muted: brandColor("--brand-surface-muted"),
+          accent: brandColor("--brand-surface-accent"),
         },
         text: {
-          secondary: colors.textSecondary,
+          secondary: brandColor("--brand-text-secondary"),
         },
-        "text-main": colors.textMain,
-        "text-muted": colors.textMuted,
-        border: colors.border,
-        danger: colors.danger,
-        success: colors.success,
+        "text-main": brandColor("--brand-text-main"),
+        "text-muted": brandColor("--brand-text-muted"),
+        border: brandColor("--brand-border"),
+        danger: brandColor("--brand-danger"),
+        success: brandColor("--brand-success"),
       },
       fontFamily: {
-        sans: typography.fontFamily.split(",").map((s: string) => s.trim()),
+        sans: ["var(--brand-font-family)"],
       },
       borderRadius: {
-        card: `${radius.card}px`,
-        button: `${radius.button}px`,
-        input: `${radius.input}px`,
+        card: "var(--brand-radius-card)",
+        button: "var(--brand-radius-button)",
+        input: "var(--brand-radius-input)",
       },
     },
   },

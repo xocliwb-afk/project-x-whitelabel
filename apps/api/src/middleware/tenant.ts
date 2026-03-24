@@ -80,7 +80,7 @@ export async function resolveTenant(req: Request, res: Response, next: NextFunct
     if (tenantId) {
       const valid = await isValidTenant(tenantId);
       if (!valid) {
-        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant' });
+        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT' });
       }
       req.tenantId = tenantId;
       return next();
@@ -89,7 +89,7 @@ export async function resolveTenant(req: Request, res: Response, next: NextFunct
     // No header — resolve default
     const fallback = await resolveDefaultTenantId();
     if (!fallback) {
-      return res.status(400).json({ error: true, message: 'No tenant available' });
+      return res.status(400).json({ error: true, message: 'No tenant available', code: 'NO_TENANT_AVAILABLE' });
     }
 
     req.tenantId = fallback;

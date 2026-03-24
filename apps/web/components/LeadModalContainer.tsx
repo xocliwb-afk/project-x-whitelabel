@@ -7,11 +7,12 @@ import Script from "next/script";
 import LeadForm from "./LeadForm";
 import { useLeadModalStore } from "@/stores/useLeadModalStore";
 import { lockScroll, unlockScroll } from "@/lib/scrollLock";
-import brand from "@/lib/brand";
+import { useBrand } from "@/context/BrandContext";
 
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
 export default function LeadModalContainer() {
+  const brand = useBrand();
   const { isOpen, intent, entrySource, listingId, listingAddress, close, setIntent } =
     useLeadModalStore();
   const pathname = usePathname();
