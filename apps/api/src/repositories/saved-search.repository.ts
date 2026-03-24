@@ -74,14 +74,17 @@ export async function update(
   }>,
   db: SavedSearchDbClient = prisma,
 ): Promise<SavedSearch | null> {
-  const existing = await findById(id, userId, tenantId, db);
-  if (!existing) {
+  const result = await db.savedSearch.updateMany({
+    where: { id, userId, tenantId },
+    data,
+  });
+
+  if (result.count === 0) {
     return null;
   }
 
-  return db.savedSearch.update({
-    where: { id },
-    data,
+  return db.savedSearch.findFirst({
+    where: { id, userId, tenantId },
   });
 }
 
