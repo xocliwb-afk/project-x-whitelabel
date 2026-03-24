@@ -28,9 +28,15 @@ export default function SaveSearchModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
+      if (previousFocusRef.current && previousFocusRef.current.isConnected) {
+        previousFocusRef.current.focus();
+      }
       setName('');
       setNotifyNew(false);
       setError(null);
@@ -38,8 +44,30 @@ export default function SaveSearchModal({
       return;
     }
 
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     lockScroll();
     return () => unlockScroll();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      if (nameInputRef.current) {
+        nameInputRef.current.focus();
+        return;
+      }
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      focusable?.[0]?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen]);
 
   useEffect(() => {
@@ -72,17 +100,51 @@ export default function SaveSearchModal({
   }
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4"
-      onClick={onClose}
-    >
       <div
-        className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="save-search-modal-title"
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4"
+        onClick={onClose}
       >
+        <div
+          ref={dialogRef}
+          tabIndex={-1}
+          className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key !== 'Tab') {
+              return;
+            }
+
+            const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+            );
+
+            if (!focusable || focusable.length === 0) {
+              event.preventDefault();
+              dialogRef.current?.focus();
+              return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const activeElement = document.activeElement;
+
+            if (event.shiftKey) {
+              if (activeElement === first || activeElement === dialogRef.current) {
+                event.preventDefault();
+                last.focus();
+              }
+              return;
+            }
+
+            if (activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="save-search-modal-title"
+        >
         <button
           type="button"
           onClick={onClose}
@@ -105,6 +167,7 @@ export default function SaveSearchModal({
           <label className="flex flex-col gap-2 text-sm text-text-main">
             Search name
             <input
+              ref={nameInputRef}
               type="text"
               maxLength={80}
               value={name}
