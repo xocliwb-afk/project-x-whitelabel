@@ -177,8 +177,5 @@ export async function deleteSavedSearch(
   userId: string,
   tenantId: string,
 ): Promise<void> {
-  const deleted = await savedSearchRepo.deleteById(id, userId, tenantId);
-  if (!deleted) {
-    throw createHttpError(404, 'Saved search not found', 'SAVED_SEARCH_NOT_FOUND');
-  }
+  await savedSearchRepo.deleteById(id, userId, tenantId);
 }

@@ -10,6 +10,8 @@ import aiRouter from "./routes/ai.route";
 import geoRouter from "./routes/geo.route";
 import brandRouter from "./routes/brand.route";
 import authRouter from "./routes/auth.route";
+import savedSearchesRouter from "./routes/saved-searches.route";
+import favoritesRouter from "./routes/favorites.route";
 import { getListingProvider } from "./utils/provider.factory";
 import { CaptchaService } from "./services/captcha.service";
 import { Prisma } from "@project-x/database";
@@ -112,6 +114,8 @@ app.use("/api/ai", aiRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/brand", brandRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/saved-searches", savedSearchesRouter);
+app.use("/api/favorites", favoritesRouter);
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -208,6 +212,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(status).json({
     error: true,
     message,
+    status,
     ...(code ? { code } : {}),
   });
 });

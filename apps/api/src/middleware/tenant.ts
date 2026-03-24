@@ -84,7 +84,7 @@ export async function resolveTenant(req: Request, res: Response, next: NextFunct
     if (tenantId) {
       const valid = await isValidTenant(tenantId);
       if (!valid) {
-        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT' });
+        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT', status: 400 });
       }
       req.tenantId = tenantId;
       return next();
@@ -93,7 +93,7 @@ export async function resolveTenant(req: Request, res: Response, next: NextFunct
     // No header — resolve default
     const fallback = await resolveDefaultTenantId();
     if (!fallback) {
-      return res.status(400).json({ error: true, message: 'No tenant available', code: 'NO_TENANT_AVAILABLE' });
+      return res.status(400).json({ error: true, message: 'No tenant available', code: 'NO_TENANT_AVAILABLE', status: 400 });
     }
 
     req.tenantId = fallback;
@@ -117,6 +117,7 @@ export async function resolveRequiredTenant(req: Request, res: Response, next: N
         error: true,
         message: 'x-tenant-id header is required',
         code: 'TENANT_REQUIRED',
+        status: 400,
       });
     }
 
@@ -124,7 +125,7 @@ export async function resolveRequiredTenant(req: Request, res: Response, next: N
     if (!valid) {
       return res
         .status(400)
-        .json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT' });
+        .json({ error: true, message: 'Invalid or inactive tenant', code: 'INVALID_TENANT', status: 400 });
     }
 
     req.tenantId = tenantId;
