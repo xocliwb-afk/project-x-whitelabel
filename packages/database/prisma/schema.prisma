@@ -73,13 +73,15 @@ model SavedSearch {
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
   filters   Json
+  filtersHash String @map("filters_hash")
   notifyNew Boolean  @default(false) @map("notify_new")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@unique([userId, tenantId, filtersHash])
+  @@index([userId, tenantId, updatedAt])
   @@index([tenantId])
   @@map("saved_searches")
 }
@@ -93,8 +95,8 @@ model Favorite {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, listingId])
-  @@index([userId])
+  @@unique([userId, tenantId, listingId])
+  @@index([userId, tenantId, createdAt])
   @@index([tenantId])
   @@map("favorites")
 }
