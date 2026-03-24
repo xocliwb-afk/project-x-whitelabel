@@ -27,7 +27,13 @@ function normalizePage(page?: number): number {
 }
 
 function normalizeName(name: string): string {
-  const normalized = name.normalize('NFC').trim();
+  const normalized = name
+    .normalize('NFC')
+    .replace(
+      /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u2028-\u202F\uFEFF]/g,
+      '',
+    )
+    .trim();
   if (normalized.length === 0) {
     throw createHttpError(400, 'Saved search name is required', 'VALIDATION_ERROR');
   }
