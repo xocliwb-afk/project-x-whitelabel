@@ -103,6 +103,7 @@ function SavedSearchesPageContent() {
                   <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
+                      aria-label={`Apply saved search: ${item.name}`}
                       onClick={() => {
                         const params = buildSearchParamsFromSavedFilters(item.filters);
                         const queryString = params.toString();
@@ -114,6 +115,7 @@ function SavedSearchesPageContent() {
                     </button>
                     <button
                       type="button"
+                      aria-label={`Delete saved search: ${item.name}`}
                       onClick={() => void remove(item.id)}
                       className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-text-main"
                     >
