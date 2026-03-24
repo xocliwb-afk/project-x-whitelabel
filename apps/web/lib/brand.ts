@@ -79,6 +79,9 @@ function mergeBrandConfig(
     throw new Error("[brand] Brand config is missing or malformed");
   }
 
+  // Full schema validation lives on the API read/write paths; the web SSR path
+  // keeps this lightweight shape guard and trusts brand rows that were validated upstream.
+
   if (brand.logoUrl && config.logo && typeof config.logo === "object") {
     config.logo.url = brand.logoUrl;
   }

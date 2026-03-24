@@ -32,20 +32,31 @@ const getIp = (req: any) => {
 const toBboxString = (bboxArr: number[]) =>
   bboxArr.map((n) => Number(n).toFixed(6)).join(",");
 
+const sendGeoError = (
+  res: any,
+  status: number,
+  message: string,
+  code: "VALIDATION_ERROR" | "RATE_LIMITED" | "GEO_LOOKUP_FAILED" | "GEO_NOT_FOUND",
+) =>
+  res.status(status).json({
+    error: true,
+    message,
+    code,
+    status,
+  });
+
 router.post("/geocode", async (req, res) => {
   const rawQuery = typeof req.body?.query === "string" ? req.body.query : "";
   const query = rawQuery.trim();
   const normalized = normalizeQuery(query);
 
   if (!normalized) {
-    return res.status(400).json({ ok: false, code: "BAD_REQUEST", error: "Query is required" });
+    return sendGeoError(res, 400, "Query is required", "VALIDATION_ERROR");
   }
 
   const token = process.env.MAPBOX_GEOCODE_TOKEN;
   if (!token) {
-    return res
-      .status(503)
-      .json({ ok: false, code: "PROVIDER_NOT_CONFIGURED", error: "Mapbox geocoding is not configured" });
+    return sendGeoError(res, 503, "Mapbox geocoding is not configured", "GEO_LOOKUP_FAILED");
   }
 
   const rpmLimit = Number(process.env.GEO_RATE_LIMIT_RPM) || 60;
@@ -53,7 +64,7 @@ router.post("/geocode", async (req, res) => {
   const rate = takeToken(`geo:geocode:${ip}`, rpmLimit);
   if (!rate.allowed) {
     res.setHeader("Retry-After", String(rate.retryAfterSeconds));
-    return res.status(429).json({ ok: false, code: "RATE_LIMITED", error: "Too many requests" });
+    return sendGeoError(res, 429, "Too many requests", "RATE_LIMITED");
   }
 
   const cached = cache.get(normalized);
@@ -80,29 +91,22 @@ router.post("/geocode", async (req, res) => {
     if (!upstream.ok) {
       const text = await upstream.text().catch(() => "");
       const snippet = text.replace(/\s+/g, " ").trim().slice(0, 200);
-      return res.status(502).json({
-        ok: false,
-        code: `UPSTREAM_HTTP_${upstream.status}`,
-        error: `Mapbox ${upstream.status}: ${snippet}`,
-      });
+      const detail = snippet ? `Mapbox ${upstream.status}: ${snippet}` : `Mapbox ${upstream.status}`;
+      return sendGeoError(res, 502, detail, "GEO_LOOKUP_FAILED");
     }
     const data = await upstream.json();
     feature = Array.isArray(data?.features) ? data.features[0] : null;
   } catch (err: any) {
     if (err?.name === "AbortError") {
-      return res
-        .status(502)
-        .json({ ok: false, code: "UPSTREAM_TIMEOUT", error: "Mapbox request timed out" });
+      return sendGeoError(res, 502, "Mapbox request timed out", "GEO_LOOKUP_FAILED");
     }
-    return res
-      .status(502)
-      .json({ ok: false, code: "UPSTREAM_FETCH_ERROR", error: "Mapbox fetch failed" });
+    return sendGeoError(res, 502, "Mapbox fetch failed", "GEO_LOOKUP_FAILED");
   } finally {
     clearTimeout(timeoutId);
   }
 
   if (!feature) {
-    return res.status(404).json({ ok: false, code: "NOT_FOUND", error: "No results found" });
+    return sendGeoError(res, 404, "No results found", "GEO_NOT_FOUND");
   }
 
   const rawBbox = Array.isArray(feature.bbox) ? feature.bbox : null;
@@ -126,9 +130,7 @@ router.post("/geocode", async (req, res) => {
   }
 
   if (!bboxArray || !Number.isFinite(centerLat) || !Number.isFinite(centerLng)) {
-    return res
-      .status(502)
-      .json({ ok: false, code: "INVALID_RESULT", error: "Mapbox returned an invalid result" });
+    return sendGeoError(res, 502, "Mapbox returned an invalid result", "GEO_LOOKUP_FAILED");
   }
 
   const result: GeocodeResult = {

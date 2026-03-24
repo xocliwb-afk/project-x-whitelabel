@@ -3,9 +3,10 @@ import { PlanTourRequest, PlannedTour, NormalizedListing } from '@project-x/shar
 import { planTour, getTourById, updateTour, deleteTour, listTours } from '../services/tour.service';
 import { generateTourNarrations } from '../services/narration.service';
 import { getListingProvider } from '../utils/provider.factory';
-import { resolveTenant } from '../middleware/tenant';
+import { resolveRequiredTenant } from '../middleware/tenant';
 import { requireAuth } from '../middleware/auth';
 import { asyncHandler } from '../utils/async-handler';
+import { createHttpError } from '../utils/http-error';
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ function isPlanTourRequest(body: unknown): body is PlanTourRequest {
 }
 
 // Apply tenant + required auth to all persisted tour routes.
-router.use(resolveTenant);
+router.use(resolveRequiredTenant);
 router.use(requireAuth);
 
 /**
@@ -53,9 +54,7 @@ router.post(
   '/',
   asyncHandler(async (req, res) => {
     if (!isPlanTourRequest(req.body)) {
-      return res
-        .status(400)
-        .json({ error: true, message: 'Invalid tour planning request' });
+      throw createHttpError(400, 'Invalid tour planning request', 'VALIDATION_ERROR');
     }
 
     const planned: PlannedTour = await planTour(req.body, {
@@ -80,7 +79,7 @@ router.get(
       role: req.user!.role,
     });
     if (!tour) {
-      return res.status(404).json({ error: true, message: 'Tour not found' });
+      throw createHttpError(404, 'Tour not found', 'TOUR_NOT_FOUND');
     }
 
     // Attempt to fetch listing data for richer narrations
@@ -117,7 +116,7 @@ router.get(
       role: req.user!.role,
     });
     if (!tour) {
-      return res.status(404).json({ error: true, message: 'Tour not found' });
+      throw createHttpError(404, 'Tour not found', 'TOUR_NOT_FOUND');
     }
     return res.status(200).json(tour);
   }),
@@ -136,7 +135,7 @@ router.put(
       role: req.user!.role,
     }, req.body);
     if (!updated) {
-      return res.status(404).json({ error: true, message: 'Tour not found' });
+      throw createHttpError(404, 'Tour not found', 'TOUR_NOT_FOUND');
     }
     return res.status(200).json(updated);
   }),
@@ -155,7 +154,7 @@ router.delete(
       role: req.user!.role,
     });
     if (!deleted) {
-      return res.status(404).json({ error: true, message: 'Tour not found' });
+      throw createHttpError(404, 'Tour not found', 'TOUR_NOT_FOUND');
     }
     return res.status(204).send();
   }),
