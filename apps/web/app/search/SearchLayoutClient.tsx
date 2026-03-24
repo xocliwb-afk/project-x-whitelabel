@@ -14,6 +14,8 @@ import Footer from '@/components/Footer';
 import ListingsList from '@/components/ListingsList';
 import { useMapLayout } from '@/context/MapLayoutContext';
 import { smartSubmit } from '@/lib/search/smartSubmit';
+import { useAuthStore } from '@/stores/auth-store';
+import { useFavoritesStore } from '@/stores/useFavoritesStore';
 
 const ListingDetailModal = dynamic(
   () => import('@/components/ListingDetailModal').then((mod) => mod.ListingDetailModal),
@@ -159,6 +161,10 @@ export default function SearchLayoutClient({
   const [pinListingsById, setPinListingsById] = useState<Map<string, Listing>>(
     () => initialPinListingsMap,
   );
+  const { authUser, isAuthInitialized } = useAuthStore((state) => ({
+    authUser: state.user,
+    isAuthInitialized: state.isInitialized,
+  }));
 
   const [hoveredListingId, setHoveredListingId] = useState<string | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
@@ -176,6 +182,7 @@ export default function SearchLayoutClient({
   const loadedPagesRef = useRef<Set<string>>(new Set());
   const autofillKeyRef = useRef<string | null>(null);
   const autofillRunningRef = useRef(false);
+  const hydratedFavoritesUserKeyRef = useRef<string | null>(null);
   const listingsRef = useRef(listings);
   const pinListingsByIdRef = useRef(pinListingsById);
   const isAutoFillingRef = useRef(isAutoFilling);
@@ -226,6 +233,34 @@ export default function SearchLayoutClient({
   useEffect(() => {
     isLoadingMoreRef.current = isLoadingMore;
   }, [isLoadingMore]);
+
+  useEffect(() => {
+    if (!isAuthInitialized) {
+      return;
+    }
+
+    if (!authUser) {
+      hydratedFavoritesUserKeyRef.current = null;
+      useFavoritesStore.getState().reset();
+      return;
+    }
+
+    const userKey = `${authUser.id}:${authUser.tenantId}`;
+    if (
+      hydratedFavoritesUserKeyRef.current === userKey &&
+      useFavoritesStore.getState().isLoaded
+    ) {
+      return;
+    }
+
+    hydratedFavoritesUserKeyRef.current = userKey;
+    void useFavoritesStore
+      .getState()
+      .hydrate()
+      .catch((error) => {
+        console.error('[favorites] failed to hydrate favorite ids', error);
+      });
+  }, [authUser, isAuthInitialized]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
