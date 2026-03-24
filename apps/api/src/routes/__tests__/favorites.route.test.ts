@@ -248,11 +248,11 @@ describe('favorites routes', () => {
   });
 
   it.each([
-    ['GET', '/ids'],
-    ['GET', '/'],
-    ['POST', '/', JSON.stringify({ listingId: 'listing-1' })],
-    ['DELETE', '/listing-1'],
-  ])('returns 401 for unauthenticated %s %s requests', async (method, path, body) => {
+    { method: 'GET', path: '/ids' },
+    { method: 'GET', path: '/' },
+    { method: 'POST', path: '/', body: JSON.stringify({ listingId: 'listing-1' }) },
+    { method: 'DELETE', path: '/listing-1' },
+  ])('returns 401 for unauthenticated $method $path requests', async ({ method, path, body }) => {
     const { baseUrl } = await startServer();
     const response = await fetch(`${baseUrl}/api/favorites${path}`, {
       method,

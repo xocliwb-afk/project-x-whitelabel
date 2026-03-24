@@ -352,12 +352,16 @@ describe('saved-searches routes', () => {
   });
 
   it.each([
-    ['GET', '/'],
-    ['POST', '/', JSON.stringify({ name: 'Test', filters: { cities: ['Grand Rapids'] } })],
-    ['GET', '/saved-1'],
-    ['PATCH', '/saved-1', JSON.stringify({ name: 'Updated' })],
-    ['DELETE', '/saved-1'],
-  ])('returns 401 for unauthenticated %s %s requests', async (method, path, body) => {
+    { method: 'GET', path: '/' },
+    {
+      method: 'POST',
+      path: '/',
+      body: JSON.stringify({ name: 'Test', filters: { cities: ['Grand Rapids'] } }),
+    },
+    { method: 'GET', path: '/saved-1' },
+    { method: 'PATCH', path: '/saved-1', body: JSON.stringify({ name: 'Updated' }) },
+    { method: 'DELETE', path: '/saved-1' },
+  ])('returns 401 for unauthenticated $method $path requests', async ({ method, path, body }) => {
     const { baseUrl } = await startServer();
     const response = await fetch(`${baseUrl}/api/saved-searches${path}`, {
       method,
