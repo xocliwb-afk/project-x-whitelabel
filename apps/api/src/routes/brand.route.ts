@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@project-x/database';
-import { resolveTenant } from '../middleware/tenant';
+import { resolveRequiredTenant } from '../middleware/tenant';
 import type { BrandConfig } from '@project-x/shared-types';
 
 const router = Router();
@@ -64,9 +64,9 @@ async function getBrandForTenant(tenantId: string): Promise<{ config: BrandConfi
 /**
  * GET /api/brand
  * Returns the tenant-specific brand config from the database.
- * Requires tenant resolution (x-tenant-id header or default fallback).
+ * Requires explicit tenant resolution via x-tenant-id.
  */
-router.get('/', resolveTenant, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', resolveRequiredTenant, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId;
     if (!tenantId) {

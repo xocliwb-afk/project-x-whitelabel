@@ -41,7 +41,7 @@ describe('brand route', () => {
 
   beforeAll(async () => {
     vi.doMock('../../middleware/tenant', () => ({
-      resolveTenant: (req: any, _res: any, next: any) => {
+      resolveRequiredTenant: (req: any, _res: any, next: any) => {
         const tenantId = req.headers['x-tenant-id'] || 'tenant-1';
         req.tenantId = tenantId;
         next();
