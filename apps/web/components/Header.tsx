@@ -279,8 +279,8 @@ export default function Header() {
                 </ul>
               )}
             </li>
-            <li>
-              {authUser ? (
+            {authUser ? (
+              <li>
                 <Link
                   href="/favorites"
                   className={navLinkClass("/favorites")}
@@ -288,10 +288,10 @@ export default function Header() {
                 >
                   Favorites
                 </Link>
-              ) : null}
-            </li>
-            <li>
-              {authUser ? (
+              </li>
+            ) : null}
+            {authUser ? (
+              <li>
                 <Link
                   href="/saved-searches"
                   className={navLinkClass("/saved-searches")}
@@ -299,8 +299,8 @@ export default function Header() {
                 >
                   Saved Searches
                 </Link>
-              ) : null}
-            </li>
+              </li>
+            ) : null}
             <li>
               <button
                 type="button"
