@@ -48,7 +48,10 @@ export async function listIds(
   tenantId: string,
 ): Promise<FavoriteIdsResponse> {
   const listingIds = await favoriteRepo.findIdsByUser(userId, tenantId);
-  return { listingIds };
+  return {
+    listingIds,
+    capped: listingIds.length >= favoriteRepo.MAX_FAVORITE_IDS,
+  };
 }
 
 export async function list(

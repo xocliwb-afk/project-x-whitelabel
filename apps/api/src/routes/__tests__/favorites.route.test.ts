@@ -170,7 +170,7 @@ describe('favorites routes', () => {
   });
 
   it('returns favorite listing IDs on GET /ids', async () => {
-    mocks.listIds.mockResolvedValue({ listingIds: ['listing-1', 'listing-2'] });
+    mocks.listIds.mockResolvedValue({ listingIds: ['listing-1', 'listing-2'], capped: false });
 
     const { baseUrl } = await startServer();
     const response = await fetch(`${baseUrl}/api/favorites/ids`, {
@@ -183,6 +183,7 @@ describe('favorites routes', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       listingIds: ['listing-1', 'listing-2'],
+      capped: false,
     });
     expect(mocks.listIds).toHaveBeenCalledWith('user-1', 'tenant-1');
   });

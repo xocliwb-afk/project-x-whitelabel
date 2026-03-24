@@ -2,6 +2,7 @@ import { Prisma, prisma } from '@project-x/database';
 import type { Favorite } from '@project-x/database';
 
 type FavoriteDbClient = typeof prisma | Prisma.TransactionClient;
+export const MAX_FAVORITE_IDS = 5000;
 
 export async function findByUser(
   userId: string,
@@ -35,6 +36,7 @@ export async function findIdsByUser(
     where: { userId, tenantId },
     orderBy: { createdAt: 'desc' },
     select: { listingId: true },
+    take: MAX_FAVORITE_IDS,
   });
 
   return favorites.map((favorite) => favorite.listingId);

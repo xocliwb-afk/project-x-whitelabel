@@ -17,6 +17,7 @@ export interface CreateFavoriteResponse {
 
 export interface FavoriteIdsResponse {
   listingIds: string[];
+  capped: boolean;
 }
 
 export interface ListFavoritesResponse {
