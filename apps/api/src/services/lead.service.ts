@@ -28,6 +28,7 @@ export class LeadService {
         provider: "captcha",
         status: 400,
         message: "Captcha verification failed",
+        code: "VALIDATION_ERROR",
       };
     }
 
@@ -41,6 +42,10 @@ export class LeadService {
     if (!result.success) {
       if (result.code === "NOT_CONFIGURED") {
         status = 503;
+      } else if (result.code === "VALIDATION_ERROR") {
+        status = 400;
+      } else if (result.code === "RATE_LIMITED") {
+        status = 429;
       } else {
         status = 500;
       }
@@ -68,6 +73,7 @@ export class LeadService {
         provider: "validation",
         status: 400,
         message: `Missing required fields: ${missing.join(", ")}`,
+        code: "VALIDATION_ERROR",
       };
     }
 

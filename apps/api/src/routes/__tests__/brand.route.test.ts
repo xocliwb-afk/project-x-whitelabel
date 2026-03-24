@@ -193,6 +193,7 @@ describe('brand route', () => {
     const data = await res.json();
     expect(data.code).toBe('BRAND_NOT_FOUND');
     expect(data.error).toBe(true);
+    expect(data.status).toBe(404);
   });
 
   it('returns refreshed brand data after the cache is cleared', async () => {
@@ -234,5 +235,6 @@ describe('brand route', () => {
     const data = await res.json();
     expect(data.code).toBe('BRAND_INACTIVE');
     expect(data.error).toBe(true);
+    expect(data.status).toBe(404);
   });
 });

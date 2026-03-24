@@ -78,7 +78,7 @@ router.get('/', resolveRequiredTenant, async (req: Request, res: Response, next:
   try {
     const tenantId = req.tenantId;
     if (!tenantId) {
-      return res.status(400).json({ error: true, message: 'No tenant context', code: 'NO_TENANT_AVAILABLE' });
+      return res.status(400).json({ error: true, message: 'No tenant context', code: 'NO_TENANT_AVAILABLE', status: 400 });
     }
 
     const result = await getBrandForTenant(tenantId);
@@ -87,7 +87,7 @@ router.get('/', resolveRequiredTenant, async (req: Request, res: Response, next:
       const message = result.reason === 'BRAND_NOT_FOUND'
         ? 'No brand configuration found for this tenant'
         : 'Brand configuration is inactive';
-      return res.status(404).json({ error: true, message, code: result.reason });
+      return res.status(404).json({ error: true, message, code: result.reason, status: 404 });
     }
 
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');

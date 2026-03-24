@@ -32,6 +32,19 @@ const getIp = (req: any) => {
 const hashIp = (ip: string, salt: string) =>
   crypto.createHash("sha256").update(`${salt}${ip}`).digest("hex").slice(0, 12);
 
+const sendLeadError = (
+  res: Response,
+  status: number,
+  message: string,
+  code: "VALIDATION_ERROR" | "RATE_LIMITED" | "LEAD_SUBMISSION_FAILED",
+) =>
+  res.status(status).json({
+    error: true,
+    message,
+    code,
+    status,
+  });
+
 const createLeadHandler = async (req: Request, res: Response) => {
   const payload = req.body as LeadRequest;
   const cfg = getRateLimitConfig();
@@ -55,24 +68,14 @@ const createLeadHandler = async (req: Request, res: Response) => {
     if (!daily.allowed) {
       res.setHeader("Retry-After", String(daily.retryAfterSeconds));
       logRateLimit("daily", daily.retryAfterSeconds);
-      return res.status(429).json({
-        error: true,
-        message: "Daily lead limit reached",
-        code: "RATE_LIMITED_DAILY",
-        status: 429,
-      });
+      return sendLeadError(res, 429, "Daily lead limit reached", "RATE_LIMITED");
     }
 
     const rpm = takeToken(`leads:submit:${ipHash}`, cfg.rpm);
     if (!rpm.allowed) {
       res.setHeader("Retry-After", String(rpm.retryAfterSeconds));
       logRateLimit("rpm", rpm.retryAfterSeconds);
-      return res.status(429).json({
-        error: true,
-        message: "Too many requests",
-        code: "RATE_LIMITED",
-        status: 429,
-      });
+      return sendLeadError(res, 429, "Too many requests", "RATE_LIMITED");
     }
   }
 
@@ -87,17 +90,16 @@ const createLeadHandler = async (req: Request, res: Response) => {
     }
 
     const status = result.status ?? 400;
-    return res.status(status).json({
-      success: false,
-      provider: result.provider,
-      message: result.message ?? "Failed to submit lead",
-    });
+    const code =
+      result.code === "VALIDATION_ERROR"
+        ? "VALIDATION_ERROR"
+        : result.code === "RATE_LIMITED"
+          ? "RATE_LIMITED"
+          : "LEAD_SUBMISSION_FAILED";
+    return sendLeadError(res, status, result.message ?? "Failed to submit lead", code);
   } catch (err: any) {
     console.error("[leads] Unexpected error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to submit lead",
-    });
+    return sendLeadError(res, 500, "Failed to submit lead", "LEAD_SUBMISSION_FAILED");
   }
 };
 

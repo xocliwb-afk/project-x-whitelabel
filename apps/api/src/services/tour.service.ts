@@ -48,7 +48,7 @@ function scheduleStops(
   }> {
   const startDate = new Date(`${date}T${startTime}:00`);
   if (Number.isNaN(startDate.getTime())) {
-    throw createHttpError(400, 'Invalid startTime provided');
+    throw createHttpError(400, 'Invalid startTime provided', 'VALIDATION_ERROR');
   }
 
   let current = startDate;
@@ -226,7 +226,7 @@ export async function planTour(
     );
 
     if (!updatedTour) {
-      throw createHttpError(500, 'Failed to persist tour');
+      throw createHttpError(500, 'Failed to persist tour', 'TOUR_PERSIST_FAILED');
     }
 
     return updatedTour;
