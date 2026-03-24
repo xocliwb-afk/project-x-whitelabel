@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/auth-store';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, isLoading } = useAuthStore();
+  const { register, isLoading, pendingVerification, user } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -24,7 +24,13 @@ export default function RegisterPage() {
         displayName || undefined,
         phone || undefined,
       );
-      router.push('/');
+      const authState = useAuthStore.getState();
+      if (authState.pendingVerification) {
+        return;
+      }
+      if (authState.user) {
+        router.push('/');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     }
@@ -37,6 +43,12 @@ export default function RegisterPage() {
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {pendingVerification && !user && (
+        <div className="mb-4 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Check your email to verify your account, then sign in to finish setup.
         </div>
       )}
 

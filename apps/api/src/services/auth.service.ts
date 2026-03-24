@@ -1,12 +1,14 @@
-import { supabaseAdmin } from '../lib/supabase-admin';
+import { getSupabaseAdmin } from '../lib/supabase-admin';
 import * as userRepo from '../repositories/user.repository';
 import type { User } from '@project-x/database';
 import type {
   AuthUser,
   AuthResponse,
   AuthTokens,
+  RegisterResponse,
   UserRole,
 } from '@project-x/shared-types';
+import { createHttpError } from '../utils/http-error';
 
 /**
  * Convert a Prisma User row to the shared AuthUser DTO.
@@ -26,51 +28,29 @@ function toAuthUser(dbUser: User): AuthUser {
 }
 
 /**
- * Register a new user.
- * 1. Creates Supabase auth user
- * 2. Creates local User row
- * 3. Returns AuthResponse with tokens
+ * Provision or return the local user row that corresponds to a verified
+ * Supabase identity.
  */
-export async function register(
+export async function createOrProvisionLocalUser(
+  supabaseId: string,
   email: string,
-  password: string,
   tenantId: string,
   displayName?: string,
   phone?: string,
-): Promise<AuthResponse> {
-  // Create user in Supabase Auth
-  const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
-    email,
-    password,
-  });
-
-  if (signUpError) {
-    const message = signUpError.message;
-    if (message.includes('already registered') || message.includes('already exists')) {
-      const err = new Error('User already exists') as Error & { status: number };
-      err.status = 409;
-      throw err;
-    }
-    throw new Error(`Supabase signup failed: ${message}`);
-  }
-
-  if (!signUpData.user || !signUpData.session) {
-    throw new Error('Supabase signup returned no user or session');
-  }
-
-  // Create local User row
-  const dbUser = await userRepo.create({
-    supabaseId: signUpData.user.id,
+): Promise<RegisterResponse> {
+  const dbUser = await userRepo.upsertBySupabaseId({
+    supabaseId,
     tenantId,
     email,
     displayName: displayName ?? null,
     phone: phone ?? null,
   });
 
+  if (dbUser.tenantId !== tenantId) {
+    throw createHttpError(403, 'User belongs to a different tenant', 'TENANT_MISMATCH');
+  }
+
   return {
-    accessToken: signUpData.session.access_token,
-    refreshToken: signUpData.session.refresh_token,
-    expiresAt: signUpData.session.expires_at ?? null,
     user: toAuthUser(dbUser),
   };
 }
@@ -86,29 +66,28 @@ export async function login(
   password: string,
   tenantId: string,
 ): Promise<AuthResponse> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
     email,
     password,
   });
 
   if (signInError) {
-    const err = new Error('Invalid credentials') as Error & { status: number };
-    err.status = 401;
-    throw err;
+    throw createHttpError(401, 'Invalid credentials');
   }
 
   if (!signInData.user || !signInData.session) {
     throw new Error('Supabase login returned no user or session');
   }
 
-  // Find or lazily create local User
-  let dbUser = await userRepo.findBySupabaseId(signInData.user.id);
-  if (!dbUser) {
-    dbUser = await userRepo.create({
-      supabaseId: signInData.user.id,
-      tenantId,
-      email: signInData.user.email ?? email,
-    });
+  const dbUser = await userRepo.upsertBySupabaseId({
+    supabaseId: signInData.user.id,
+    tenantId,
+    email: signInData.user.email ?? email,
+  });
+
+  if (dbUser.tenantId !== tenantId) {
+    throw createHttpError(403, 'User belongs to a different tenant', 'TENANT_MISMATCH');
   }
 
   return {
@@ -145,14 +124,13 @@ export async function updateProfile(
  * Refresh an access token using a refresh token.
  */
 export async function refresh(refreshToken: string): Promise<AuthTokens> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin.auth.refreshSession({
     refresh_token: refreshToken,
   });
 
   if (error || !data.session) {
-    const err = new Error('Invalid or expired refresh token') as Error & { status: number };
-    err.status = 401;
-    throw err;
+    throw createHttpError(401, 'Invalid or expired refresh token');
   }
 
   return {
@@ -160,15 +138,4 @@ export async function refresh(refreshToken: string): Promise<AuthTokens> {
     refreshToken: data.session.refresh_token,
     expiresAt: data.session.expires_at ?? null,
   };
-}
-
-/**
- * Log out a user. Supabase handles session invalidation;
- * we just confirm success.
- */
-export async function logout(jwt: string): Promise<void> {
-  const { error } = await supabaseAdmin.auth.admin.signOut(jwt);
-  if (error) {
-    throw new Error(`Logout failed: ${error.message}`);
-  }
 }

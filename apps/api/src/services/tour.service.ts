@@ -4,14 +4,18 @@ import {
   Tour,
   TourStop,
   NormalizedListing,
+  UserRole,
 } from '@project-x/shared-types';
+import { Prisma, prisma } from '@project-x/database';
 import { generateTourNarrations } from './narration.service';
 import * as tourRepo from '../repositories/tour.repository';
 import { toApiTour } from './tour.mapper';
+import { createHttpError } from '../utils/http-error';
 
 interface TourOptions {
   tenantId: string;
-  userId?: string | null;
+  userId: string;
+  role: UserRole;
 }
 
 /**
@@ -19,24 +23,32 @@ interface TourOptions {
  * Pure function — same logic as the original in-memory version.
  */
 function scheduleStops(
-  stops: Array<{ listingId: string; address: string; lat: number; lng: number }>,
+  stops: Array<{
+    id?: string;
+    listingId: string;
+    address: string;
+    lat: number;
+    lng: number;
+    thumbnailUrl?: string | null;
+  }>,
   date: string,
   startTime: string,
   defaultDurationMinutes: number,
   defaultBufferMinutes: number,
 ): Array<{
+  id?: string;
   listingId: string;
   order: number;
   address: string;
   lat: number;
   lng: number;
-  thumbnailUrl: null;
+  thumbnailUrl: string | null;
   startTime: string;
   endTime: string;
-}> {
+  }> {
   const startDate = new Date(`${date}T${startTime}:00`);
   if (Number.isNaN(startDate.getTime())) {
-    throw new Error('Invalid startTime provided');
+    throw createHttpError(400, 'Invalid startTime provided');
   }
 
   let current = startDate;
@@ -50,16 +62,123 @@ function scheduleStops(
     current = nextStart;
 
     return {
+      id: stop.id,
       listingId: stop.listingId,
       order: idx,
       address: stop.address,
       lat: stop.lat,
       lng: stop.lng,
-      thumbnailUrl: null,
+      thumbnailUrl: stop.thumbnailUrl ?? null,
       startTime: startIso,
       endTime: endIso,
     };
   });
+}
+
+function shouldRescheduleTour(updates: Partial<Tour>): boolean {
+  return (
+    updates.stops !== undefined ||
+    updates.date !== undefined ||
+    updates.startTime !== undefined ||
+    updates.defaultDurationMinutes !== undefined ||
+    updates.defaultBufferMinutes !== undefined
+  );
+}
+
+function resolveUpdatedStops(
+  incomingStops: TourStop[] | undefined,
+  existingStops: TourStop[],
+): Array<{
+  id?: string;
+  listingId: string;
+  address: string;
+  lat: number;
+  lng: number;
+  thumbnailUrl?: string | null;
+}> {
+  if (!incomingStops) {
+    return existingStops.map((stop) => ({
+      id: stop.id,
+      listingId: stop.listingId,
+      address: stop.address,
+      lat: stop.lat,
+      lng: stop.lng,
+      thumbnailUrl: stop.thumbnailUrl ?? null,
+    }));
+  }
+
+  const existingStopsById = new Map(existingStops.map((stop) => [stop.id, stop]));
+  return incomingStops.map((stop) => {
+    const existingStop = existingStopsById.get(stop.id);
+    return {
+      id: existingStop?.id,
+      listingId: stop.listingId,
+      address: stop.address,
+      lat: stop.lat,
+      lng: stop.lng,
+      thumbnailUrl: stop.thumbnailUrl ?? existingStop?.thumbnailUrl ?? null,
+    };
+  });
+}
+
+async function syncTourStops(
+  tx: Prisma.TransactionClient,
+  tourId: string,
+  existingStops: TourStop[],
+  scheduledStops: Array<{
+    id?: string;
+    listingId: string;
+    order: number;
+    address: string;
+    lat: number;
+    lng: number;
+    thumbnailUrl?: string | null;
+    startTime: string;
+    endTime: string;
+  }>,
+  replaceMissingStops: boolean,
+): Promise<void> {
+  const existingStopIds = new Set(existingStops.map((stop) => stop.id));
+  const preservedStopIds = scheduledStops
+    .map((stop) => stop.id)
+    .filter((stopId): stopId is string => Boolean(stopId && existingStopIds.has(stopId)));
+
+  if (replaceMissingStops) {
+    await tx.tourStop.deleteMany({
+      where: {
+        tourId,
+        ...(preservedStopIds.length > 0 ? { id: { notIn: preservedStopIds } } : {}),
+      },
+    });
+  }
+
+  for (const stop of scheduledStops) {
+    const data = {
+      listingId: stop.listingId,
+      order: stop.order,
+      address: stop.address,
+      lat: stop.lat,
+      lng: stop.lng,
+      thumbnailUrl: stop.thumbnailUrl ?? null,
+      startTime: stop.startTime,
+      endTime: stop.endTime,
+    };
+
+    if (stop.id && existingStopIds.has(stop.id)) {
+      await tx.tourStop.update({
+        where: { id: stop.id },
+        data,
+      });
+      continue;
+    }
+
+    await tx.tourStop.create({
+      data: {
+        tourId,
+        ...data,
+      },
+    });
+  }
 }
 
 /**
@@ -81,108 +200,124 @@ export async function planTour(
     defaultBufferMinutes,
   );
 
-  // 1. Create tour + stops in DB first (no narrations yet — need real stop IDs)
-  const dbTour = await tourRepo.create({
-    tenantId: options.tenantId,
-    userId: options.userId ?? null,
-    title: req.clientName ? `${req.clientName}'s Tour` : 'Planned Tour',
-    clientName: req.clientName ?? '',
-    date,
-    startTime,
-    defaultDurationMinutes,
-    defaultBufferMinutes,
-    stops: scheduledStops,
+  const dbTour = await prisma.$transaction(async (tx) => {
+    const createdTour = await tourRepo.create({
+      tenantId: options.tenantId,
+      userId: options.userId,
+      title: req.clientName ? `${req.clientName}'s Tour` : 'Planned Tour',
+      clientName: req.clientName ?? '',
+      date,
+      startTime,
+      defaultDurationMinutes,
+      defaultBufferMinutes,
+      stops: scheduledStops,
+    }, tx);
+
+    const narrationPayloads = generateTourNarrations(
+      toApiTour(createdTour),
+      listings ?? new Map(),
+    );
+
+    const updatedTour = await tourRepo.update(
+      createdTour.id,
+      options,
+      { narrationPayloads },
+      tx,
+    );
+
+    if (!updatedTour) {
+      throw createHttpError(500, 'Failed to persist tour');
+    }
+
+    return updatedTour;
   });
 
-  // 2. Generate narrations using real stop IDs from the DB
-  const realTourStops: TourStop[] = dbTour.stops.map((s) => ({
-    id: s.id,
-    listingId: s.listingId,
-    order: s.order,
-    address: s.address,
-    lat: s.lat,
-    lng: s.lng,
-    thumbnailUrl: s.thumbnailUrl ?? null,
-    startTime: s.startTime ?? undefined,
-    endTime: s.endTime ?? undefined,
-  }));
-  const narrationPayloads = generateTourNarrations(
-    { stops: realTourStops } as Tour,
-    listings ?? new Map(),
-  );
-
-  // 3. Update the tour with the generated narration payloads
-  const updatedTour = await tourRepo.update(dbTour.id, options.tenantId, {
-    narrationPayloads,
-  });
-
-  return toApiTour(updatedTour ?? dbTour) as PlannedTour;
+  return toApiTour(dbTour) as PlannedTour;
 }
 
-export async function getTourById(id: string, tenantId: string): Promise<Tour | undefined> {
-  const dbTour = await tourRepo.findById(id, tenantId);
+export async function getTourById(id: string, options: TourOptions): Promise<Tour | undefined> {
+  const dbTour = await tourRepo.findById(id, options);
   return dbTour ? toApiTour(dbTour) : undefined;
 }
 
 export async function updateTour(
   id: string,
-  tenantId: string,
+  options: TourOptions,
   updates: Partial<Tour>,
 ): Promise<Tour | undefined> {
-  // If stops were updated, recalculate times
-  // First fetch existing to get scheduling params
-  const existing = await tourRepo.findById(id, tenantId);
-  if (!existing) return undefined;
+  const dbTour = await prisma.$transaction(async (tx) => {
+    const existing = await tourRepo.findById(id, options, tx);
+    if (!existing) {
+      return null;
+    }
 
-  let stopsData: Array<{
-    listingId: string;
-    order: number;
-    address: string;
-    lat: number;
-    lng: number;
-    thumbnailUrl: string | null;
-    startTime: string | null;
-    endTime: string | null;
-  }> | undefined;
+    const existingTour = toApiTour(existing);
+    const needsReschedule = shouldRescheduleTour(updates);
 
-  if (updates.stops) {
-    const date = updates.date ?? existing.date;
-    const startTimeStr = updates.startTime ?? existing.startTime;
-    const duration = updates.defaultDurationMinutes ?? existing.defaultDurationMinutes;
-    const buffer = updates.defaultBufferMinutes ?? existing.defaultBufferMinutes;
+    const updatedTourRow = await tourRepo.update(id, options, {
+      title: updates.title,
+      clientName: updates.clientName,
+      date: updates.date,
+      startTime: updates.startTime,
+      defaultDurationMinutes: updates.defaultDurationMinutes,
+      defaultBufferMinutes: updates.defaultBufferMinutes,
+      narrationPayloads: needsReschedule ? undefined : updates.narrationPayloads,
+    }, tx);
 
-    const rescheduled = scheduleStops(
-      updates.stops.map((s) => ({
-        listingId: s.listingId,
-        address: s.address,
-        lat: s.lat,
-        lng: s.lng,
-      })),
-      date,
-      startTimeStr,
-      duration,
-      buffer,
-    );
+    if (!updatedTourRow) {
+      return null;
+    }
 
-    stopsData = rescheduled;
-  }
+    if (needsReschedule) {
+      const date = updates.date ?? existing.date;
+      const startTime = updates.startTime ?? existing.startTime;
+      const duration = updates.defaultDurationMinutes ?? existing.defaultDurationMinutes;
+      const buffer = updates.defaultBufferMinutes ?? existing.defaultBufferMinutes;
+      const stopInputs = resolveUpdatedStops(updates.stops, existingTour.stops);
+      const scheduledStops = scheduleStops(stopInputs, date, startTime, duration, buffer);
 
-  const dbTour = await tourRepo.update(id, tenantId, {
-    title: updates.title,
-    clientName: updates.clientName,
-    date: updates.date,
-    startTime: updates.startTime,
-    defaultDurationMinutes: updates.defaultDurationMinutes,
-    defaultBufferMinutes: updates.defaultBufferMinutes,
-    narrationPayloads: updates.narrationPayloads,
-    stops: stopsData,
+      await syncTourStops(
+        tx,
+        id,
+        existingTour.stops,
+        scheduledStops,
+        updates.stops !== undefined,
+      );
+    }
+
+    const finalTour = await tourRepo.findById(id, options, tx);
+    if (!finalTour) {
+      return null;
+    }
+
+    if (needsReschedule) {
+      const narrationPayloads = generateTourNarrations(
+        toApiTour(finalTour),
+        new Map(),
+      );
+
+      const persistedWithNarrations = await tourRepo.update(
+        id,
+        options,
+        { narrationPayloads },
+        tx,
+      );
+
+      if (!persistedWithNarrations) {
+        return null;
+      }
+
+      return persistedWithNarrations;
+    }
+
+    return finalTour;
   });
 
   return dbTour ? toApiTour(dbTour) : undefined;
 }
 
-export async function deleteTour(id: string, tenantId: string): Promise<boolean> {
-  return tourRepo.deleteById(id, tenantId);
+export async function deleteTour(id: string, options: TourOptions): Promise<boolean> {
+  return tourRepo.deleteById(id, options);
 }
 
 export async function listTours(options: TourOptions): Promise<Tour[]> {

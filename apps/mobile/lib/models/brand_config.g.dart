@@ -10,8 +10,7 @@ BrandConfig _$BrandConfigFromJson(Map<String, dynamic> json) => BrandConfig(
       brandName: json['brandName'] as String,
       brandTagline: json['brandTagline'] as String?,
       agentName: json['agentName'] as String?,
-      contact:
-          BrandContact.fromJson(json['contact'] as Map<String, dynamic>),
+      contact: BrandContact.fromJson(json['contact'] as Map<String, dynamic>),
       logo: BrandLogo.fromJson(json['logo'] as Map<String, dynamic>),
       favicon: json['favicon'] as String?,
       theme: ThemeConfig.fromJson(json['theme'] as Map<String, dynamic>),
@@ -38,19 +37,18 @@ Map<String, dynamic> _$BrandConfigToJson(BrandConfig instance) =>
       'brandName': instance.brandName,
       'brandTagline': instance.brandTagline,
       'agentName': instance.agentName,
-      'contact': instance.contact.toJson(),
-      'logo': instance.logo.toJson(),
+      'contact': instance.contact,
+      'logo': instance.logo,
       'favicon': instance.favicon,
-      'theme': instance.theme.toJson(),
-      'navItems': instance.navItems?.map((e) => e.toJson()).toList(),
-      'neighborhoods': instance.neighborhoods?.map((e) => e.toJson()).toList(),
-      'search': instance.search?.toJson(),
-      'compliance': instance.compliance?.toJson(),
-      'features': instance.features?.toJson(),
+      'theme': instance.theme,
+      'navItems': instance.navItems,
+      'neighborhoods': instance.neighborhoods,
+      'search': instance.search,
+      'compliance': instance.compliance,
+      'features': instance.features,
     };
 
-BrandContact _$BrandContactFromJson(Map<String, dynamic> json) =>
-    BrandContact(
+BrandContact _$BrandContactFromJson(Map<String, dynamic> json) => BrandContact(
       email: json['email'] as String,
       phone: json['phone'] as String?,
       address: json['address'] as String?,
@@ -70,8 +68,7 @@ BrandLogo _$BrandLogoFromJson(Map<String, dynamic> json) => BrandLogo(
       alt: json['alt'] as String,
     );
 
-Map<String, dynamic> _$BrandLogoToJson(BrandLogo instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$BrandLogoToJson(BrandLogo instance) => <String, dynamic>{
       'url': instance.url,
       'darkUrl': instance.darkUrl,
       'height': instance.height,
@@ -79,19 +76,17 @@ Map<String, dynamic> _$BrandLogoToJson(BrandLogo instance) =>
     };
 
 ThemeConfig _$ThemeConfigFromJson(Map<String, dynamic> json) => ThemeConfig(
-      colors:
-          ThemeColors.fromJson(json['colors'] as Map<String, dynamic>),
-      typography: ThemeTypography.fromJson(
-          json['typography'] as Map<String, dynamic>),
-      radius:
-          ThemeRadius.fromJson(json['radius'] as Map<String, dynamic>),
+      colors: ThemeColors.fromJson(json['colors'] as Map<String, dynamic>),
+      typography:
+          ThemeTypography.fromJson(json['typography'] as Map<String, dynamic>),
+      radius: ThemeRadius.fromJson(json['radius'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ThemeConfigToJson(ThemeConfig instance) =>
     <String, dynamic>{
-      'colors': instance.colors.toJson(),
-      'typography': instance.typography.toJson(),
-      'radius': instance.radius.toJson(),
+      'colors': instance.colors,
+      'typography': instance.typography,
+      'radius': instance.radius,
     };
 
 ThemeColors _$ThemeColorsFromJson(Map<String, dynamic> json) => ThemeColors(
@@ -166,8 +161,7 @@ Map<String, dynamic> _$NavItemToJson(NavItem instance) => <String, dynamic>{
       'href': instance.href,
     };
 
-Neighborhood _$NeighborhoodFromJson(Map<String, dynamic> json) =>
-    Neighborhood(
+Neighborhood _$NeighborhoodFromJson(Map<String, dynamic> json) => Neighborhood(
       label: json['label'] as String,
       slug: json['slug'] as String,
     );
@@ -178,8 +172,7 @@ Map<String, dynamic> _$NeighborhoodToJson(Neighborhood instance) =>
       'slug': instance.slug,
     };
 
-SearchConfig _$SearchConfigFromJson(Map<String, dynamic> json) =>
-    SearchConfig(
+SearchConfig _$SearchConfigFromJson(Map<String, dynamic> json) => SearchConfig(
       defaultCenter: json['defaultCenter'] == null
           ? null
           : LatLng.fromJson(json['defaultCenter'] as Map<String, dynamic>),
@@ -192,7 +185,7 @@ SearchConfig _$SearchConfigFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$SearchConfigToJson(SearchConfig instance) =>
     <String, dynamic>{
-      'defaultCenter': instance.defaultCenter?.toJson(),
+      'defaultCenter': instance.defaultCenter,
       'defaultZoom': instance.defaultZoom,
       'defaultBbox': instance.defaultBbox,
       'defaultStatus': instance.defaultStatus,
@@ -228,8 +221,7 @@ Map<String, dynamic> _$ComplianceConfigToJson(ComplianceConfig instance) =>
       'equalHousingLogo': instance.equalHousingLogo,
     };
 
-FeatureFlags _$FeatureFlagsFromJson(Map<String, dynamic> json) =>
-    FeatureFlags(
+FeatureFlags _$FeatureFlagsFromJson(Map<String, dynamic> json) => FeatureFlags(
       tourEngine: json['tourEngine'] as bool?,
       aiSearch: json['aiSearch'] as bool?,
       contactForm: json['contactForm'] as bool?,

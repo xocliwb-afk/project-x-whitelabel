@@ -15,8 +15,13 @@ class AuthService {
   Future<AuthResponse> signUp({
     required String email,
     required String password,
+    Map<String, dynamic>? data,
   }) async {
-    return _client.auth.signUp(email: email, password: password);
+    return _client.auth.signUp(
+      email: email,
+      password: password,
+      data: data,
+    );
   }
 
   /// Sign in with email + password.

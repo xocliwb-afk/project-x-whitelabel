@@ -1,13 +1,32 @@
-import { prisma } from '@project-x/database';
+import { Prisma, prisma } from '@project-x/database';
 import type { Tour, TourStop } from '@project-x/database';
+import type { UserRole } from '@project-x/shared-types';
 
 type TourWithStops = Tour & { stops: TourStop[] };
+type TourDbClient = typeof prisma | Prisma.TransactionClient;
+export type TourAccessScope = {
+  tenantId: string;
+  userId: string;
+  role: UserRole;
+};
 
 const INCLUDE_STOPS = { stops: { orderBy: { order: 'asc' as const } } };
 
+function isPrivilegedRole(role: UserRole): boolean {
+  return role === 'ADMIN' || role === 'AGENT';
+}
+
+function buildScopedWhere(scope: TourAccessScope): Prisma.TourWhereInput {
+  const where: Prisma.TourWhereInput = { tenantId: scope.tenantId };
+  if (!isPrivilegedRole(scope.role)) {
+    where.userId = scope.userId;
+  }
+  return where;
+}
+
 export async function create(data: {
   tenantId: string;
-  userId?: string | null;
+  userId: string;
   title: string;
   clientName: string;
   date: string;
@@ -25,12 +44,11 @@ export async function create(data: {
     startTime?: string | null;
     endTime?: string | null;
   }>;
-}): Promise<TourWithStops> {
+}, db: TourDbClient = prisma): Promise<TourWithStops> {
   const { stops, narrationPayloads, ...tourData } = data;
-  return prisma.tour.create({
+  return db.tour.create({
     data: {
       ...tourData,
-      userId: tourData.userId ?? null,
       narrationPayloads: narrationPayloads != null ? JSON.parse(JSON.stringify(narrationPayloads)) : undefined,
       stops: {
         create: stops,
@@ -40,23 +58,26 @@ export async function create(data: {
   });
 }
 
-export async function findById(id: string, tenantId: string): Promise<TourWithStops | null> {
-  return prisma.tour.findFirst({
-    where: { id, tenantId },
+export async function findById(
+  id: string,
+  scope: TourAccessScope,
+  db: TourDbClient = prisma,
+): Promise<TourWithStops | null> {
+  return db.tour.findFirst({
+    where: {
+      id,
+      ...buildScopedWhere(scope),
+    },
     include: INCLUDE_STOPS,
   });
 }
 
-export async function findAll(options: {
-  tenantId: string;
-  userId?: string | null;
-}): Promise<TourWithStops[]> {
-  const where: Record<string, unknown> = { tenantId: options.tenantId };
-  if (options.userId !== undefined && options.userId !== null) {
-    where.userId = options.userId;
-  }
-  return prisma.tour.findMany({
-    where,
+export async function findAll(
+  scope: TourAccessScope,
+  db: TourDbClient = prisma,
+): Promise<TourWithStops[]> {
+  return db.tour.findMany({
+    where: buildScopedWhere(scope),
     include: INCLUDE_STOPS,
     orderBy: { createdAt: 'desc' },
   });
@@ -64,7 +85,7 @@ export async function findAll(options: {
 
 export async function update(
   id: string,
-  tenantId: string,
+  scope: TourAccessScope,
   data: {
     title?: string;
     clientName?: string;
@@ -73,43 +94,20 @@ export async function update(
     defaultDurationMinutes?: number;
     defaultBufferMinutes?: number;
     narrationPayloads?: unknown;
-    stops?: Array<{
-      listingId: string;
-      order: number;
-      address: string;
-      lat: number;
-      lng: number;
-      thumbnailUrl?: string | null;
-      startTime?: string | null;
-      endTime?: string | null;
-    }>;
   },
+  db: TourDbClient = prisma,
 ): Promise<TourWithStops | null> {
-  // Check existence + tenant ownership
-  const existing = await prisma.tour.findFirst({ where: { id, tenantId } });
+  const existing = await db.tour.findFirst({
+    where: {
+      id,
+      ...buildScopedWhere(scope),
+    },
+  });
   if (!existing) return null;
 
-  const { stops, narrationPayloads, ...tourFields } = data;
+  const { narrationPayloads, ...tourFields } = data;
 
-  // If stops are provided, delete existing and create new ones in a transaction
-  if (stops) {
-    return prisma.$transaction(async (tx) => {
-      await tx.tourStop.deleteMany({ where: { tourId: id } });
-      return tx.tour.update({
-        where: { id },
-        data: {
-          ...tourFields,
-          narrationPayloads: narrationPayloads !== undefined
-            ? (narrationPayloads != null ? JSON.parse(JSON.stringify(narrationPayloads)) : null)
-            : undefined,
-          stops: { create: stops },
-        },
-        include: INCLUDE_STOPS,
-      });
-    });
-  }
-
-  return prisma.tour.update({
+  return db.tour.update({
     where: { id },
     data: {
       ...tourFields,
@@ -121,7 +119,16 @@ export async function update(
   });
 }
 
-export async function deleteById(id: string, tenantId: string): Promise<boolean> {
-  const result = await prisma.tour.deleteMany({ where: { id, tenantId } });
+export async function deleteById(
+  id: string,
+  scope: TourAccessScope,
+  db: TourDbClient = prisma,
+): Promise<boolean> {
+  const result = await db.tour.deleteMany({
+    where: {
+      id,
+      ...buildScopedWhere(scope),
+    },
+  });
   return result.count > 0;
 }

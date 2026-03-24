@@ -5,18 +5,39 @@ class AppConfig {
     defaultValue: 'http://10.0.2.2:3002',
   );
 
-  static const String supabaseUrl = String.fromEnvironment(
+  static const String _supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://bmkqwfiipbxktrihydxd.supabase.co',
+    defaultValue: '',
   );
 
-  static const String supabaseAnonKey = String.fromEnvironment(
+  static const String _supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
     defaultValue: '',
   );
 
-  static const String tenantId = String.fromEnvironment(
+  static const String _tenantId = String.fromEnvironment(
     'TENANT_ID',
     defaultValue: '',
   );
+
+  static String get supabaseUrl {
+    if (_supabaseUrl.isEmpty) {
+      throw StateError('Missing required SUPABASE_URL configuration');
+    }
+    return _supabaseUrl;
+  }
+
+  static String get supabaseAnonKey {
+    if (_supabaseAnonKey.isEmpty) {
+      throw StateError('Missing required SUPABASE_ANON_KEY configuration');
+    }
+    return _supabaseAnonKey;
+  }
+
+  static String get tenantId {
+    if (_tenantId.isEmpty) {
+      throw StateError('Missing required TENANT_ID configuration');
+    }
+    return _tenantId;
+  }
 }

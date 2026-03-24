@@ -4,6 +4,7 @@ import { prisma } from '@project-x/database';
 /** Simple TTL cache for tenant validation */
 const tenantCache = new Map<string, { valid: boolean; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_TENANT_CACHE_ENTRIES = 250;
 
 let defaultTenantId: string | null = null;
 let defaultTenantExpiresAt = 0;
@@ -20,6 +21,25 @@ async function isValidTenant(tenantId: string): Promise<boolean> {
   });
 
   const valid = tenant?.active ?? false;
+  if (!tenantCache.has(tenantId) && tenantCache.size >= MAX_TENANT_CACHE_ENTRIES) {
+    const now = Date.now();
+    for (const [cachedTenantId, entry] of tenantCache) {
+      if (entry.expiresAt <= now) {
+        tenantCache.delete(cachedTenantId);
+      }
+      if (tenantCache.size < MAX_TENANT_CACHE_ENTRIES) {
+        break;
+      }
+    }
+
+    if (tenantCache.size >= MAX_TENANT_CACHE_ENTRIES) {
+      const oldestKey = tenantCache.keys().next().value;
+      if (oldestKey) {
+        tenantCache.delete(oldestKey);
+      }
+    }
+  }
+
   tenantCache.set(tenantId, { valid, expiresAt: Date.now() + CACHE_TTL_MS });
   return valid;
 }
@@ -53,24 +73,28 @@ async function resolveDefaultTenantId(): Promise<string | null> {
  * Attaches req.tenantId for downstream use.
  */
 export async function resolveTenant(req: Request, res: Response, next: NextFunction) {
-  const headerTenantId = req.headers['x-tenant-id'];
-  const tenantId = typeof headerTenantId === 'string' ? headerTenantId.trim() : null;
+  try {
+    const headerTenantId = req.headers['x-tenant-id'];
+    const tenantId = typeof headerTenantId === 'string' ? headerTenantId.trim() : null;
 
-  if (tenantId) {
-    const valid = await isValidTenant(tenantId);
-    if (!valid) {
-      return res.status(400).json({ error: true, message: 'Invalid or inactive tenant' });
+    if (tenantId) {
+      const valid = await isValidTenant(tenantId);
+      if (!valid) {
+        return res.status(400).json({ error: true, message: 'Invalid or inactive tenant' });
+      }
+      req.tenantId = tenantId;
+      return next();
     }
-    req.tenantId = tenantId;
+
+    // No header — resolve default
+    const fallback = await resolveDefaultTenantId();
+    if (!fallback) {
+      return res.status(400).json({ error: true, message: 'No tenant available' });
+    }
+
+    req.tenantId = fallback;
     return next();
+  } catch (error) {
+    return next(error);
   }
-
-  // No header — resolve default
-  const fallback = await resolveDefaultTenantId();
-  if (!fallback) {
-    return res.status(400).json({ error: true, message: 'No tenant available' });
-  }
-
-  req.tenantId = fallback;
-  next();
 }

@@ -10,6 +10,8 @@ import type {
   TourStop,
 } from '@project-x/shared-types';
 import { planTourApi } from '@/lib/api-client';
+import { createClient } from '@/lib/supabase/client';
+import { useAuthStore } from '@/stores/auth-store';
 
 type TourMetaFields = Partial<
   Pick<
@@ -27,6 +29,7 @@ type TourState = {
   tour: Tour | null;
   isPlanning: boolean;
   planError: string | null;
+  planNotice: string | null;
   actions: {
     addStopFromListing: (listing: NormalizedListing) => void;
     removeStop: (stopId: string) => void;
@@ -67,6 +70,7 @@ export const useTourStore = create<TourState>()(
       tour: null,
       isPlanning: false,
       planError: null,
+      planNotice: null,
       actions: {
         addStopFromListing: (listing) => {
           set(
@@ -97,11 +101,15 @@ export const useTourStore = create<TourState>()(
         planTourServerSide: async () => {
           const currentTour = get().tour;
           if (!currentTour || currentTour.stops.length === 0) {
-            set({ planError: 'Add at least one stop to plan a tour.', isPlanning: false });
+            set({
+              planError: 'Add at least one stop to plan a tour.',
+              planNotice: null,
+              isPlanning: false,
+            });
             return;
           }
 
-          set({ isPlanning: true, planError: null });
+          set({ isPlanning: true, planError: null, planNotice: null });
 
           try {
             const sortedStops = [...currentTour.stops].sort((a, b) => a.order - b.order);
@@ -125,12 +133,36 @@ export const useTourStore = create<TourState>()(
               })),
             };
 
-            const plannedTour = await planTourApi(payload);
-            set({ tour: plannedTour, isPlanning: false, planError: null });
+            const authState = useAuthStore.getState();
+            const supabase = createClient();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+
+            if (!authState.user || !session?.access_token) {
+              get().actions.computeStopTimes();
+              set({
+                isPlanning: false,
+                planError: null,
+                planNotice: 'Log in to save tours. Your current route is still stored locally.',
+              });
+              return;
+            }
+
+            const plannedTour = await planTourApi(payload, {
+              accessToken: session.access_token,
+              tenantId: authState.user.tenantId,
+            });
+            set({
+              tour: plannedTour,
+              isPlanning: false,
+              planError: null,
+              planNotice: null,
+            });
           } catch (error) {
             const message =
               error instanceof Error ? error.message : 'Failed to plan tour. Please try again.';
-            set({ isPlanning: false, planError: message });
+            set({ isPlanning: false, planError: message, planNotice: null });
           }
         },
         removeStop: (stopId) => {
@@ -223,7 +255,7 @@ export const useTourStore = create<TourState>()(
           }
           return `https://www.google.com/maps/dir/?${params.toString()}`;
         },
-        clearTour: () => set({ tour: null }),
+        clearTour: () => set({ tour: null, planError: null, planNotice: null }),
       },
     }),
     { name: 'project-x-tour' },

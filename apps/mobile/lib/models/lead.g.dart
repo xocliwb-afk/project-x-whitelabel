@@ -35,8 +35,7 @@ Map<String, dynamic> _$LeadPayloadToJson(LeadPayload instance) =>
       'captchaToken': instance.captchaToken,
     };
 
-LeadResponse _$LeadResponseFromJson(Map<String, dynamic> json) =>
-    LeadResponse(
+LeadResponse _$LeadResponseFromJson(Map<String, dynamic> json) => LeadResponse(
       success: json['success'] as bool,
       provider: json['provider'] as String?,
       message: json['message'] as String?,

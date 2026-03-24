@@ -39,7 +39,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           phone: phone.isEmpty ? null : phone,
         );
 
-    if (mounted && ref.read(authProvider).isAuthenticated) {
+    final authState = ref.read(authProvider);
+    if (!mounted || authState.pendingVerification) {
+      return;
+    }
+
+    if (authState.isAuthenticated) {
       context.go('/search');
     }
   }
@@ -85,6 +90,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         authState.error!,
                         style: TextStyle(
                           color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (authState.pendingVerification) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Check your email to verify your account, then sign in to finish setup.',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),

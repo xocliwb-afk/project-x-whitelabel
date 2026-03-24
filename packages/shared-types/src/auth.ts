@@ -18,10 +18,12 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  email: string;
-  password: string;
   displayName?: string;
   phone?: string;
+}
+
+export interface RegisterResponse {
+  user: AuthUser;
 }
 
 export interface RefreshTokenRequest {

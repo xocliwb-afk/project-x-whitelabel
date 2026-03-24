@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifySupabaseToken } from '../lib/jwt';
+import {
+  AuthTokenError,
+  isAuthTokenError,
+  verifySupabaseToken,
+} from '../lib/jwt';
 import { prisma } from '@project-x/database';
 import type { AuthUser, UserRole } from '@project-x/shared-types';
 
@@ -7,6 +11,99 @@ function extractBearerToken(req: Request): string | null {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) return null;
   return header.slice(7);
+}
+
+function setRequestAuth(req: Request, claims: Awaited<ReturnType<typeof verifySupabaseToken>>) {
+  req.auth = {
+    supabaseId: claims.sub,
+    email: claims.email,
+    tenantId: claims.tenantId ?? null,
+    accessTokenClaims: claims as unknown as Record<string, unknown>,
+  };
+}
+
+function toAuthUser(user: {
+  id: string;
+  supabaseId: string;
+  tenantId: string;
+  email: string;
+  displayName: string | null;
+  phone: string | null;
+  role: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): AuthUser {
+  return {
+    id: user.id,
+    supabaseId: user.supabaseId,
+    tenantId: user.tenantId,
+    email: user.email,
+    displayName: user.displayName,
+    phone: user.phone,
+    role: user.role as UserRole,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  };
+}
+
+function respondAuthFailure(res: Response, error: unknown) {
+  const message =
+    error instanceof AuthTokenError ? error.message : 'Invalid or expired token';
+  return res.status(401).json({ error: true, message });
+}
+
+function respondAccessFailure(
+  res: Response,
+  status: number,
+  message: string,
+  code: string,
+) {
+  return res.status(status).json({ error: true, message, code });
+}
+
+function hasTokenTenantMismatch(req: Request): boolean {
+  return Boolean(
+    req.tenantId &&
+    req.auth?.tenantId &&
+    req.auth.tenantId !== req.tenantId,
+  );
+}
+
+function logAuthDrop(reason: string, details?: Record<string, unknown>) {
+  if (details) {
+    console.warn(`[auth] ${reason}`, details);
+    return;
+  }
+  console.warn(`[auth] ${reason}`);
+}
+
+export async function requireVerifiedToken(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const token = extractBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ error: true, message: 'Authentication required' });
+  }
+
+  try {
+    const claims = await verifySupabaseToken(token);
+    setRequestAuth(req, claims);
+    if (hasTokenTenantMismatch(req)) {
+      logAuthDrop('verified token rejected: tenant claim mismatch', {
+        requestTenantId: req.tenantId,
+        tokenTenantId: req.auth?.tenantId,
+      });
+      return respondAccessFailure(res, 403, 'Tenant mismatch', 'TENANT_MISMATCH');
+    }
+    return next();
+  } catch (error) {
+    if (isAuthTokenError(error)) {
+      return respondAuthFailure(res, error);
+    }
+    return next(error);
+  }
 }
 
 /**
@@ -19,37 +116,46 @@ export async function attachAuth(req: Request, _res: Response, next: NextFunctio
 
   try {
     const claims = await verifySupabaseToken(token);
+    setRequestAuth(req, claims);
+    if (hasTokenTenantMismatch(req)) {
+      logAuthDrop('optional auth skipped: tenant claim mismatch', {
+        requestTenantId: req.tenantId,
+        tokenTenantId: req.auth?.tenantId,
+      });
+      req.auth = undefined;
+      return next();
+    }
+  } catch (error) {
+    if (isAuthTokenError(error)) {
+      logAuthDrop('optional auth skipped: invalid token');
+      return next();
+    }
+    return next(error);
+  }
 
-    req.auth = {
-      supabaseId: claims.sub,
-      email: claims.email,
-      accessTokenClaims: claims as unknown as Record<string, unknown>,
-    };
-
-    // Look up local user by Supabase ID
+  try {
     const dbUser = await prisma.user.findUnique({
-      where: { supabaseId: claims.sub },
+      where: { supabaseId: req.auth!.supabaseId },
     });
 
-    if (dbUser) {
-      // Skip attaching user if tenant doesn't match (cross-tenant request)
-      if (req.tenantId && dbUser.tenantId !== req.tenantId) {
-        return next();
-      }
-      req.user = {
-        id: dbUser.id,
-        supabaseId: dbUser.supabaseId,
-        tenantId: dbUser.tenantId,
-        email: dbUser.email,
-        displayName: dbUser.displayName,
-        phone: dbUser.phone,
-        role: dbUser.role as UserRole,
-        createdAt: dbUser.createdAt.toISOString(),
-        updatedAt: dbUser.updatedAt.toISOString(),
-      };
+    if (!dbUser) {
+      logAuthDrop('optional auth skipped: local user not provisioned', {
+        supabaseId: req.auth!.supabaseId,
+      });
+      return next();
     }
-  } catch {
-    // Invalid token — silently skip, this is optional auth
+
+    if (req.tenantId && dbUser.tenantId !== req.tenantId) {
+      logAuthDrop('optional auth skipped: tenant mismatch', {
+        requestTenantId: req.tenantId,
+        userTenantId: dbUser.tenantId,
+      });
+      return next();
+    }
+
+    req.user = toAuthUser(dbUser);
+  } catch (error) {
+    return next(error);
   }
 
   next();
@@ -67,38 +173,46 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   try {
     const claims = await verifySupabaseToken(token);
+    setRequestAuth(req, claims);
+    if (hasTokenTenantMismatch(req)) {
+      logAuthDrop('required auth rejected: tenant claim mismatch', {
+        requestTenantId: req.tenantId,
+        tokenTenantId: req.auth?.tenantId,
+      });
+      return respondAccessFailure(res, 403, 'Tenant mismatch', 'TENANT_MISMATCH');
+    }
+  } catch (error) {
+    if (isAuthTokenError(error)) {
+      return respondAuthFailure(res, error);
+    }
+    return next(error);
+  }
 
-    req.auth = {
-      supabaseId: claims.sub,
-      email: claims.email,
-      accessTokenClaims: claims as unknown as Record<string, unknown>,
-    };
-
+  try {
     const dbUser = await prisma.user.findUnique({
-      where: { supabaseId: claims.sub },
+      where: { supabaseId: req.auth!.supabaseId },
     });
 
     if (!dbUser) {
-      return res.status(401).json({ error: true, message: 'User not found' });
+      return respondAccessFailure(
+        res,
+        401,
+        'User not provisioned',
+        'USER_NOT_PROVISIONED',
+      );
     }
 
     if (req.tenantId && dbUser.tenantId !== req.tenantId) {
-      return res.status(403).json({ error: true, message: 'Tenant mismatch' });
+      logAuthDrop('required auth rejected: tenant mismatch', {
+        requestTenantId: req.tenantId,
+        userTenantId: dbUser.tenantId,
+      });
+      return respondAccessFailure(res, 403, 'Tenant mismatch', 'TENANT_MISMATCH');
     }
 
-    req.user = {
-      id: dbUser.id,
-      supabaseId: dbUser.supabaseId,
-      tenantId: dbUser.tenantId,
-      email: dbUser.email,
-      displayName: dbUser.displayName,
-      phone: dbUser.phone,
-      role: dbUser.role as UserRole,
-      createdAt: dbUser.createdAt.toISOString(),
-      updatedAt: dbUser.updatedAt.toISOString(),
-    };
-  } catch {
-    return res.status(401).json({ error: true, message: 'Invalid or expired token' });
+    req.user = toAuthUser(dbUser);
+  } catch (error) {
+    return next(error);
   }
 
   next();

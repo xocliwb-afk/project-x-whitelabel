@@ -7,6 +7,7 @@ declare global {
       auth?: {
         supabaseId: string;
         email: string;
+        tenantId?: string | null;
         accessTokenClaims: Record<string, unknown>;
       };
       tenantId?: string;

@@ -12,15 +12,15 @@ ListingSearchResponse _$ListingSearchResponseFromJson(
       results: (json['results'] as List<dynamic>)
           .map((e) => Listing.fromJson(e as Map<String, dynamic>))
           .toList(),
-      pagination: SearchPagination.fromJson(
-          json['pagination'] as Map<String, dynamic>),
+      pagination:
+          SearchPagination.fromJson(json['pagination'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ListingSearchResponseToJson(
         ListingSearchResponse instance) =>
     <String, dynamic>{
-      'results': instance.results.map((e) => e.toJson()).toList(),
-      'pagination': instance.pagination.toJson(),
+      'results': instance.results,
+      'pagination': instance.pagination,
     };
 
 SearchPagination _$SearchPaginationFromJson(Map<String, dynamic> json) =>

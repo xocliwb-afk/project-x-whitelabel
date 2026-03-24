@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import '../models/models.dart';
-import '../models/narration.dart';
+import '../core/config/app_config.dart';
 
 /// Error type for API failures with structured information.
 class ApiException implements Exception {
@@ -33,11 +33,26 @@ class ApiClient {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-tenant-id': AppConfig.tenantId,
           },
         )) {
     if (interceptors != null) {
       _dio.interceptors.addAll(interceptors);
     }
+  }
+
+  Dio get dio => _dio;
+
+  void addInterceptor(Interceptor interceptor) {
+    final alreadyRegistered = _dio.interceptors.any(
+      (existing) =>
+          identical(existing, interceptor) ||
+          existing.runtimeType == interceptor.runtimeType,
+    );
+    if (alreadyRegistered) {
+      return;
+    }
+    _dio.interceptors.add(interceptor);
   }
 
   /// Search listings with optional query parameters.
