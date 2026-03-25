@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type {
   BrandAssetOverrides,
+  BrandAssetType,
   PatchAdminBrandRequest,
   PutAdminBrandRequest,
 } from '@project-x/shared-types';
@@ -19,6 +20,8 @@ import {
   replaceAdminBrand,
   validateAdminBrandDraft,
 } from '../services/brand.service';
+import { createBrandAssetUploadInit } from '../services/brand-asset.service';
+import { validateBrandAssetUploadRequest } from '../utils/upload-policy';
 
 const router = Router();
 const MAX_ASSET_REFERENCE_LENGTH = 2000;
@@ -182,6 +185,15 @@ function parsePatchBody(body: unknown): PatchAdminBrandRequest {
   return parsed;
 }
 
+function parseAssetUploadInitBody(assetType: BrandAssetType, body: unknown) {
+  const validation = validateBrandAssetUploadRequest(assetType, body);
+  if (!validation.valid) {
+    throw createValidationHttpError(validation.message, validation.errors, validation.code);
+  }
+
+  return validation.request;
+}
+
 router.use((_, res, next) => {
   res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('Vary', 'Authorization, x-tenant-id');
@@ -224,6 +236,36 @@ router.patch(
     }
 
     return res.status(200).json(result.brand);
+  }),
+);
+
+router.post(
+  '/logo',
+  asyncHandler(async (req, res) => {
+    const result = await createBrandAssetUploadInit(
+      req.tenantId!,
+      parseAssetUploadInitBody('logo', req.body),
+    );
+    if (!result.found) {
+      throw createHttpError(404, toBrandUnavailableMessage(result.reason), result.reason);
+    }
+
+    return res.status(200).json(result.upload);
+  }),
+);
+
+router.post(
+  '/favicon',
+  asyncHandler(async (req, res) => {
+    const result = await createBrandAssetUploadInit(
+      req.tenantId!,
+      parseAssetUploadInitBody('favicon', req.body),
+    );
+    if (!result.found) {
+      throw createHttpError(404, toBrandUnavailableMessage(result.reason), result.reason);
+    }
+
+    return res.status(200).json(result.upload);
   }),
 );
 
