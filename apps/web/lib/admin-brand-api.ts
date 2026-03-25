@@ -1,5 +1,6 @@
 import type {
   AdminBrandResponse,
+  BrandAssetType,
   BrandAssetInitRequest,
   BrandAssetInitResponse,
   BrandValidateRequest,
@@ -43,6 +44,14 @@ export class AdminBrandApiError extends Error {
 }
 
 type BrandAssetUploadInitInput = Omit<BrandAssetInitRequest, 'assetType'>;
+
+const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+};
 
 async function adminBrandApiFetch<T>(
   path: string,
@@ -135,4 +144,39 @@ export function createFaviconUploadInit(
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export function inferBrandAssetContentType(
+  file: File,
+  assetType: BrandAssetType,
+): string {
+  const explicitType = file.type.trim().toLowerCase();
+  if (explicitType) {
+    return explicitType;
+  }
+
+  const lowerName = file.name.toLowerCase();
+  const extension = lowerName.includes('.') ? lowerName.slice(lowerName.lastIndexOf('.')) : '';
+  const inferred = CONTENT_TYPE_BY_EXTENSION[extension];
+
+  if (inferred) {
+    return inferred;
+  }
+
+  return assetType === 'favicon' ? 'image/x-icon' : '';
+}
+
+export async function uploadBrandAssetToSignedUrl(
+  upload: BrandAssetInitResponse,
+  file: File,
+): Promise<void> {
+  const response = await fetch(upload.uploadUrl, {
+    method: upload.method,
+    headers: upload.headers,
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Upload failed with status ${response.status}`);
+  }
 }
