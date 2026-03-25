@@ -43,6 +43,7 @@ export default function BrandBootstrapView() {
     }
 
     if (user.role !== 'ADMIN') {
+      reset();
       return;
     }
 

@@ -48,6 +48,7 @@ type AdminBrandStoreState = {
   uploadStatus: UploadStatusByAsset;
   hydrate: (brand: AdminBrandResponse) => void;
   updateDraft: (updater: (draft: AdminBrandResponse) => void) => void;
+  setAssetOverride: (assetType: BrandAssetType, value: string | null) => void;
   resetDraft: () => void;
   loadCurrentBrand: () => Promise<void>;
   validateDraft: () => Promise<BrandValidateResponse | null>;
@@ -209,7 +210,7 @@ async function getAuthenticatedRequestOptions(): Promise<AdminBrandRequestOption
 
 function currentUserKey(): string | null {
   const user = useAuthStore.getState().user;
-  return user ? `${user.id}:${user.tenantId}` : null;
+  return user ? `${user.id}:${user.tenantId}:${user.role}` : null;
 }
 
 const initialState = {
@@ -263,6 +264,30 @@ export const useAdminBrandStore = create<AdminBrandStoreState>((set, get) => ({
         draft,
         ...clearActionFeedback(),
         isDirty: !brandsMatch(state.original, draft),
+      };
+    }),
+
+  setAssetOverride: (assetType, value) =>
+    set((state) => {
+      if (!state.draft) {
+        return {};
+      }
+
+      const draft = cloneJson(state.draft);
+      if (assetType === 'logo') {
+        draft.assets.logoUrl = value;
+      } else {
+        draft.assets.faviconUrl = value;
+      }
+
+      return {
+        draft,
+        ...clearActionFeedback(),
+        isDirty: !brandsMatch(state.original, draft),
+        uploadStatus: {
+          ...state.uploadStatus,
+          [assetType]: createEmptyUploadStatus(),
+        },
       };
     }),
 
@@ -588,9 +613,9 @@ let adminBrandAuthSubscriptionInstalled = false;
 if (!adminBrandAuthSubscriptionInstalled) {
   adminBrandAuthSubscriptionInstalled = true;
   useAuthStore.subscribe((state, previousState) => {
-    const currentKey = state.user ? `${state.user.id}:${state.user.tenantId}` : null;
+    const currentKey = state.user ? `${state.user.id}:${state.user.tenantId}:${state.user.role}` : null;
     const previousKey = previousState.user
-      ? `${previousState.user.id}:${previousState.user.tenantId}`
+      ? `${previousState.user.id}:${previousState.user.tenantId}:${previousState.user.role}`
       : null;
 
     if (currentKey !== previousKey) {
