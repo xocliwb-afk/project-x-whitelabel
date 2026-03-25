@@ -7,6 +7,10 @@ const mocks = vi.hoisted(() => ({
   tenantFindUnique: vi.fn(),
   brandFindUnique: vi.fn(),
   brandUpdateMany: vi.fn(),
+  storageFrom: vi.fn(),
+  storageCreateSignedUploadUrl: vi.fn(),
+  storageGetPublicUrl: vi.fn(),
+  randomUUID: vi.fn(),
   brandRows: new Map<string, any>(),
 }));
 
@@ -20,6 +24,18 @@ vi.mock('@project-x/database', () => ({
       updateMany: (...args: any[]) => mocks.brandUpdateMany(...args),
     },
   },
+}));
+
+vi.mock('../../lib/supabase-admin', () => ({
+  getSupabaseAdmin: () => ({
+    storage: {
+      from: (...args: any[]) => mocks.storageFrom(...args),
+    },
+  }),
+}));
+
+vi.mock('node:crypto', () => ({
+  randomUUID: (...args: any[]) => mocks.randomUUID(...args),
 }));
 
 const baseConfig = {
@@ -150,6 +166,7 @@ describe('admin brand routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.brandRows.clear();
+    mocks.randomUUID.mockReturnValue('opaque-upload-id');
     mocks.brandRows.set('tenant-1', createBrandRow('tenant-1'));
     mocks.brandRows.set(
       'tenant-2',
@@ -194,6 +211,26 @@ describe('admin brand routes', () => {
 
       return { count: 1 };
     });
+
+    mocks.storageFrom.mockImplementation((bucket: string) => ({
+      createSignedUploadUrl: (...args: any[]) => mocks.storageCreateSignedUploadUrl(bucket, ...args),
+      getPublicUrl: (...args: any[]) => mocks.storageGetPublicUrl(bucket, ...args),
+    }));
+
+    mocks.storageCreateSignedUploadUrl.mockImplementation(async (bucket: string, path: string) => ({
+      data: {
+        signedUrl: `https://supabase.example/storage/v1/object/upload/sign/${bucket}/${path}?token=test-token`,
+        path,
+        token: 'test-token',
+      },
+      error: null,
+    }));
+
+    mocks.storageGetPublicUrl.mockImplementation((bucket: string, path: string) => ({
+      data: {
+        publicUrl: `https://supabase.example/storage/v1/object/public/${bucket}/${path}`,
+      },
+    }));
   });
 
   afterEach(async () => {
@@ -541,5 +578,209 @@ describe('admin brand routes', () => {
     });
     expect(mocks.brandUpdateMany).not.toHaveBeenCalled();
     expect(cloneJson(mocks.brandRows.get('tenant-1'))).toEqual(tenantOneBefore);
+  });
+
+  it('returns 404 when the tenant brand is missing on logo upload-init', async () => {
+    const { baseUrl } = await startServer();
+    mocks.brandRows.delete('tenant-1');
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/logo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: 'tenant-logo.png',
+        contentType: 'image/png',
+        fileSizeBytes: 1234,
+      }),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: true,
+      message: 'No brand configuration found for this tenant',
+      code: 'BRAND_NOT_FOUND',
+      status: 404,
+    });
+  });
+
+  it('returns 404 when the tenant brand is inactive on favicon upload-init', async () => {
+    const { baseUrl } = await startServer();
+    mocks.brandRows.set('tenant-1', createBrandRow('tenant-1', { active: false }));
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/favicon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: 'favicon.ico',
+        contentType: 'image/x-icon',
+        fileSizeBytes: 2048,
+      }),
+    });
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: true,
+      message: 'Brand configuration is inactive',
+      code: 'BRAND_INACTIVE',
+      status: 404,
+    });
+  });
+
+  it('returns signed upload-init metadata for logo uploads without mutating the brand row', async () => {
+    const { baseUrl } = await startServer();
+    const tenantOneBefore = cloneJson(mocks.brandRows.get('tenant-1'));
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/logo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: 'Team Logo.PNG',
+        contentType: 'image/png',
+        fileSizeBytes: 128000,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      assetType: 'logo',
+      uploadUrl: 'https://supabase.example/storage/v1/object/upload/sign/brand-assets/tenant-1/brand/logo/opaque-upload-id.png?token=test-token',
+      assetUrl: 'https://supabase.example/storage/v1/object/public/brand-assets/tenant-1/brand/logo/opaque-upload-id.png',
+      method: 'PUT',
+      headers: {
+        'content-type': 'image/png',
+      },
+      expiresAt: expect.any(String),
+    });
+    expect(mocks.storageFrom).toHaveBeenCalledWith('brand-assets');
+    expect(mocks.storageCreateSignedUploadUrl).toHaveBeenCalledWith(
+      'brand-assets',
+      'tenant-1/brand/logo/opaque-upload-id.png',
+    );
+    expect(mocks.brandUpdateMany).not.toHaveBeenCalled();
+    expect(cloneJson(mocks.brandRows.get('tenant-1'))).toEqual(tenantOneBefore);
+  });
+
+  it('returns signed upload-init metadata for favicon uploads', async () => {
+    const { baseUrl } = await startServer();
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/favicon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: 'site-icon.ico',
+        contentType: 'image/x-icon',
+        fileSizeBytes: 32000,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      assetType: 'favicon',
+      uploadUrl: 'https://supabase.example/storage/v1/object/upload/sign/brand-assets/tenant-1/brand/favicon/opaque-upload-id.ico?token=test-token',
+      assetUrl: 'https://supabase.example/storage/v1/object/public/brand-assets/tenant-1/brand/favicon/opaque-upload-id.ico',
+      method: 'PUT',
+      headers: {
+        'content-type': 'image/x-icon',
+      },
+      expiresAt: expect.any(String),
+    });
+    expect(mocks.brandUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported upload content types with a machine-readable code', async () => {
+    const { baseUrl } = await startServer();
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/logo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: 'tenant-logo.svg',
+        contentType: 'image/svg+xml',
+        fileSizeBytes: 1024,
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: true,
+      message: 'Unsupported logo content type',
+      code: 'UPLOAD_CONTENT_TYPE_NOT_ALLOWED',
+      status: 400,
+      validationErrors: ['contentType: image/svg+xml is not allowed for logo uploads'],
+    });
+  });
+
+  it('rejects oversized upload metadata with a machine-readable code', async () => {
+    const { baseUrl } = await startServer();
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/favicon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: 'favicon.ico',
+        contentType: 'image/x-icon',
+        fileSizeBytes: 600000,
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: true,
+      message: 'favicon upload exceeds size limit',
+      code: 'UPLOAD_FILE_TOO_LARGE',
+      status: 400,
+      validationErrors: ['fileSizeBytes: Must be 524288 bytes or fewer for favicon uploads'],
+    });
+  });
+
+  it('rejects invalid upload filenames with a machine-readable code', async () => {
+    const { baseUrl } = await startServer();
+
+    const response = await fetch(`${baseUrl}/api/admin/brand/logo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer token',
+        'x-tenant-id': 'tenant-1',
+      },
+      body: JSON.stringify({
+        fileName: '../tenant-logo.png',
+        contentType: 'image/png',
+        fileSizeBytes: 1024,
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: true,
+      message: 'Invalid upload filename',
+      code: 'UPLOAD_INVALID_FILENAME',
+      status: 400,
+      validationErrors: ['fileName: Path separators are not allowed'],
+    });
   });
 });
