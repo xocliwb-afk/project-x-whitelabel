@@ -14,16 +14,16 @@ export default function AdminOverviewPage() {
             Brand settings are the only active Epic 14 admin surface
           </h2>
           <p className="max-w-2xl text-sm leading-6 text-text-secondary">
-            This route group stays intentionally narrow. Start with the brand
-            bootstrap page to inspect the current runtime config and asset override
-            state before the editable form lands in the next slice.
+            This route group stays intentionally narrow. Start with the brand editor
+            to review the current runtime config, asset override state, and the
+            bounded editable fields available in this slice.
           </p>
           <div className="pt-2">
             <Link
               href="/admin/brand"
               className="inline-flex items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95"
             >
-              Open brand settings
+              Open brand editor
             </Link>
           </div>
         </div>
@@ -37,8 +37,8 @@ export default function AdminOverviewPage() {
           <h2 className="text-xl font-semibold text-text-main">Not a generic dashboard</h2>
           <p className="text-sm leading-6 text-text-secondary">
             No tenant management, user administration, analytics, or content CMS
-            panels are introduced here. This slice only establishes the brand-admin
-            foundation.
+            panels are introduced here. This slice only covers the bounded brand
+            editor workspace.
           </p>
         </div>
       </article>

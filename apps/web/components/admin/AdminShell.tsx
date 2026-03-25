@@ -41,9 +41,9 @@ export default function AdminShell({ user, children }: AdminShellProps) {
                     Brand workspace
                   </h1>
                   <p className="max-w-3xl text-sm leading-6 text-text-secondary">
-                    A bounded admin surface for tenant brand configuration only. This
-                    route group is intentionally narrow and will grow into the editor
-                    in later Epic 14 slices.
+                    A bounded admin surface for tenant brand configuration only. The
+                    editor now covers the first practical brand settings slice and
+                    stays intentionally narrow through the remaining Epic 14 work.
                   </p>
                 </div>
                 {user ? (
