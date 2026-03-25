@@ -55,6 +55,7 @@ function TextField({
   onChange,
   placeholder,
   type = 'text',
+  disabled = false,
   errors = [],
 }: {
   label: string;
@@ -62,6 +63,7 @@ function TextField({
   onChange: (value: string) => void;
   placeholder?: string;
   type?: 'text' | 'email';
+  disabled?: boolean;
   errors?: string[];
 }) {
   return (
@@ -72,6 +74,7 @@ function TextField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
         className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
       />
       <ErrorList errors={errors} />
@@ -84,12 +87,14 @@ function TextAreaField({
   value,
   onChange,
   placeholder,
+  disabled = false,
   errors = [],
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean;
   errors?: string[];
 }) {
   return (
@@ -100,6 +105,7 @@ function TextAreaField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={3}
+        disabled={disabled}
         className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
       />
       <ErrorList errors={errors} />
@@ -111,11 +117,13 @@ function ColorField({
   label,
   value,
   onChange,
+  disabled = false,
   errors = [],
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
   errors?: string[];
 }) {
   const safeColor = isValidHexColor(value) ? value : '#000000';
@@ -128,6 +136,7 @@ function ColorField({
           type="color"
           value={safeColor}
           onChange={(event) => onChange(event.target.value.toUpperCase())}
+          disabled={disabled}
           className="h-12 w-14 rounded-xl border border-border bg-white p-1"
           aria-label={label}
         />
@@ -135,6 +144,7 @@ function ColorField({
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
           className="w-full rounded-2xl border border-border bg-white px-4 py-3 font-mono text-sm uppercase text-text-main outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
         />
       </div>
@@ -150,7 +160,7 @@ function AssetControl({
   fallbackUrl,
   accept,
   hint,
-  onChange,
+  disabled,
 }: {
   assetType: BrandAssetType;
   label: string;
@@ -158,12 +168,13 @@ function AssetControl({
   fallbackUrl: string;
   accept: string;
   hint: string;
-  onChange: (value: string | null) => void;
+  disabled: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const validationErrors = useAdminBrandStore((state) => state.validationErrors);
   const uploadStatus = useAdminBrandStore((state) => state.uploadStatus[assetType]);
   const uploadAsset = useAdminBrandStore((state) => state.uploadAsset);
+  const setAssetOverride = useAdminBrandStore((state) => state.setAssetOverride);
 
   const errors = fieldErrors(validationErrors, `assets.${assetType}Url`);
 
@@ -199,8 +210,9 @@ function AssetControl({
         <TextField
           label={`${label} override URL`}
           value={overrideUrl ?? ''}
-          onChange={(value) => onChange(value.trim().length > 0 ? value : null)}
+          onChange={(value) => setAssetOverride(assetType, value.trim().length > 0 ? value : null)}
           placeholder="https://..."
+          disabled={disabled}
           errors={errors}
         />
 
@@ -208,15 +220,15 @@ function AssetControl({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            disabled={uploadStatus.isUploading}
+            disabled={disabled}
             className="inline-flex items-center rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-text-main transition hover:border-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploadStatus.isUploading ? `Uploading ${label.toLowerCase()}...` : `Upload ${label}`}
           </button>
           <button
             type="button"
-            onClick={() => onChange(null)}
-            disabled={uploadStatus.isUploading || !overrideUrl}
+            onClick={() => setAssetOverride(assetType, null)}
+            disabled={disabled || !overrideUrl}
             className="inline-flex items-center rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-main transition hover:border-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Clear override
@@ -228,6 +240,7 @@ function AssetControl({
           type="file"
           accept={accept}
           className="hidden"
+          disabled={disabled}
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = '';
@@ -352,7 +365,15 @@ export default function BrandEditorForm() {
   }
 
   const isUploading = uploadStatus.logo.isUploading || uploadStatus.favicon.isUploading;
-  const canSave = isDirty && !isSaving && !isValidating && !isUploading;
+  const isBusy = isSaving || isValidating || isUploading;
+  const canSave = isDirty && !isBusy;
+  const busyLabel = isSaving
+    ? 'Saving in progress'
+    : isValidating
+      ? 'Validation in progress'
+      : isUploading
+        ? 'Upload in progress'
+        : null;
   const statusMessage = saveSuccessMessage ?? validateSuccessMessage;
 
   return (
@@ -377,7 +398,7 @@ export default function BrandEditorForm() {
             <button
               type="button"
               onClick={() => void validateDraft().catch(() => undefined)}
-              disabled={isSaving || isValidating || isUploading}
+              disabled={isBusy}
               className="inline-flex items-center rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-text-main transition hover:border-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isValidating ? 'Validating...' : 'Validate draft'}
@@ -385,7 +406,7 @@ export default function BrandEditorForm() {
             <button
               type="button"
               onClick={resetDraft}
-              disabled={isSaving || isValidating || isUploading || !isDirty}
+              disabled={isBusy || !isDirty}
               className="inline-flex items-center rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-main transition hover:border-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Reset to saved
@@ -411,9 +432,9 @@ export default function BrandEditorForm() {
           >
             {isDirty ? 'Dirty draft' : 'Up to date'}
           </span>
-          {isUploading ? (
+          {busyLabel ? (
             <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-900">
-              Upload in progress
+              {busyLabel}
             </span>
           ) : null}
         </div>
@@ -462,6 +483,7 @@ export default function BrandEditorForm() {
                       current.config.brandName = value;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'brandName')}
                 />
                 <TextAreaField
@@ -472,6 +494,7 @@ export default function BrandEditorForm() {
                       current.config.brandTagline = value.trim().length > 0 ? value : undefined;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'brandTagline')}
                 />
                 <TextField
@@ -482,6 +505,7 @@ export default function BrandEditorForm() {
                       current.config.agentName = value.trim().length > 0 ? value : undefined;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'agentName')}
                 />
               </div>
@@ -505,6 +529,7 @@ export default function BrandEditorForm() {
                       current.config.contact.email = value;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'contact.email')}
                 />
                 <TextField
@@ -515,6 +540,7 @@ export default function BrandEditorForm() {
                       current.config.contact.phone = value.trim().length > 0 ? value : undefined;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'contact.phone')}
                 />
                 <TextAreaField
@@ -525,6 +551,7 @@ export default function BrandEditorForm() {
                       current.config.contact.address = value.trim().length > 0 ? value : undefined;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'contact.address')}
                 />
               </div>
@@ -547,6 +574,7 @@ export default function BrandEditorForm() {
                       current.config.theme.colors.primary = value;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'theme.colors.primary')}
                 />
                 <ColorField
@@ -557,6 +585,7 @@ export default function BrandEditorForm() {
                       current.config.theme.colors.surface = value;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'theme.colors.surface')}
                 />
                 <TextField
@@ -567,6 +596,7 @@ export default function BrandEditorForm() {
                       current.config.theme.typography.fontFamily = value;
                     })
                   }
+                  disabled={isBusy}
                   errors={fieldErrors(validationErrors, 'theme.typography.fontFamily')}
                 />
               </div>
@@ -582,11 +612,7 @@ export default function BrandEditorForm() {
             fallbackUrl={draft.config.logo.url}
             accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
             hint="Upload a PNG, JPEG, or WEBP up to 2 MiB, or paste a direct override URL."
-            onChange={(value) =>
-              updateDraft((current) => {
-                current.assets.logoUrl = value;
-              })
-            }
+            disabled={isBusy}
           />
 
           <AssetControl
@@ -596,11 +622,7 @@ export default function BrandEditorForm() {
             fallbackUrl={draft.config.favicon ?? 'No favicon configured'}
             accept=".png,.ico,image/png,image/x-icon,image/vnd.microsoft.icon"
             hint="Upload a PNG or ICO up to 512 KiB. SVG remains intentionally unsupported."
-            onChange={(value) =>
-              updateDraft((current) => {
-                current.assets.faviconUrl = value;
-              })
-            }
+            disabled={isBusy}
           />
         </div>
       </section>
