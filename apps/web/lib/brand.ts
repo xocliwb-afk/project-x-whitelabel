@@ -1,5 +1,4 @@
 import type { BrandConfig } from "@project-x/shared-types";
-import { prisma } from "@project-x/database";
 import brandJson from "../../../config/brand.json";
 
 const DEFAULT_FONT_FAMILY =
@@ -7,6 +6,14 @@ const DEFAULT_FONT_FAMILY =
 const DEFAULT_CARD_RADIUS = "16px";
 const DEFAULT_BUTTON_RADIUS = "9999px";
 const DEFAULT_INPUT_RADIUS = "9999px";
+const SERVER_TENANT_ENV_FILES = [
+  ".env.local",
+  ".env",
+  "../api/.env.local",
+  "../api/.env",
+  "apps/api/.env.local",
+  "apps/api/.env",
+];
 
 /**
  * Returns the current brand configuration from the static brand.json file.
@@ -27,13 +34,7 @@ export default brand;
  * Falls back to static brand.json only in local development.
  */
 export async function fetchBrand(): Promise<BrandConfig> {
-  const apiBase =
-    process.env.API_PROXY_TARGET ||
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://127.0.0.1:3002";
-
-  const url = `${apiBase.replace(/\/+$/, "")}/api/brand`;
+  const url = `${resolveServerBrandApiBaseUrl()}/api/brand`;
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID?.trim();
 
   try {
@@ -70,62 +71,161 @@ export async function fetchBrand(): Promise<BrandConfig> {
   }
 }
 
-function mergeBrandConfig(
-  brand: { config: unknown; logoUrl: string | null; faviconUrl: string | null },
-): BrandConfig {
-  const config = JSON.parse(JSON.stringify(brand.config)) as BrandConfig | null;
+class BrandFetchError extends Error {
+  status?: number;
 
-  if (!config || typeof config !== "object" || !config.theme || !config.brandName) {
-    throw new Error("[brand] Brand config is missing or malformed");
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "BrandFetchError";
+    this.status = status;
   }
-
-  // Full schema validation lives on the API read/write paths; the web SSR path
-  // keeps this lightweight shape guard and trusts brand rows that were validated upstream.
-
-  if (brand.logoUrl && config.logo && typeof config.logo === "object") {
-    config.logo.url = brand.logoUrl;
-  }
-
-  if (brand.faviconUrl) {
-    config.favicon = brand.faviconUrl;
-  }
-
-  return config;
 }
 
-export async function fetchBrandDirect(tenantId = process.env.NEXT_PUBLIC_TENANT_ID?.trim()): Promise<BrandConfig> {
-  if (!tenantId) {
+function normalizeTenantId(value: string | undefined | null): string | undefined {
+  const normalized = value?.trim();
+  return normalized || undefined;
+}
+
+function resolveServerBrandApiBaseUrl(): string {
+  const apiBase =
+    process.env.API_PROXY_TARGET ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://127.0.0.1:3002";
+
+  return apiBase.replace(/\/+$/, "");
+}
+
+function parseEnvValue(rawValue: string): string | undefined {
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const unquoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1)
+      : trimmed;
+
+  return normalizeTenantId(unquoted);
+}
+
+async function readServerTenantIdFromEnvFiles(): Promise<string | undefined> {
+  const { access, readFile } = await import("node:fs/promises");
+  const { constants } = await import("node:fs");
+  const path = await import("node:path");
+
+  const candidatePaths = Array.from(
+    new Set(
+      SERVER_TENANT_ENV_FILES.map((filePath) =>
+        path.resolve(process.cwd(), filePath),
+      ),
+    ),
+  );
+
+  for (const candidatePath of candidatePaths) {
+    try {
+      await access(candidatePath, constants.R_OK);
+    } catch {
+      continue;
+    }
+
+    const fileContents = await readFile(candidatePath, "utf8");
+    const match = fileContents.match(/^\s*DEFAULT_TENANT_ID\s*=\s*(.+)\s*$/m);
+    if (!match) {
+      continue;
+    }
+
+    const tenantId = parseEnvValue(match[1]);
+    if (tenantId) {
+      return tenantId;
+    }
+  }
+
+  return undefined;
+}
+
+type DirectBrandTenantResolution =
+  | { tenantId: string; source: "explicit" | "public-env" | "server-env" | "api-env-file" }
+  | null;
+
+async function resolveDirectBrandTenantId(
+  tenantId?: string | null,
+): Promise<DirectBrandTenantResolution> {
+  const explicitTenantId = normalizeTenantId(tenantId);
+  if (explicitTenantId) {
+    return { tenantId: explicitTenantId, source: "explicit" };
+  }
+
+  const publicTenantId = normalizeTenantId(process.env.NEXT_PUBLIC_TENANT_ID);
+  if (publicTenantId) {
+    return { tenantId: publicTenantId, source: "public-env" };
+  }
+
+  const serverTenantId = normalizeTenantId(process.env.DEFAULT_TENANT_ID);
+  if (serverTenantId) {
+    return { tenantId: serverTenantId, source: "server-env" };
+  }
+
+  // Local monorepo fallback: the API app already owns the default-tenant config,
+  // but `next start` does not automatically load `apps/api/.env`.
+  const fileTenantId = await readServerTenantIdFromEnvFiles();
+  if (fileTenantId) {
+    return { tenantId: fileTenantId, source: "api-env-file" };
+  }
+
+  return null;
+}
+
+async function fetchRuntimeBrandByTenant(tenantId: string): Promise<BrandConfig> {
+  const response = await fetch(`${resolveServerBrandApiBaseUrl()}/api/brand`, {
+    headers: {
+      Accept: "application/json",
+      "x-tenant-id": tenantId,
+    },
+    next: { revalidate: 300 },
+  });
+
+  if (!response.ok) {
+    throw new BrandFetchError(
+      `[brand] Failed to fetch runtime brand config: ${response.status} ${response.statusText}`,
+      response.status,
+    );
+  }
+
+  return (await response.json()) as BrandConfig;
+}
+
+export async function fetchBrandDirect(tenantId?: string | null): Promise<BrandConfig> {
+  const resolvedTenant = await resolveDirectBrandTenantId(tenantId);
+
+  if (!resolvedTenant) {
     if (process.env.NODE_ENV === "development") {
       return getBrand();
     }
 
-    throw new Error("[brand] Missing NEXT_PUBLIC_TENANT_ID for direct brand lookup");
+    throw new Error(
+      "[brand] Missing configured tenant ID for direct brand lookup",
+    );
   }
 
   try {
-    const brand = await prisma.brand.findUnique({
-      where: { tenantId },
-      select: {
-        config: true,
-        logoUrl: true,
-        faviconUrl: true,
-        active: true,
-        tenant: {
-          select: {
-            active: true,
-          },
-        },
-      },
-    });
-
-    if (!brand || !brand.active || !brand.tenant?.active) {
-      throw new Error("[brand] No active brand configuration found for tenant");
-    }
-
-    return mergeBrandConfig(brand);
+    return await fetchRuntimeBrandByTenant(resolvedTenant.tenantId);
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.error("[brand] Error loading brand directly, using static fallback:", error);
+      return getBrand();
+    }
+
+    if (
+      resolvedTenant.source === "api-env-file" &&
+      (!(error instanceof BrandFetchError) || (error.status != null && error.status >= 500))
+    ) {
+      console.error(
+        "[brand] Error loading runtime brand via local API env fallback, using static fallback:",
+        error,
+      );
       return getBrand();
     }
 
