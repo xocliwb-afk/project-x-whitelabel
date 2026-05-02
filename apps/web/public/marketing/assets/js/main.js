@@ -842,6 +842,28 @@ document.addEventListener('DOMContentLoaded', () => {
       .trim();
   };
 
+  const syncNeighborhoodSearchLink = () => {
+    const slug = getPageSlug();
+    const filterCfg = slug ? NEIGHBORHOOD_FILTERS[slug] : null;
+    if (!filterCfg) return;
+
+    const searchLink = document.querySelector('.hero__cta-row a[href^="/search"]');
+    if (!(searchLink instanceof HTMLAnchorElement)) return;
+
+    const params = new URLSearchParams();
+    const zips = Array.isArray(filterCfg.zips)
+      ? filterCfg.zips.map((zip) => normalizeZip(zip)).filter(Boolean)
+      : [];
+    const cities = Array.isArray(filterCfg.cities)
+      ? filterCfg.cities.map((city) => String(city).trim()).filter(Boolean)
+      : [];
+
+    zips.forEach((zip) => params.append('postalCodes', zip));
+    cities.forEach((city) => params.append('cities', city));
+
+    searchLink.setAttribute('href', params.toString() ? `/search?${params.toString()}` : '/search');
+  };
+
   const MAX_DESC_WORDS = 120;
   const truncateWords = (text, maxWords) => {
     if (!text) return { text: "", truncated: false };
@@ -1418,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const slug = getPageSlug();
   const isNeighborhoodPage = Boolean(slug && NEIGHBORHOOD_FILTERS[slug]);
+  syncNeighborhoodSearchLink();
   if (featuredGrid) {
     if (isNeighborhoodPage) {
       loadNeighborhoodFeaturedListings();
