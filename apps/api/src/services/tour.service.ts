@@ -18,11 +18,127 @@ interface TourOptions {
   role: UserRole;
 }
 
+export const DEFAULT_TOUR_TIME_ZONE = 'UTC';
+
+export interface TourStopUpdateInput {
+  id?: string;
+  listingId: string;
+  address: string;
+  lat: number;
+  lng: number;
+  thumbnailUrl?: string | null;
+  order?: number;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface TourUpdateRequest {
+  title?: string;
+  clientName?: string;
+  date?: string;
+  startTime?: string;
+  timeZone?: string;
+  defaultDurationMinutes?: number;
+  defaultBufferMinutes?: number;
+  stops?: TourStopUpdateInput[];
+  narrationPayloads?: Tour['narrationPayloads'] | null;
+}
+
+type TimeZoneParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+function readDateParts(date: string): { year: number; month: number; day: number } {
+  const [year, month, day] = date.split('-').map(Number);
+  return { year, month, day };
+}
+
+function readTimeParts(time: string): { hour: number; minute: number } {
+  const [hour, minute] = time.split(':').map(Number);
+  return { hour, minute };
+}
+
+function getTimeZoneParts(instant: Date, timeZone: string): TimeZoneParts {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const parts = formatter.formatToParts(instant);
+  const valueByType = new Map(parts.map((part) => [part.type, part.value]));
+
+  return {
+    year: Number(valueByType.get('year')),
+    month: Number(valueByType.get('month')),
+    day: Number(valueByType.get('day')),
+    hour: Number(valueByType.get('hour')),
+    minute: Number(valueByType.get('minute')),
+    second: Number(valueByType.get('second')),
+  };
+}
+
+function getTimeZoneOffsetMs(instant: Date, timeZone: string): number {
+  const parts = getTimeZoneParts(instant, timeZone);
+  const zonedTimeAsUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+  return zonedTimeAsUtc - instant.getTime();
+}
+
+function localDateTimeToUtcDate(date: string, startTime: string, timeZone: string): Date {
+  const { year, month, day } = readDateParts(date);
+  const { hour, minute } = readTimeParts(startTime);
+  const localWallTimeAsUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
+
+  let utcTime = localWallTimeAsUtc - getTimeZoneOffsetMs(new Date(localWallTimeAsUtc), timeZone);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const adjustedUtcTime = localWallTimeAsUtc - getTimeZoneOffsetMs(new Date(utcTime), timeZone);
+    if (adjustedUtcTime === utcTime) {
+      break;
+    }
+    utcTime = adjustedUtcTime;
+  }
+
+  const scheduledDate = new Date(utcTime);
+  const scheduledParts = getTimeZoneParts(scheduledDate, timeZone);
+  if (
+    scheduledParts.year !== year ||
+    scheduledParts.month !== month ||
+    scheduledParts.day !== day ||
+    scheduledParts.hour !== hour ||
+    scheduledParts.minute !== minute
+  ) {
+    throw createHttpError(400, 'date/startTime is not valid in the requested timeZone', 'VALIDATION_ERROR');
+  }
+
+  return scheduledDate;
+}
+
+function addMinutes(instant: Date, minutes: number): Date {
+  return new Date(instant.getTime() + minutes * 60 * 1000);
+}
+
 /**
  * Schedule stop times based on duration and buffer.
- * Pure function — same logic as the original in-memory version.
+ * Converts the requested wall-clock time in an explicit IANA timezone to UTC ISO strings.
  */
-function scheduleStops(
+export function scheduleStops(
   stops: Array<{
     id?: string;
     listingId: string;
@@ -35,6 +151,7 @@ function scheduleStops(
   startTime: string,
   defaultDurationMinutes: number,
   defaultBufferMinutes: number,
+  timeZone = DEFAULT_TOUR_TIME_ZONE,
 ): Array<{
   id?: string;
   listingId: string;
@@ -46,7 +163,7 @@ function scheduleStops(
   startTime: string;
   endTime: string;
   }> {
-  const startDate = new Date(`${date}T${startTime}:00`);
+  const startDate = localDateTimeToUtcDate(date, startTime, timeZone);
   if (Number.isNaN(startDate.getTime())) {
     throw createHttpError(400, 'Invalid startTime provided', 'VALIDATION_ERROR');
   }
@@ -54,12 +171,9 @@ function scheduleStops(
   let current = startDate;
   return stops.map((stop, idx) => {
     const startIso = current.toISOString();
-    const endDate = new Date(current);
-    endDate.setMinutes(endDate.getMinutes() + defaultDurationMinutes);
+    const endDate = addMinutes(current, defaultDurationMinutes);
     const endIso = endDate.toISOString();
-    const nextStart = new Date(endDate);
-    nextStart.setMinutes(nextStart.getMinutes() + defaultBufferMinutes);
-    current = nextStart;
+    current = addMinutes(endDate, defaultBufferMinutes);
 
     return {
       id: stop.id,
@@ -75,18 +189,19 @@ function scheduleStops(
   });
 }
 
-function shouldRescheduleTour(updates: Partial<Tour>): boolean {
+function shouldRescheduleTour(updates: TourUpdateRequest): boolean {
   return (
     updates.stops !== undefined ||
     updates.date !== undefined ||
     updates.startTime !== undefined ||
+    updates.timeZone !== undefined ||
     updates.defaultDurationMinutes !== undefined ||
     updates.defaultBufferMinutes !== undefined
   );
 }
 
 function resolveUpdatedStops(
-  incomingStops: TourStop[] | undefined,
+  incomingStops: TourStopUpdateInput[] | undefined,
   existingStops: TourStop[],
 ): Array<{
   id?: string;
@@ -109,7 +224,7 @@ function resolveUpdatedStops(
 
   const existingStopsById = new Map(existingStops.map((stop) => [stop.id, stop]));
   return incomingStops.map((stop) => {
-    const existingStop = existingStopsById.get(stop.id);
+    const existingStop = stop.id ? existingStopsById.get(stop.id) : undefined;
     return {
       id: existingStop?.id,
       listingId: stop.listingId,
@@ -190,7 +305,13 @@ export async function planTour(
   options: TourOptions,
   listings?: Map<string, NormalizedListing>,
 ): Promise<PlannedTour> {
-  const { date, startTime, defaultDurationMinutes, defaultBufferMinutes } = req;
+  const {
+    date,
+    startTime,
+    defaultDurationMinutes,
+    defaultBufferMinutes,
+    timeZone = DEFAULT_TOUR_TIME_ZONE,
+  } = req;
 
   const scheduledStops = scheduleStops(
     req.stops,
@@ -198,6 +319,7 @@ export async function planTour(
     startTime,
     defaultDurationMinutes,
     defaultBufferMinutes,
+    timeZone,
   );
 
   const dbTour = await prisma.$transaction(async (tx) => {
@@ -243,7 +365,7 @@ export async function getTourById(id: string, options: TourOptions): Promise<Tou
 export async function updateTour(
   id: string,
   options: TourOptions,
-  updates: Partial<Tour>,
+  updates: TourUpdateRequest,
 ): Promise<Tour | undefined> {
   const dbTour = await prisma.$transaction(async (tx) => {
     const existing = await tourRepo.findById(id, options, tx);
@@ -253,8 +375,7 @@ export async function updateTour(
 
     const existingTour = toApiTour(existing);
     const needsReschedule = shouldRescheduleTour(updates);
-
-    const updatedTourRow = await tourRepo.update(id, options, {
+    const tourFieldUpdates = {
       title: updates.title,
       clientName: updates.clientName,
       date: updates.date,
@@ -262,10 +383,14 @@ export async function updateTour(
       defaultDurationMinutes: updates.defaultDurationMinutes,
       defaultBufferMinutes: updates.defaultBufferMinutes,
       narrationPayloads: needsReschedule ? undefined : updates.narrationPayloads,
-    }, tx);
+    };
 
-    if (!updatedTourRow) {
-      return null;
+    const hasTourFieldUpdates = Object.values(tourFieldUpdates).some((value) => value !== undefined);
+    if (hasTourFieldUpdates) {
+      const updatedTourRow = await tourRepo.update(id, options, tourFieldUpdates, tx);
+      if (!updatedTourRow) {
+        return null;
+      }
     }
 
     if (needsReschedule) {
@@ -273,8 +398,9 @@ export async function updateTour(
       const startTime = updates.startTime ?? existing.startTime;
       const duration = updates.defaultDurationMinutes ?? existing.defaultDurationMinutes;
       const buffer = updates.defaultBufferMinutes ?? existing.defaultBufferMinutes;
+      const timeZone = updates.timeZone ?? DEFAULT_TOUR_TIME_ZONE;
       const stopInputs = resolveUpdatedStops(updates.stops, existingTour.stops);
-      const scheduledStops = scheduleStops(stopInputs, date, startTime, duration, buffer);
+      const scheduledStops = scheduleStops(stopInputs, date, startTime, duration, buffer, timeZone);
 
       await syncTourStops(
         tx,
