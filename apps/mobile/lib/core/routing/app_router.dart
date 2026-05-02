@@ -24,7 +24,20 @@ class SplashScreen extends StatelessWidget {
 }
 
 /// Routes that don't require authentication.
-const _publicRoutes = {'/login', '/register'};
+const _publicRoutes = {'/login', '/register', '/search', '/tour'};
+
+bool _isPublicRoute(GoRouterState state) {
+  final location = state.matchedLocation;
+  if (_publicRoutes.contains(location)) {
+    return true;
+  }
+
+  final pathSegments = state.uri.pathSegments;
+  return location == '/listing/:id' ||
+      (pathSegments.length == 2 &&
+          pathSegments.first == 'listing' &&
+          pathSegments.last.isNotEmpty);
+}
 
 class _AuthRouterRefreshListenable extends ChangeNotifier {
   _AuthRouterRefreshListenable(Ref ref) {
@@ -81,7 +94,7 @@ GoRouter createRouter(Ref ref) {
         return '/login';
       }
 
-      if (!_publicRoutes.contains(location)) {
+      if (!_isPublicRoute(state)) {
         return '/login';
       }
 
