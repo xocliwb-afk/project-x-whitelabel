@@ -29,7 +29,7 @@ export default function RegisterPage() {
         return;
       }
       if (authState.user) {
-        router.push('/');
+        router.replace('/search');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');

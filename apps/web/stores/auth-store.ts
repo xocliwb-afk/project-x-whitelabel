@@ -81,19 +81,12 @@ function tenantFromToken(accessToken: string): string | undefined {
   return tenantId?.trim() || undefined;
 }
 
-function resolveTenantId(accessToken: string, fallbackTenantId?: string | null): string {
-  const tenantId =
+function resolveTenantId(accessToken: string, fallbackTenantId?: string | null): string | undefined {
+  return (
     fallbackTenantId?.trim() ||
     WEB_TENANT_ID ||
-    tenantFromToken(accessToken);
-
-  if (!tenantId) {
-    throw new Error(
-      'Missing tenant configuration for authenticated request. Set NEXT_PUBLIC_TENANT_ID or sign in to a provisioned tenant first.',
-    );
-  }
-
-  return tenantId;
+    tenantFromToken(accessToken)
+  );
 }
 
 function readPendingProfileFromMetadata(session: Session): PendingProfile {
@@ -119,7 +112,8 @@ async function apiFetch<T>(
   options?: RequestInit & { tenantId?: string | null },
 ): Promise<T> {
   const tenantId = options?.tenantId ?? undefined;
-  if (!tenantId) {
+
+  if (tenantId !== undefined && tenantId !== null && tenantId.trim().length === 0) {
     throw new Error(
       'Missing tenant configuration for authenticated request. Set NEXT_PUBLIC_TENANT_ID or sign in to a provisioned tenant first.',
     );
@@ -130,7 +124,7 @@ async function apiFetch<T>(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
-      ...(tenantId ? { 'x-tenant-id': tenantId } : {}),
+      ...(tenantId?.trim() ? { 'x-tenant-id': tenantId.trim() } : {}),
       ...options?.headers,
     },
   });
