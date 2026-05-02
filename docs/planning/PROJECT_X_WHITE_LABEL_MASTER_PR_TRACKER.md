@@ -1,6 +1,6 @@
 # Project X White Label — Master PR Tracker
 
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-05-02
 
 ---
 
@@ -168,6 +168,40 @@
 - Fixed module resolution in computePreviewSide test
 
 **Dependencies:** Epics 0-9
+
+---
+
+### Epic 15: Mobile Search, Listing Detail, and Tour Screens ✅ COMPLETE
+**Branches / PRs:**
+- `feature/epic-15-mobile-routing-contract` — PR #31
+- `feature/epic-15-mobile-data-state-foundation` — PR #32
+- `feature/epic-15-mobile-search-screen` — PR #33
+- `feature/epic-15-mobile-listing-detail` — PR #34
+- `feature/epic-15-mobile-tour-screen` — PR #35
+- `feature/epic-15-mobile-hardening-docs` — PR #36 planned
+
+**Goal:** Replace the mobile Search, Listing Detail, and Tour placeholders with real Flutter screens while preserving the locked Epic 15 scope.
+
+**What was done:**
+- Mobile route contract: `/search`, `/listing/:id`, and `/tour` public; persisted user-data actions remain auth-gated
+- Mobile data/state foundation: search, listing detail, and tour repositories/controllers/providers; full tour CRUD wrappers
+- Search screen: list-first public search UI with loading, empty, error/retry, refresh, pagination/load-more, result cards, navigation, and feature-gated local add-to-tour
+- Listing Detail screen: PDP-style detail UI with preview fallback, full detail hydration, retry/error states, media fallback, facts, description, attribution/disclaimer, and feature-gated local add-to-tour
+- Tour screen: local draft planner/current-tour UI with stops, remove/reorder, schedule metadata, auth-gated persistence, success/error state, current-tour status, and `tourEngine=false` persistence blocking
+- Mobile tests: routing, search, listing detail, tour controller, and tour screen coverage
+
+**Explicitly deferred:**
+- Embedded map SDK work
+- Route polyline rendering
+- Navigation handoff
+- Geofencing
+- TTS/narration playback
+- Android Auto production implementation
+- Favorites/saved searches/lead capture on Epic 15 mobile screens
+- Share/export
+- Multi-tour archive/history UX
+
+**Dependencies:** Epic 14 completion, runtime tenant brand bootstrap, mobile Flutter toolchain validation
 
 ---
 

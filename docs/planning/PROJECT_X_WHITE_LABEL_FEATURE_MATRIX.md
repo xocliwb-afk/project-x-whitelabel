@@ -81,10 +81,11 @@
 | Dart models | ✅ Built | NOW | Mirrors shared-types: Listing, Tour, Brand, Lead, Narration |
 | Narration service | ✅ Built | NOW | Fetch narrations, TtsEngine interface |
 | Proximity service | ⚠️ Stub | DESIGN NOW | Interface defined, simulate methods for testing |
-| Search UI | ❌ Missing | LATER (COMMITTED) | Core mobile feature |
-| Map integration | ❌ Missing | LATER (COMMITTED) | Need map SDK decision |
-| PDP | ❌ Missing | LATER (COMMITTED) | Detail view |
-| Tour Engine UI | ❌ Missing | LATER (COMMITTED) | Mobile tour experience |
+| Search UI | ✅ Built | NOW | Epic 15 list-first public search screen |
+| Map integration | ❌ Deferred | LATER (COMMITTED) | Embedded map SDK and web map/list parity are post-Epic 15 |
+| PDP | ✅ Built | NOW | Epic 15 public Listing Detail screen with preview fallback |
+| Tour Engine UI | ✅ Built | NOW | Epic 15 local draft/current-tour planner; persisted actions auth-gated |
+| Route polylines/navigation handoff | ❌ Deferred | LATER (COMMITTED) | Out of Epic 15 scope |
 
 ## Android Auto / Narration
 
