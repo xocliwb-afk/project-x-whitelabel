@@ -24,6 +24,12 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -41,3 +47,10 @@ jobs:
 
       - name: API tests
         run: pnpm --filter @project-x/api test
+
+      - name: Mobile validation
+        run: |
+          cd apps/mobile
+          flutter pub get
+          flutter analyze
+          flutter test
