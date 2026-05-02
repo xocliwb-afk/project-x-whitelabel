@@ -64,6 +64,67 @@ describe('tours routes', () => {
     vi.clearAllMocks();
   });
 
+  const validCreatePayload = () => ({
+    date: '2026-03-23',
+    clientName: 'Ada Buyer',
+    stops: [
+      {
+        listingId: 'listing-1',
+        address: '1 Main St',
+        lat: 42.3314,
+        lng: -83.0458,
+      },
+    ],
+    startTime: '09:00',
+    defaultDurationMinutes: 30,
+    defaultBufferMinutes: 10,
+    timeZone: 'America/Detroit',
+  });
+
+  const plannedTour = {
+    id: 'tour-123',
+    title: "Ada Buyer's Tour",
+    clientName: 'Ada Buyer',
+    date: '2026-03-23',
+    startTime: '09:00',
+    defaultDurationMinutes: 30,
+    defaultBufferMinutes: 10,
+    stops: [
+      {
+        id: 'stop-1',
+        listingId: 'listing-1',
+        order: 0,
+        address: '1 Main St',
+        lat: 42.3314,
+        lng: -83.0458,
+        thumbnailUrl: null,
+        startTime: '2026-03-23T13:00:00.000Z',
+        endTime: '2026-03-23T13:30:00.000Z',
+      },
+    ],
+  };
+
+  const validUpdatePayload = () => ({
+    date: '2026-03-24',
+    startTime: '10:15',
+    timeZone: 'America/Detroit',
+    defaultDurationMinutes: 45,
+    defaultBufferMinutes: 15,
+    stops: [
+      {
+        id: 'stop-1',
+        listingId: 'listing-1',
+        order: 0,
+        address: '1 Main St',
+        lat: 42.3314,
+        lng: -83.0458,
+        thumbnailUrl: null,
+        startTime: '2026-03-23T13:00:00.000Z',
+        endTime: '2026-03-23T13:30:00.000Z',
+      },
+    ],
+  });
+
   async function startServer() {
     const app = express();
     app.use(express.json());
@@ -100,6 +161,35 @@ describe('tours routes', () => {
           });
         }),
     };
+  }
+
+  async function expectValidationFailure(body: unknown, method: 'POST' | 'PUT' = 'POST') {
+    const server = await startServer();
+
+    try {
+      const response = await fetch(
+        `${server.baseUrl}/api/tours${method === 'PUT' ? '/tour-123' : ''}`,
+        {
+          method,
+          headers: {
+            Authorization: 'Bearer test-token',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        },
+      );
+
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data).toMatchObject({
+        error: true,
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      });
+      return data;
+    } finally {
+      await server.close();
+    }
   }
 
   it.each([
@@ -143,7 +233,8 @@ describe('tours routes', () => {
     }
   });
 
-  it('returns VALIDATION_ERROR for an invalid planning payload', async () => {
+  it('plans a valid tour payload', async () => {
+    mocks.planTour.mockResolvedValue(plannedTour);
     const server = await startServer();
 
     try {
@@ -153,19 +244,114 @@ describe('tours routes', () => {
           Authorization: 'Bearer test-token',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(validCreatePayload()),
       });
 
-      expect(response.status).toBe(400);
-      await expect(response.json()).resolves.toEqual({
-        error: true,
-        message: 'Invalid tour planning request',
-        code: 'VALIDATION_ERROR',
-        status: 400,
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(plannedTour);
+      expect(mocks.planTour).toHaveBeenCalledWith(validCreatePayload(), {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        role: 'CONSUMER',
       });
     } finally {
       await server.close();
     }
+  });
+
+  it('updates a valid tour payload', async () => {
+    const updatedTour = {
+      ...plannedTour,
+      date: '2026-03-24',
+      startTime: '10:15',
+      defaultDurationMinutes: 45,
+      defaultBufferMinutes: 15,
+    };
+    mocks.updateTour.mockResolvedValue(updatedTour);
+    const server = await startServer();
+
+    try {
+      const response = await fetch(`${server.baseUrl}/api/tours/tour-123`, {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(validUpdatePayload()),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(updatedTour);
+      expect(mocks.updateTour).toHaveBeenCalledWith('tour-123', {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        role: 'CONSUMER',
+      }, validUpdatePayload());
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('uses the explicit omitted timeZone fallback contract without requiring a request field', async () => {
+    mocks.planTour.mockResolvedValue(plannedTour);
+    const { timeZone: _timeZone, ...payload } = validCreatePayload();
+    const server = await startServer();
+
+    try {
+      const response = await fetch(`${server.baseUrl}/api/tours`, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      expect(response.status).toBe(200);
+      expect(mocks.planTour).toHaveBeenCalledWith(payload, {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        role: 'CONSUMER',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it.each([
+    ['invalid date', { date: '2026-02-30' }],
+    ['invalid startTime', { startTime: '24:00' }],
+    ['invalid timeZone', { timeZone: 'Not/AZone' }],
+    ['empty stops', { stops: [] }],
+    ['too many stops', { stops: Array.from({ length: 51 }, (_, index) => ({
+      listingId: `listing-${index}`,
+      address: `${index} Main St`,
+      lat: 42,
+      lng: -83,
+    })) }],
+    ['missing listingId', { stops: [{ address: '1 Main St', lat: 42, lng: -83 }] }],
+    ['empty listingId', { stops: [{ listingId: ' ', address: '1 Main St', lat: 42, lng: -83 }] }],
+    ['missing address', { stops: [{ listingId: 'listing-1', lat: 42, lng: -83 }] }],
+    ['empty address', { stops: [{ listingId: 'listing-1', address: '', lat: 42, lng: -83 }] }],
+    ['invalid lat', { stops: [{ listingId: 'listing-1', address: '1 Main St', lat: 91, lng: -83 }] }],
+    ['invalid lng', { stops: [{ listingId: 'listing-1', address: '1 Main St', lat: 42, lng: -181 }] }],
+    ['invalid defaultDurationMinutes', { defaultDurationMinutes: 0 }],
+    ['invalid defaultBufferMinutes', { defaultBufferMinutes: -1 }],
+  ])('rejects create payload with %s', async (_caseName, override) => {
+    await expectValidationFailure({
+      ...validCreatePayload(),
+      ...override,
+    });
+    expect(mocks.planTour).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid partial tour updates before calling the service', async () => {
+    await expectValidationFailure({
+      ...validUpdatePayload(),
+      date: '2026/03/24',
+    }, 'PUT');
+
+    expect(mocks.updateTour).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -214,7 +400,7 @@ describe('tours routes', () => {
         },
         body: JSON.stringify({
           date: '2026-03-23',
-          startTime: 'bad-time',
+          startTime: '09:00',
           defaultDurationMinutes: 30,
           defaultBufferMinutes: 15,
           stops: [{ listingId: 'listing-1', address: '1 Main St', lat: 1, lng: 1 }],
