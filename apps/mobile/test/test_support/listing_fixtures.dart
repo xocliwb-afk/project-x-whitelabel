@@ -1,6 +1,6 @@
 import 'package:project_x_mobile/models/listing.dart';
 
-Listing buildListing(String id) {
+Listing buildListing(String id, {String? thumbnailUrl}) {
   return Listing(
     id: id,
     mlsId: 'MLS-$id',
@@ -15,9 +15,9 @@ Listing buildListing(String id) {
       lat: 42.3314,
       lng: -83.0458,
     ),
-    media: const ListingMedia(
-      photos: [],
-      thumbnailUrl: 'https://example.com/thumb.jpg',
+    media: ListingMedia(
+      photos: const [],
+      thumbnailUrl: thumbnailUrl,
     ),
     details: const ListingDetails(
       beds: 3,
