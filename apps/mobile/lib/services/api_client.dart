@@ -105,7 +105,8 @@ class ApiClient {
       if (maxSqft != null) queryParams['maxSqft'] = maxSqft;
       if (minYearBuilt != null) queryParams['minYearBuilt'] = minYearBuilt;
       if (maxYearBuilt != null) queryParams['maxYearBuilt'] = maxYearBuilt;
-      if (maxDaysOnMarket != null) queryParams['maxDaysOnMarket'] = maxDaysOnMarket;
+      if (maxDaysOnMarket != null)
+        queryParams['maxDaysOnMarket'] = maxDaysOnMarket;
       if (keywords != null) queryParams['keywords'] = keywords;
       if (cities != null) queryParams['cities'] = cities;
       if (postalCodes != null) queryParams['postalCodes'] = postalCodes;
@@ -171,6 +172,56 @@ class ApiClient {
         data: request.toJson(),
       );
       return Tour.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// List persisted tours for the authenticated user.
+  /// GET /api/tours
+  Future<List<Tour>> listTours() async {
+    try {
+      final response = await _dio.get('/api/tours');
+      final data = response.data as Map<String, dynamic>;
+      final tours = data['tours'] as List<dynamic>;
+      return tours
+          .map((tour) => Tour.fromJson(tour as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Get a persisted tour by ID.
+  /// GET /api/tours/:id
+  Future<Tour> getTourById(String id) async {
+    try {
+      final response = await _dio.get('/api/tours/$id');
+      return Tour.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Update a persisted tour by ID.
+  /// PUT /api/tours/:id
+  Future<Tour> updateTour(String id, Map<String, dynamic> updates) async {
+    try {
+      final response = await _dio.put(
+        '/api/tours/$id',
+        data: updates,
+      );
+      return Tour.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Delete a persisted tour by ID.
+  /// DELETE /api/tours/:id
+  Future<void> deleteTour(String id) async {
+    try {
+      await _dio.delete('/api/tours/$id');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
