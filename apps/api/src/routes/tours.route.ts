@@ -8,7 +8,11 @@ import {
   deleteTour,
   listTours,
 } from '../services/tour.service';
-import { generateTourNarrations } from '../services/narration.service';
+import {
+  fetchListingsForTourStops,
+  generateTourNarrations,
+} from '../services/narration.service';
+import { parseNarrationPayloadsForWrite } from '../services/narration-payload.contract';
 import { getListingProvider } from '../utils/provider.factory';
 import { resolveRequiredTenant } from '../middleware/tenant';
 import { requireAuth } from '../middleware/auth';
@@ -338,10 +342,7 @@ function parseUpdateTourRequest(body: unknown): TourUpdateRequest {
   }
 
   if (body.narrationPayloads !== undefined) {
-    if (body.narrationPayloads !== null && !Array.isArray(body.narrationPayloads)) {
-      throwValidationError('narrationPayloads must be an array or null');
-    }
-    updates.narrationPayloads = body.narrationPayloads as TourUpdateRequest['narrationPayloads'];
+    updates.narrationPayloads = parseNarrationPayloadsForWrite(body.narrationPayloads);
   }
 
   return updates;
@@ -400,17 +401,13 @@ router.get(
     }
 
     // Attempt to fetch listing data for richer narrations
-    const listings = new Map<string, NormalizedListing>();
+    let listings = new Map<string, NormalizedListing>();
     try {
       const provider = getListingProvider();
-      const results = await Promise.allSettled(
-        tour.stops.map((stop) => provider.getById(stop.listingId)),
+      listings = await fetchListingsForTourStops(
+        tour.stops,
+        (listingId) => provider.getById(listingId),
       );
-      results.forEach((result) => {
-        if (result.status === 'fulfilled' && result.value) {
-          listings.set(result.value.id, result.value);
-        }
-      });
     } catch {
       // If listing fetch fails, generate narrations without listing data
     }

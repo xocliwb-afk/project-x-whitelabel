@@ -1,4 +1,5 @@
 import type { Server } from 'node:http';
+import type { NormalizedListing } from '@project-x/shared-types';
 
 import express from 'express';
 import { createHttpError } from '../../utils/http-error';
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   updateTour: vi.fn(),
   deleteTour: vi.fn(),
   listTours: vi.fn(),
+  getListingById: vi.fn(),
 }));
 
 describe('tours routes', () => {
@@ -55,6 +57,13 @@ describe('tours routes', () => {
       updateTour: mocks.updateTour,
       deleteTour: mocks.deleteTour,
       listTours: mocks.listTours,
+    }));
+
+    vi.doMock('../../utils/provider.factory', () => ({
+      getListingProvider: () => ({
+        getById: mocks.getListingById,
+        search: vi.fn(),
+      }),
     }));
 
     router = (await import('../tours.route')).default;
@@ -103,6 +112,62 @@ describe('tours routes', () => {
       },
     ],
   };
+
+  function validNarrationPayload(overrides: Record<string, unknown> = {}) {
+    return {
+      tourStopId: 'stop-1',
+      listingId: 'listing-1',
+      trigger: 'approaching',
+      narrationText: 'Approaching 1 Main St.',
+      listingSummary: {
+        address: '1 Main St',
+        price: '$250,000',
+        beds: 3,
+        baths: 2,
+        sqft: 1500,
+        highlights: ['large lot'],
+      },
+      ...overrides,
+    };
+  }
+
+  function makeListing(id: string, address: string): NormalizedListing {
+    return {
+      id,
+      mlsId: id,
+      listPrice: 250000,
+      listPriceFormatted: '$250,000',
+      address: {
+        full: address,
+        street: address,
+        city: 'Detroit',
+        state: 'MI',
+        zip: '48226',
+        lat: 42.3314,
+        lng: -83.0458,
+      },
+      media: {
+        photos: [],
+        thumbnailUrl: null,
+      },
+      details: {
+        beds: 3,
+        baths: 2,
+        sqft: 1500,
+        lotSize: null,
+        yearBuilt: null,
+        hoaFees: null,
+        basement: null,
+        propertyType: 'House',
+        status: 'Active',
+      },
+      meta: {
+        daysOnMarket: null,
+        mlsName: null,
+      },
+      description: null,
+    };
+  }
 
   const validUpdatePayload = () => ({
     date: '2026-03-24',
@@ -292,6 +357,37 @@ describe('tours routes', () => {
     }
   });
 
+  it('accepts valid narrationPayloads in tour updates', async () => {
+    const narrationPayloads = [validNarrationPayload()];
+    const updatedTour = {
+      ...plannedTour,
+      narrationPayloads,
+    };
+    mocks.updateTour.mockResolvedValue(updatedTour);
+    const server = await startServer();
+
+    try {
+      const response = await fetch(`${server.baseUrl}/api/tours/tour-123`, {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ narrationPayloads }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(updatedTour);
+      expect(mocks.updateTour).toHaveBeenCalledWith('tour-123', {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        role: 'CONSUMER',
+      }, { narrationPayloads });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('uses the explicit omitted timeZone fallback contract without requiring a request field', async () => {
     mocks.planTour.mockResolvedValue(plannedTour);
     const { timeZone: _timeZone, ...payload } = validCreatePayload();
@@ -352,6 +448,100 @@ describe('tours routes', () => {
     }, 'PUT');
 
     expect(mocks.updateTour).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['non-array narrationPayloads', { narrationPayloads: {} }],
+    ['invalid trigger', { narrationPayloads: [validNarrationPayload({ trigger: 'nearby' })] }],
+    ['empty listingId', { narrationPayloads: [validNarrationPayload({ listingId: ' ' })] }],
+    ['missing listingSummary', { narrationPayloads: [validNarrationPayload({ listingSummary: undefined })] }],
+    ['empty listingSummary address', {
+      narrationPayloads: [
+        validNarrationPayload({
+          listingSummary: {
+            address: '',
+            price: '$250,000',
+            beds: 3,
+            baths: 2,
+            sqft: 1500,
+          },
+        }),
+      ],
+    }],
+    ['invalid navigationContext', {
+      narrationPayloads: [
+        validNarrationPayload({
+          navigationContext: {
+            distanceMeters: -1,
+            durationSeconds: 60,
+            relation: 'next',
+          },
+        }),
+      ],
+    }],
+  ])('rejects update payload with %s', async (_caseName, body) => {
+    await expectValidationFailure(body, 'PUT');
+    expect(mocks.updateTour).not.toHaveBeenCalled();
+  });
+
+  it('dedupes narration listing enrichment and preserves stop order', async () => {
+    mocks.getTourById.mockResolvedValue({
+      ...plannedTour,
+      stops: [
+        {
+          ...plannedTour.stops[0],
+          id: 'stop-1',
+          listingId: 'listing-a',
+          order: 0,
+          address: '1 Main St',
+        },
+        {
+          ...plannedTour.stops[0],
+          id: 'stop-2',
+          listingId: 'listing-a',
+          order: 1,
+          address: '1 Main St',
+        },
+        {
+          ...plannedTour.stops[0],
+          id: 'stop-3',
+          listingId: 'listing-b',
+          order: 2,
+          address: '2 Main St',
+        },
+      ],
+    });
+    mocks.getListingById.mockImplementation(async (id: string) =>
+      makeListing(id, id === 'listing-a' ? '1 Main St enriched' : '2 Main St enriched'),
+    );
+    const server = await startServer();
+
+    try {
+      const response = await fetch(`${server.baseUrl}/api/tours/tour-123/narrations`, {
+        headers: {
+          Authorization: 'Bearer test-token',
+        },
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(mocks.getListingById.mock.calls.map(([listingId]) => listingId)).toEqual([
+        'listing-a',
+        'listing-b',
+      ]);
+      expect(data.narrations.map((narration: any) => narration.tourStopId)).toEqual([
+        'stop-1',
+        'stop-2',
+        'stop-3',
+      ]);
+      expect(data.narrations.map((narration: any) => narration.listingSummary.address)).toEqual([
+        '1 Main St enriched',
+        '1 Main St enriched',
+        '2 Main St enriched',
+      ]);
+    } finally {
+      await server.close();
+    }
   });
 
   it.each([
