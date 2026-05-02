@@ -1,9 +1,9 @@
 # Project X White Label — Pre-Epic 16 Hardening Plan
 
-**Status:** Approved planning draft for repo/database upload  
+**Status:** Updated after GitHub PR #37 and PR #38 merges; Epic 16 not started  
 **Prepared:** 2026-05-02  
 **Context:** Epic 15 is complete on `main`; do not start Epic 16 until the P0 hardening items are complete.  
-**Latest known Epic 15 closeout commit:** `d665791 chore(epic-15): harden mobile routes and reconcile docs (#36)`
+**Latest hardening commits on `main`:** `69a0729 chore(epic-16): harden tour contract and timezone handling (#37)`, `f2c3ab8 chore(ci): generate Prisma client before database build (#38)`
 
 ---
 
@@ -175,10 +175,13 @@ These should be planned, but must not delay the core tour/narration hardening:
 
 These must happen before Epic 16 starts:
 
-1. PR 37 — Tour contract/timezone hardening
-2. PR 38 — Narration contract/enrichment hardening
-3. PR 39 — Mobile validation in blocking CI
-4. PR 40 — Remaining repo-truth docs cleanup
+1. GitHub PR #37 — Tour contract/timezone hardening — merged
+2. GitHub PR #38 — CI/database Prisma client generation fix — merged
+3. Next hardening PR — Narration contract/enrichment hardening — not started
+4. Planning label PR 39 — Mobile validation in blocking CI
+5. Planning label PR 40 — Remaining repo-truth docs cleanup
+
+**Numbering note:** GitHub PR #38 was consumed by the CI/database Prisma client generation fix. Remaining planned PR labels in this document are planning labels, not guaranteed future GitHub PR numbers.
 
 ### Phase 2 — Pre-demo / production hardening
 
@@ -206,11 +209,13 @@ Useful before major external diligence or heavy future modifications:
 
 ## PR 37 — Tour Contract / Timezone Hardening
 
+**GitHub PR:** #37  
+**Status:** Merged on 2026-05-02  
 **Branch:** `chore/epic-16-tour-contract-hardening`  
 **Priority:** P0  
 **Size:** Medium  
 **Type:** API contract hardening + tests  
-**Start here first.**
+**Status note:** Completed; retained for historical context.
 
 ### Goal
 
@@ -291,9 +296,10 @@ pnpm --filter web lint
 
 ---
 
-## PR 38 — Narration Contract / Enrichment Hardening
+## Next Hardening PR — Narration Contract / Enrichment Hardening
 
 **Branch:** `chore/narration-contract-hardening`  
+**Status:** Not started  
 **Priority:** P0/P1  
 **Size:** Medium  
 **Type:** API/service validation hardening + tests
@@ -339,7 +345,7 @@ Epic 16 may trigger narration playback from proximity events. Malformed narratio
 
 ---
 
-## PR 39 — Mobile Validation In Blocking CI
+## Planning Label PR 39 — Mobile Validation In Blocking CI
 
 **Branch:** `ci/mobile-validation`  
 **Priority:** P0  
@@ -385,7 +391,7 @@ flutter test
 
 ---
 
-## PR 40 — Remaining Repo-Truth Docs Cleanup
+## Planning Label PR 40 — Remaining Repo-Truth Docs Cleanup
 
 **Branch:** `docs/post-epic-15-truth-cleanup`  
 **Priority:** P1  
@@ -667,12 +673,13 @@ Do not mix this with API/mobile/tour work. This is a separate project.
 
 Epic 16 can start only after:
 
-- [ ] PR 37 merged: tour create/update validation strict and tested
-- [ ] PR 37 merged: tour timezone/date/startTime behavior explicit and tested
-- [ ] PR 38 merged: narration payload validation strict enough for TTS work
-- [ ] PR 38 merged: narration enrichment N+1/dedupe/cap addressed or safely bounded
-- [ ] PR 39 merged: Flutter analyze/test blocking in CI
-- [ ] PR 40 merged: remaining stale docs do not mislead agents/reviewers
+- [x] GitHub PR #37 merged: tour create/update validation strict and tested
+- [x] GitHub PR #37 merged: tour timezone/date/startTime behavior explicit and tested
+- [x] GitHub PR #38 merged: CI/database generates Prisma client before database build
+- [ ] Next hardening PR merged: narration payload validation strict enough for TTS work
+- [ ] Next hardening PR merged: narration enrichment N+1/dedupe/cap addressed or safely bounded
+- [ ] Planning label PR 39 merged: Flutter analyze/test blocking in CI
+- [ ] Planning label PR 40 merged: remaining stale docs do not mislead agents/reviewers
 - [ ] full local validation green:
   - [ ] `pnpm --filter @project-x/api typecheck`
   - [ ] `pnpm --filter @project-x/api build`
@@ -763,21 +770,26 @@ Important, but not blockers before Epic 16:
 Hardened plan:
 
 Phase 1 — Must do before Epic 16:
-PR 37:
+GitHub PR #37 — merged:
 - Branch: chore/epic-16-tour-contract-hardening
 - Goal: harden tour create/update contract and timezone/date/startTime behavior
 - No mobile UI, no web UI, no geofencing, no TTS, no Android Auto
 
-PR 38:
+GitHub PR #38 — merged:
+- Branch: chore/ci-generate-prisma-client
+- Goal: generate Prisma client before database build in CI
+- Note: this was a CI/database fix, not narration hardening
+
+Next hardening PR candidate:
 - Branch: chore/narration-contract-hardening
 - Goal: validate narration payloads and fix/bound narration enrichment N+1
 - No TTS playback, no geofencing, no Android Auto
 
-PR 39:
+Planning label PR 39:
 - Branch: ci/mobile-validation
 - Goal: make Flutter analyze/test blocking in CI
 
-PR 40:
+Planning label PR 40:
 - Branch: docs/post-epic-15-truth-cleanup
 - Goal: remove remaining stale repo-truth docs drift
 
@@ -820,21 +832,23 @@ PR 50:
 Your job in this new chat:
 1. Keep me on this hardened plan.
 2. Generate precise Codex VS Code prompts one PR at a time.
-3. Start with PR 37 only.
+3. Continue with the next hardening PR candidate only.
 4. Do not combine PRs.
 5. Require raw git state, live file inspection, validation evidence, and final scope checks.
 6. Do not let scope drift into Epic 16.
 7. After each Codex result, help me review, commit, push, PR, review, and merge.
 
-First task:
-Give me the Codex VS Code prompt for PR 37:
-“chore/epic-16-tour-contract-hardening”
-Tour contract/timezone validation hardening only.
+Next task:
+Give me the Codex VS Code prompt for the next hardening PR candidate:
+“chore/narration-contract-hardening”
+Narration contract/enrichment hardening only.
 ```
 
 ---
 
-# 10. Codex Prompt For PR 37
+# 10. Historical Codex Prompt For PR 37
+
+PR #37 is merged. This prompt is retained only as an audit artifact for the completed tour contract/timezone hardening work.
 
 ```text
 You are working in VS Code on this local repo:
@@ -988,13 +1002,14 @@ Do not open a PR.
 
 ## 11. Final Recommendation
 
-Do **PR 37 first**.
+GitHub PR #37 and GitHub PR #38 are merged. Do **the next hardening PR candidate** next: narration contract/enrichment hardening.
 
 Do not start Epic 16 until Phase 1 is complete:
 
-1. tour contract/timezone hardening
-2. narration contract/enrichment hardening
-3. mobile validation in CI
-4. final repo-truth docs cleanup
+1. tour contract/timezone hardening — done
+2. CI/database Prisma generation fix — done
+3. narration contract/enrichment hardening — not started
+4. mobile validation in CI
+5. final repo-truth docs cleanup
 
 After that, Epic 16 can begin from a much safer foundation.
