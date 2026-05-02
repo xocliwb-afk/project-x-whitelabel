@@ -1,106 +1,125 @@
 # Project X White Label — Mobile Architecture
 
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-05-02
 
 ---
 
 ## 1. Current State
 
-`apps/mobile` contains a bare Flutter skeleton:
-- `pubspec.yaml` — Flutter project with no dependencies beyond core SDK
-- `lib/main.dart` — "Project X Mobile – Skeleton" placeholder
+`apps/mobile` is a real Flutter client, not a decorative skeleton. It includes:
 
-**This is decorative, not functional.** No API client, no state management, no navigation, no brand consumption.
+- Supabase initialization and auth state management
+- Riverpod providers for auth, API transport, brand config, search, listing detail, and tour draft/current-tour state
+- Dio API client with tenant and auth handling
+- GoRouter route guards with public `/search`, `/listing/:id`, and `/tour`
+- Brand config fetch on startup and ThemeData generation from tenant brand config
+- Dart models for listings, tours, brand config, leads, narration payloads, and auth user data
+- A focused Flutter test suite under `apps/mobile/test`
+
+Epic 15 completed the first real mobile product surfaces:
+
+- **Search:** public, list-first search UI backed by `listingSearchControllerProvider`
+- **Listing Detail:** public PDP-style detail UI backed by `ListingDetailController`, with Search preview fallback through `GoRouter.extra`
+- **Tour:** public local draft planner/current-tour UI backed by `tourDraftControllerProvider`; persisted tour actions remain auth-gated
 
 ## 2. Flutter's Role
 
-Flutter is the **primary mobile client**. It is NOT optional. The mobile app must:
+Flutter is the primary mobile client. The mobile app:
 
-1. Consume the same BFF API as the web client (`apps/api`)
-2. Consume brand config for theming and identity
-3. Share domain models/contracts with web via API responses (not direct TypeScript import)
-4. Provide search, map, PDP, lead capture, and tour experiences
-5. Host Android Auto integration via native platform channels
+1. Consumes the same BFF API as the web client (`apps/api`)
+2. Consumes runtime tenant brand config for theming and identity
+3. Uses Dart model classes that mirror API response contracts
+4. Provides public Search and Listing Detail surfaces
+5. Provides a local Tour draft/current-tour planner with authenticated persistence
 
-## 3. Shared Contracts
+Mobile does not directly import TypeScript shared types. Contract alignment is enforced through API response shape, Dart models, and tests.
 
-Flutter cannot directly import TypeScript types. The contract is enforced through:
+## 3. API Usage
 
-1. **API response shapes** — The BFF returns `NormalizedListing`, `PlannedTour`, etc.
-2. **Dart model classes** — Generated or manually maintained to match shared-types
-3. **API contract tests** — Ensure Dart models stay in sync with TypeScript types
+Mobile API calls go through `apps/mobile/lib/services/api_client.dart` and repository/controller/provider layers. Widgets do not call the API client directly.
 
-### Key Dart Models Needed
+Current Epic 15 mobile surfaces use:
 
-| Dart Class | Mirrors TypeScript Type | Purpose |
-|-----------|------------------------|---------|
-| `Listing` | `NormalizedListing` | Property data |
-| `ListingSearchParams` | `ListingSearchParams` | Search query |
-| `PaginatedResponse<T>` | `PaginatedListingsResponse` | Search results |
-| `Tour` | `Tour` | Tour data |
-| `TourStop` | `TourStop` | Tour stop |
-| `PlanTourRequest` | `PlanTourRequest` | Tour planning |
-| `BrandConfig` | `BrandConfig` (new) | Brand identity + theme |
-| `LeadPayload` | `LeadPayload` | Lead submission |
-| `NarrationPayload` | `NarrationPayload` (new) | Narration data |
-| `ProximityEvent` | `ProximityEvent` (new) | Geofence events |
+| Surface | API dependency | Auth requirement |
+|---------|----------------|------------------|
+| Search | `GET /api/listings` | Public |
+| Listing Detail | `GET /api/listings/:id` | Public |
+| Brand bootstrap | `GET /api/brand` | Public tenant-aware request |
+| Local Tour draft | None | Public local state |
+| Persisted Tour save/load/update/delete | `/api/tours*` | Auth + tenant |
 
-## 4. API Expectations
+Lead capture, favorites, saved searches, route calculation, geofencing, TTS playback, and Android Auto are outside Epic 15 screen scope.
 
-The mobile app talks exclusively to the BFF API. Expected endpoints:
+## 4. State Management
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/listings` | GET | Search listings |
-| `/api/listings/:id` | GET | Get listing detail |
-| `/api/leads` | POST | Submit lead |
-| `/api/tours` | POST | Plan tour |
-| `/api/geo/geocode` | POST | Geocode location |
-| `/api/brand` | GET | Get brand config (new) |
-| `/health` | GET | Health check |
+The app uses Riverpod.
 
-## 5. State Management
+Current state boundaries:
 
-Recommended approach for Flutter:
+- `authProvider`: Supabase/local app user lifecycle and provisioning status
+- `brandConfigProvider`: runtime tenant brand config
+- `listingSearchControllerProvider`: query, results, pagination, loading/error state
+- `listingDetailControllerProvider`: listing detail fetch, preview fallback, retry/error state
+- `tourDraftControllerProvider`: local draft stops, reorder/remove, schedule metadata, auth-gated persistence, current-tour state, logout/user-change reset
 
-- **Riverpod** or **Bloc** for state management (decision deferred to implementation)
-- State should mirror the web's Zustand store concepts:
-  - Search state (filters, results, pagination)
-  - Tour state (stops, planned tour)
-  - Lead modal state
-  - Brand/theme state
-  - Map state (center, zoom, selected listing)
+UI should continue to follow:
 
-## 6. Native Bridge / Plugin Boundaries
+`Widget -> controller/provider -> repository -> ApiClient`
 
-| Capability | Implementation | Bridge Type |
-|-----------|---------------|-------------|
-| Map rendering | Flutter map package (e.g., flutter_map, google_maps_flutter) | Pure Flutter |
-| Location services | Platform channels + geolocator | Flutter plugin |
-| Geofencing | Platform channels + native geofence APIs | Custom native plugin |
-| Android Auto | Pure native Android (Kotlin) | Platform channel bridge |
-| TTS (narration) | Flutter TTS plugin | Flutter plugin |
-| Push notifications | Firebase or platform channels | Flutter plugin |
-| Deep linking | Flutter deep link handling | Flutter built-in |
+## 5. Routing Contract
 
-## 7. Implementation Phases
+The current mobile route contract is:
 
-### Phase 6A — Project Setup
-- Flutter project with proper dependencies
-- Navigation (GoRouter or Navigator 2.0)
-- API client (Dio or http)
-- Brand config loading and ThemeData application
-- Dart model classes for core types
+| Route | Access | Notes |
+|-------|--------|-------|
+| `/login` | Public | Redirects authenticated users to `/search` |
+| `/register` | Public | Redirects authenticated users to `/search` |
+| `/search` | Public | List-first mobile search |
+| `/listing/:id` | Public | Detail fetch by ID; accepts optional `Listing` preview via `state.extra` |
+| `/tour` | Public local draft | Persisted actions are still auth-gated in the controller |
 
-### Phase 6B — Core Screens
-- Search screen (list view initially, map later)
-- Listing detail screen
-- Lead/contact form
+Routes outside the public contract redirect signed-out users to `/login`.
 
-### Phase 6C — Map + Tour
-- Map integration
-- Tour management screens
-- Add-to-tour flow
+## 6. Testing
 
-### Phase 6D — Android Auto + Narration
-- See Android Auto / Narration architecture doc
+Mobile tests now cover:
+
+- Routing public-vs-protected behavior
+- Search initial shell, loading, empty, error/retry, navigation, and add-to-tour gating
+- Listing Detail preview fallback, full detail render, fetch failures with/without preview, and add-to-tour gating
+- Tour draft controller local state, auth-gated persistence, failure preservation, and current tour state
+- Tour screen empty state, stops, remove/reorder, signed-out auth gate, signed-in save, failed save preservation, and `tourEngine=false`
+
+Expected validation for mobile-affecting work:
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter analyze
+flutter test
+```
+
+Repo-level validation should also include the API and web gates when closing cross-surface epics:
+
+```bash
+pnpm --filter @project-x/api test
+pnpm --filter web build
+pnpm --filter web lint
+```
+
+## 7. Deferred Mobile Work
+
+The following remain deferred beyond Epic 15:
+
+- Embedded map SDK work and map/list parity with web
+- Route polyline rendering
+- Navigation handoff/deep links to external maps
+- Native geofencing
+- TTS/narration playback
+- Android Auto production implementation
+- Favorites, saved searches, and lead capture on the new mobile Search/Listing Detail/Tour screens
+- Share/export
+- Multi-tour archive/history UX
+- Broader platform packaging, physical-device QA, and store/deployment work
+
+Existing narration/proximity/Android Auto service files are architecture stubs or interfaces only; they are not production platform integrations.

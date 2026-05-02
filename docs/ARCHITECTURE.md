@@ -2,7 +2,7 @@
 
 ## System State
 
-Project X is a multi-tenant white-label real estate search monorepo. The current codebase includes a working web product, an Express BFF/API, a Flutter mobile client scaffold, Prisma-backed persisted user data, Supabase authentication, and runtime DB-driven tenant branding.
+Project X is a multi-tenant white-label real estate search monorepo. The current codebase includes a working web product, an Express BFF/API, a Flutter mobile client, Prisma-backed persisted user data, Supabase authentication, and runtime DB-driven tenant branding.
 
 Search remains the product center. Marketing pages still exist, but they are not the architectural source of truth for the tenant-aware product surfaces.
 
@@ -19,7 +19,7 @@ Search remains the product center. Marketing pages still exist, but they are not
 
 - `apps/web`: Next.js web app, product UI, auth flows, SSR brand loading, and static marketing rewrites
 - `apps/api`: BFF/API for listings, geo, leads, auth, brand config, favorites, saved searches, and tours
-- `apps/mobile`: Flutter mobile client with auth/bootstrap/theme plumbing and placeholder feature screens
+- `apps/mobile`: Flutter mobile client with auth/bootstrap/theme plumbing, list-first Search, Listing Detail, and Tour planner/current-tour screens
 - `packages/shared-types`: canonical TypeScript contracts shared by web and API
 - `packages/database`: Prisma schema, generated client, and seed logic
 - `config/brand.json`: legacy/static brand source still used for seeding, local fallback, and marketing rewrites
@@ -114,14 +114,20 @@ The Flutter app has working bootstrap plumbing for:
 - GoRouter route guards
 - ThemeData generation from brand config
 
-The feature screens themselves are still incomplete. Search and tour screens are explicit placeholders, and listing detail is a minimal scaffold.
+Epic 15 replaced the placeholder feature screens with real mobile surfaces:
+
+- `/search` is public and renders a list-first search UI using the mobile search controller/repository foundation
+- `/listing/:id` is public and renders a PDP-style detail screen with preview fallback from Search route extras
+- `/tour` is public as a local draft planner/current-tour screen; signed-out users can manage local draft stops, while persisted tour actions remain auth-gated
+
+The mobile app intentionally does not yet include embedded map SDK work, route polyline rendering, navigation handoff, geofencing, TTS playback, Android Auto, favorites/saved searches/lead capture on the Epic 15 screens, share/export, or multi-tour archive/history UX.
 
 ## Testing and CI
 
 - Root CI installs dependencies, builds `@project-x/shared-types`, runs lint, runs build, and runs API tests
 - Lighthouse and hygiene workflows are present as non-blocking GitHub Actions
 - Playwright specs exist under `apps/web/e2e`, but there is no blocking GitHub Actions workflow that runs them today
-- The mobile app includes Flutter test dependencies, but there is no `apps/mobile/test` suite in the repo today
+- The mobile app includes a focused Flutter test suite under `apps/mobile/test` covering routing, Search, Listing Detail, Tour draft/controller behavior, and Tour screen persistence states
 
 ## Deployment Notes
 
@@ -132,5 +138,5 @@ The repo does not currently include checked-in `vercel.json`, `railway.json`, or
 - Web tenant resolution is still env-driven (`NEXT_PUBLIC_TENANT_ID`) rather than subdomain-driven
 - `config/brand.json` is still part of the runtime picture for marketing rewrites, local fallback, and seeding
 - `apps/web/next.config.js` marketing rewrites and neighborhood pages are static and not tenant-aware
-- Mobile feature screens are not production-complete yet
+- Mobile Search, Listing Detail, and Tour planner/current-tour screens are implemented, but maps, navigation handoff, geofencing, TTS playback, Android Auto, and broader mobile platform hardening remain deferred
 - E2E browser coverage exists, but it is not part of blocking CI

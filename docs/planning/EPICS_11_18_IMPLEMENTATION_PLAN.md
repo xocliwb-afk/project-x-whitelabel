@@ -9,15 +9,16 @@
 
 ---
 
-## Current State (Post-Epic 10)
+## Current State
 
-- **13 PRs merged**, 83 API tests passing, all gates green
-- **apps/web:** Next.js 14, Tailwind, Zustand, Mapbox — working search with map+list, PDP, filters, AI search
-- **apps/api:** Express/TypeScript BFF — SimplyRETS adapter, HubSpot leads (retry+classification), tour CRUD, narration service, compliance enforcement
-- **apps/mobile:** Flutter — Riverpod, GoRouter, Dio, 24 Dart files, brand config → ThemeData. Placeholder screens only.
-- **packages/shared-types:** 13+ canonical TS interfaces exported
-- **config/brand.json:** Single-file brand config (build-time on web, runtime on mobile via GET /api/brand)
-- **No database. No auth. No user accounts. No saved searches. Single-tenant build-time branding.**
+This document began as the approved Epics 11-18 implementation plan. The live repo has since advanced through Epic 15.
+
+- **apps/web:** Next.js 14, Tailwind, Zustand, Mapbox, Supabase SSR helpers, working product surfaces
+- **apps/api:** Express/TypeScript BFF with Prisma, Supabase JWT validation, listings, brand config, leads, favorites, saved searches, and tours
+- **apps/mobile:** Flutter with Riverpod, GoRouter, Dio, Supabase auth, runtime brand theming, public Search, public Listing Detail, and public local Tour planner/current-tour screens
+- **packages/shared-types:** canonical TS interfaces exported for API/web contracts
+- **packages/database:** Prisma schema and client for tenant-scoped persisted data
+- **config/brand.json:** legacy/static brand source still used for seeding, local fallback, and marketing rewrites
 
 ---
 
@@ -534,56 +535,49 @@ Upload service: Supabase Storage bucket `brand-assets`, validates type (png/jpg/
 ## Epic 15 — Real Flutter Screens (Search, Detail, Tour)
 
 ### Goal
-Replace all placeholder screens with fully functional search (map + list), listing detail (PDP), and active tour screens.
+Replace the placeholder mobile feature screens with real Flutter Search, Listing Detail, and Tour planner/current-tour screens.
 
 ### Prerequisites
-Epic 11 (auth for favorites/tour). Can start without Epic 12 by feature-flagging favorites.
+Epic 14 completion, runtime tenant brand bootstrap, working mobile auth/bootstrap, and the Epic 15 mobile routing/data-state foundation.
 
-### New Screens
-
-| File | Description |
-|------|-------------|
-| `screens/search/search_screen.dart` | Split view: Mapbox map (top) + scrollable listing list (bottom) + filter bar |
-| `screens/search/filter_sheet.dart` | Bottom sheet: price slider, beds, baths, sqft, property type |
-| `screens/listing/listing_detail_screen.dart` | Photo gallery (PageView), price, facts grid, description, map, contact CTA |
-| `screens/listing/photo_gallery.dart` | Full-screen swipeable photo viewer |
-| `screens/tour/tour_screen.dart` | Current stop card, next/prev, map with polyline, narration play/pause |
-| `screens/tour/tour_stop_card.dart` | Address, listing summary, narration text, Navigate button |
-
-### New Widgets
+### Delivered Scope
 
 | File | Description |
 |------|-------------|
-| `widgets/map/listing_map.dart` | Mapbox map with marker clusters, camera animation, tap-to-select |
-| `widgets/map/marker_builder.dart` | Price pill markers matching web |
-| `widgets/listing/listing_card.dart` | Photo, price, address, beds/baths/sqft, favorite button |
-| `widgets/search/filter_chip_bar.dart` | Horizontal scrolling active filter chips |
-| `widgets/tour/narration_player.dart` | Play/pause, progress indicator |
+| `apps/mobile/lib/core/routing/app_router.dart` | Public route contract for `/search`, `/listing/:id`, and `/tour`; protected routes still redirect signed-out users |
+| `apps/mobile/lib/features/search/**` | List-first public Search screen plus search repository/controller/provider foundation |
+| `apps/mobile/lib/features/listing_detail/**` | Public PDP-style Listing Detail screen with preview fallback and retry/error states |
+| `apps/mobile/lib/features/tour/**` | Public local Tour draft planner/current-tour screen with auth-gated persistence |
+| `apps/mobile/test/**` | Mobile controller, widget, and route contract tests |
 
-### New Providers (Riverpod)
+### Delivered Behavior
 
-- `search_provider.dart` — SearchFilters + List\<NormalizedListing\> + loading + pagination
-- `listing_detail_provider.dart` — FutureProvider.family keyed by listing ID
-- `active_tour_provider.dart` — current tour, stop index, narration state
-
-### Dependencies
-
-- `mapbox_maps_flutter: ^2.0.0`
-- `flutter_tts: ^4.0.0`
-- `cached_network_image: ^3.3.0`
-- `url_launcher: ^6.2.0`
-- `shimmer: ^3.0.0`
+- `/search` is public and renders a list-first search UI.
+- `/listing/:id` is public and fetches detail by listing ID, with optional preview data passed from Search via `GoRouter.extra`.
+- `/tour` is public for local draft planning; signed-out users can view/manage local draft stops.
+- Persisted tour save/load/update/delete actions remain auth-gated through `tourDraftControllerProvider`.
+- Add-to-tour on Search and Listing Detail is gated by `brand.features.tourEngine == true` and only mutates local draft state.
+- Mobile API access remains centralized through repositories/controllers/providers and `ApiClient`.
 
 ### Acceptance Criteria
 
-1. Search screen shows Mapbox map with markers + scrollable list
-2. Tapping marker highlights corresponding card (and vice versa)
-3. Applying filters updates both map and list
-4. Detail screen shows all NormalizedListing fields: photos, price, beds, baths, sqft, description
-5. Photo swiping is smooth (cached images, shimmer placeholders)
-6. Tour screen shows stops with map polyline
-7. Narration player speaks via TTS with play/pause
-8. "Navigate" launches Google Maps with stop coordinates
+1. Search screen renders shell, loading, empty, error/retry, results, refresh, pagination/load-more, and listing-card navigation.
+2. Listing Detail screen renders preview-first detail, full detail hydration, retry/error states, media fallback, price/status/address/facts, description, and attribution/disclaimer when available.
+3. Tour screen renders local draft stops, remove/reorder actions, schedule metadata, auth-gated save, save success/error state, current-tour status, and `tourEngine=false` persistence blocking.
+4. Mobile tests cover routing, Search, Listing Detail, Tour draft/controller behavior, and Tour screen persistence states.
+5. Validation passes with `flutter pub get`, `flutter analyze`, `flutter test`, API tests, web build, and web lint.
+
+### Explicitly Deferred Beyond Epic 15
+
+- Embedded map SDK work and web map/list parity
+- Route polyline rendering
+- Navigation handoff/deep links to external maps
+- Geofencing
+- TTS/narration playback
+- Android Auto production implementation
+- Favorites/saved searches/lead capture on the new mobile screens
+- Share/export
+- Multi-tour archive/history UX
 
 ---
 
