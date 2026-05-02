@@ -215,7 +215,7 @@ Useful before major external diligence or heavy future modifications:
 **Priority:** P0  
 **Size:** Medium  
 **Type:** API contract hardening + tests  
-**Start here first.**
+**Status note:** Completed; retained for historical context.
 
 ### Goal
 
@@ -838,7 +838,7 @@ Your job in this new chat:
 6. Do not let scope drift into Epic 16.
 7. After each Codex result, help me review, commit, push, PR, review, and merge.
 
-First task:
+Next task:
 Give me the Codex VS Code prompt for the next hardening PR candidate:
 “chore/narration-contract-hardening”
 Narration contract/enrichment hardening only.
