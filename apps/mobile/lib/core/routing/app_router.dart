@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/listing_detail/presentation/screens/listing_detail_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/tour/presentation/screens/tour_screen.dart';
+import '../../models/listing.dart';
 import '../../providers/auth_provider.dart';
 
 /// Splash/loading screen shown while auth state is being resolved.
@@ -77,7 +78,9 @@ GoRouter createRouter(Ref ref) {
       }
 
       if (authState.isAuthenticated) {
-        if (location == '/' || location == '/login' || location == '/register') {
+        if (location == '/' ||
+            location == '/login' ||
+            location == '/register') {
           return '/search';
         }
         return null;
@@ -121,7 +124,11 @@ GoRouter createRouter(Ref ref) {
         path: '/listing/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return ListingDetailScreen(listingId: id);
+          final extra = state.extra;
+          return ListingDetailScreen(
+            listingId: id,
+            previewListing: extra is Listing ? extra : null,
+          );
         },
       ),
       GoRoute(

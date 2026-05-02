@@ -9,6 +9,7 @@ import 'package:project_x_mobile/features/search/presentation/screens/search_scr
 import 'package:project_x_mobile/features/tour/application/tour_draft_controller.dart';
 import 'package:project_x_mobile/features/tour/data/tour_repository.dart';
 import 'package:project_x_mobile/models/brand_config.dart';
+import 'package:project_x_mobile/models/listing.dart';
 import 'package:project_x_mobile/models/listing_search_response.dart';
 import 'package:project_x_mobile/models/tour.dart';
 import 'package:project_x_mobile/providers/api_provider.dart';
@@ -131,9 +132,15 @@ Future<GoRouter> pumpSearchScreen(
       ),
       GoRoute(
         path: '/listing/:id',
-        builder: (context, state) => Scaffold(
-          body: Text('Listing detail ${state.pathParameters['id']}'),
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          final previewId = extra is Listing ? extra.id : 'none';
+          return Scaffold(
+            body: Text(
+              'Listing detail ${state.pathParameters['id']} preview $previewId',
+            ),
+          );
+        },
       ),
     ],
   );
@@ -228,7 +235,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('listing-card-listing-1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Listing detail listing-1'), findsOneWidget);
+    expect(find.text('Listing detail listing-1 preview listing-1'),
+        findsOneWidget);
   });
 
   testWidgets('shows add-to-tour only when tour engine is enabled',

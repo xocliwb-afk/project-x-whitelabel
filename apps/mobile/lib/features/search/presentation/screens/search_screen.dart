@@ -53,7 +53,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _openListing(Listing listing) {
-    context.push('/listing/${listing.id}');
+    context.push('/listing/${listing.id}', extra: listing);
   }
 
   void _addToTour(Listing listing) {

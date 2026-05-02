@@ -1,6 +1,13 @@
 import 'package:project_x_mobile/models/listing.dart';
 
-Listing buildListing(String id, {String? thumbnailUrl}) {
+Listing buildListing(
+  String id, {
+  String? thumbnailUrl,
+  String? description,
+  ListingAttribution? attribution,
+  int? yearBuilt,
+  int? daysOnMarket = 4,
+}) {
   return Listing(
     id: id,
     mlsId: 'MLS-$id',
@@ -19,12 +26,15 @@ Listing buildListing(String id, {String? thumbnailUrl}) {
       photos: const [],
       thumbnailUrl: thumbnailUrl,
     ),
-    details: const ListingDetails(
+    details: ListingDetails(
       beds: 3,
       baths: 2,
       sqft: 1800,
+      yearBuilt: yearBuilt,
       status: 'Active',
     ),
-    meta: const ListingMeta(daysOnMarket: 4),
+    meta: ListingMeta(daysOnMarket: daysOnMarket),
+    description: description,
+    attribution: attribution,
   );
 }
