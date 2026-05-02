@@ -1,5 +1,9 @@
 import type { NormalizedListing, TourStop, Tour, NarrationPayload } from '@project-x/shared-types';
 
+export const MAX_NARRATION_LISTING_ENRICHMENT = 50;
+
+type ListingLookup = (listingId: string) => Promise<NormalizedListing | null>;
+
 /**
  * Generate a rich narration payload for a single tour stop,
  * using listing data when available.
@@ -50,6 +54,41 @@ export function generateTourNarrations(
     const listing = listings.get(stop.listingId) ?? null;
     return generateNarrationForStop(stop, listing);
   });
+}
+
+/**
+ * Fetch listing data for tour narration enrichment at most once per listingId.
+ * Missing or failed listing lookups are omitted so narration generation can
+ * fall back to the persisted stop address.
+ */
+export async function fetchListingsForTourStops(
+  stops: TourStop[],
+  lookupListing: ListingLookup,
+  maxListings = MAX_NARRATION_LISTING_ENRICHMENT,
+): Promise<Map<string, NormalizedListing>> {
+  const uniqueListingIds = Array.from(
+    new Set(
+      stops
+        .map((stop) => stop.listingId.trim())
+        .filter((listingId) => listingId.length > 0),
+    ),
+  ).slice(0, maxListings);
+
+  const results = await Promise.allSettled(
+    uniqueListingIds.map(async (listingId) => ({
+      listingId,
+      listing: await lookupListing(listingId),
+    })),
+  );
+
+  const listings = new Map<string, NormalizedListing>();
+  results.forEach((result) => {
+    if (result.status === 'fulfilled' && result.value.listing) {
+      listings.set(result.value.listingId, result.value.listing);
+    }
+  });
+
+  return listings;
 }
 
 function buildRichNarration(stop: TourStop, listing: NormalizedListing): string {
