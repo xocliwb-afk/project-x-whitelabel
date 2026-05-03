@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-Project X White Label has reached a major milestone: Epic 15 converted the Flutter mobile app from placeholder surfaces into real product screens for Search, Listing Detail, and Tour planner/current-tour. The repo now has real API, web, mobile, database, auth, tenant, brand, admin, search, listing, saved-search/favorite, and tour foundations.
+Project X White Label has reached a major milestone: Epic 15 delivered real Flutter product screens for Search, Listing Detail, and Tour planner/current-tour. The repo now has real API, web, mobile, database, auth, tenant, brand, admin, search, listing, saved-search/favorite, and tour foundations.
 
 The post-Epic 15 health reviews agree on the core conclusion:
 
@@ -401,8 +401,9 @@ flutter test
 
 ## Final Docs Cleanup — Remaining Repo-Truth Docs Cleanup
 
+**GitHub PR:** #42  
 **Branch:** `docs/post-epic-15-truth-cleanup`  
-**Status:** In progress  
+**Status:** In review  
 **Priority:** P1  
 **Size:** Small/Medium  
 **Type:** docs only
@@ -418,7 +419,7 @@ Clean:
 - feature matrix stale status
 - PR tracker stale PR status language
 - old API/mobile test counts and CI status
-- old claims that mobile is skeleton/placeholder
+- old claims that mobile remained preliminary or incomplete
 - old claims that tours are purely in-memory if the live repo says otherwise
 - docs implying maps/geofencing/TTS/Android Auto are part of Epic 15
 
@@ -440,7 +441,7 @@ Clean:
 
 # Phase 2 — Pre-Demo / Production Hardening
 
-## PR 41 — Public Listing/Search Rate Limiting
+## Future Hardening Item — Public Listing/Search Rate Limiting
 
 **Branch:** `chore/api-public-rate-limits`  
 **Priority:** P1/P2  
@@ -471,7 +472,7 @@ Protect public listing/search routes from scraping and vendor quota drain.
 
 ---
 
-## PR 42 — CORS Preflight Cleanup
+## Future Hardening Item — CORS Preflight Cleanup
 
 **Branch:** `chore/api-cors-preflight-cleanup`  
 **Priority:** P2  
@@ -494,7 +495,7 @@ Ensure CORS preflight uses the same configured CORS options as normal requests.
 
 ---
 
-## PR 48 — Full Mobile Device / Emulator QA
+## Future QA Item — Full Mobile Device / Emulator QA
 
 **Branch:** optional QA/report branch  
 **Priority:** P1 before release/demo  
@@ -529,7 +530,7 @@ Manual QA against real local or staged config:
 
 ---
 
-## PR 49 — Android SDK Setup
+## Future Tooling Item — Android SDK Setup
 
 **Branch:** optional tooling/docs branch  
 **Priority:** P2 before native work  
@@ -557,7 +558,7 @@ Prepare for Android emulator/native validation before Android Auto work.
 
 # Phase 3 — Maintainability / Diligence Polish
 
-## PR 43 — Split Large Flutter Screen Files
+## Future Maintainability Item — Split Large Flutter Screen Files
 
 **Branch:** `refactor/mobile-screen-widgets`  
 **Priority:** P2  
@@ -587,7 +588,7 @@ No behavior changes. Preserve tests.
 
 ---
 
-## PR 44 — Decompose Large Web Search Files
+## Future Maintainability Item — Decompose Large Web Search Files
 
 **Branch:** `refactor/web-search-surface`  
 **Priority:** P2/P3  
@@ -608,7 +609,7 @@ No behavior changes. Preserve search E2E behavior.
 
 ---
 
-## PR 45 — Remove Unused Web Database Dependency
+## Future Maintainability Item — Remove Unused Web Database Dependency
 
 **Branch:** `chore/web-remove-unused-database-dependency`  
 **Priority:** P3  
@@ -626,7 +627,7 @@ Remove unnecessary dependency if live repo confirms web does not import `@projec
 
 ---
 
-## PR 46 — Static Marketing / Vendor String Cleanup
+## Future Maintainability Item — Static Marketing / Vendor String Cleanup
 
 **Branch:** `chore/marketing-vendor-string-cleanup`  
 **Priority:** P2/P3  
@@ -644,7 +645,7 @@ Clean remaining user-facing or diligence-visible vendor strings.
 
 ---
 
-## PR 47 — Tour ID Strategy Review
+## Future Maintainability Item — Tour ID Strategy Review
 
 **Branch:** `chore/tour-id-strategy-review`  
 **Priority:** P3 unless public/shareable tour URLs begin  
@@ -662,7 +663,7 @@ Decide whether custom tour text IDs are acceptable long-term.
 
 ---
 
-## PR 50 — Static Marketing Multi-Tenant Modernization
+## Future Maintainability Item — Static Marketing Multi-Tenant Modernization
 
 **Branch:** `refactor/marketing-tenant-modernization`  
 **Priority:** P3 / later  
@@ -802,44 +803,44 @@ GitHub PR #41 — merged:
 - Branch: ci/mobile-validation
 - Goal: make Flutter analyze/test blocking in CI
 
-Final docs cleanup — in progress:
+GitHub PR #42 — in review:
 - Branch: docs/post-epic-15-truth-cleanup
 - Goal: remove remaining stale repo-truth docs drift
 
 Phase 2 — Important before demo/production, but not blockers for Epic 16:
-PR 41:
+Future hardening item:
 - Branch: chore/api-public-rate-limits
 - Goal: rate limit public listing/search routes
 
-PR 42:
+Future hardening item:
 - Branch: chore/api-cors-preflight-cleanup
 - Goal: clean CORS preflight config
 
-PR 48:
+Future QA item:
 - Full mobile device/emulator QA
 
-PR 49:
+Future tooling item:
 - Android SDK setup
 
 Phase 3 — Maintainability/diligence:
-PR 43:
+Future maintainability item:
 - Branch: refactor/mobile-screen-widgets
 - Goal: split large Flutter screen files
 
-PR 44:
+Future maintainability item:
 - Branch: refactor/web-search-surface
 - Goal: decompose large web Search files
 
-PR 45:
+Future maintainability item:
 - Branch: chore/web-remove-unused-database-dependency
 
-PR 46:
+Future maintainability item:
 - Branch: chore/marketing-vendor-string-cleanup
 
-PR 47:
+Future maintainability item:
 - Branch: chore/tour-id-strategy-review
 
-PR 50:
+Future maintainability item:
 - Branch: refactor/marketing-tenant-modernization
 
 Your job in this new chat:
@@ -1022,6 +1023,6 @@ Do not start Epic 16 until Phase 1 is complete:
 3. docs/planning PR numbering reconciliation — done
 4. narration contract/enrichment hardening — done
 5. mobile validation in CI — done
-6. final repo-truth docs cleanup — in progress
+6. final repo-truth docs cleanup — PR #42 in review
 
 After the docs cleanup merges, Epic 16 can begin from a much safer foundation.

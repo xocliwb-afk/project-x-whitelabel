@@ -6,7 +6,7 @@
 
 ## 1. Current State
 
-`apps/mobile` is a real Flutter client, not a decorative skeleton. It includes:
+`apps/mobile` is a real Flutter client with production-facing product surfaces. It includes:
 
 - Supabase initialization and auth state management
 - Riverpod providers for auth, API transport, brand config, search, listing detail, and tour draft/current-tour state

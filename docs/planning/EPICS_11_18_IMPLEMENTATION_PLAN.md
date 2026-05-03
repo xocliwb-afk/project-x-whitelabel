@@ -535,7 +535,7 @@ Upload service: Supabase Storage bucket `brand-assets`, validates type (png/jpg/
 ## Epic 15 — Real Flutter Screens (Search, Detail, Tour)
 
 ### Goal
-Replace the placeholder mobile feature screens with real Flutter Search, Listing Detail, and Tour planner/current-tour screens.
+Deliver real Flutter Search, Listing Detail, and Tour planner/current-tour screens.
 
 ### Prerequisites
 Epic 14 completion, runtime tenant brand bootstrap, working mobile auth/bootstrap, and the Epic 15 mobile routing/data-state foundation.

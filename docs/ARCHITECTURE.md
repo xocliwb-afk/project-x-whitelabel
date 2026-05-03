@@ -114,7 +114,7 @@ The Flutter app has working bootstrap plumbing for:
 - GoRouter route guards
 - ThemeData generation from brand config
 
-Epic 15 replaced the placeholder feature screens with real mobile surfaces:
+Epic 15 delivered real mobile product surfaces:
 
 - `/search` is public and renders a list-first search UI using the mobile search controller/repository foundation
 - `/listing/:id` is public and renders a PDP-style detail screen with preview fallback from Search route extras

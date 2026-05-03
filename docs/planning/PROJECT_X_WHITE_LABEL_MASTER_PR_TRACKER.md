@@ -94,7 +94,7 @@
 - Dart model classes mirroring all shared-types contracts
 - Dio-based API client with all BFF endpoints
 - BrandConfig → ThemeData mapping (colors, typography, radii)
-- GoRouter navigation with placeholder screens
+- GoRouter navigation with initial route scaffolding
 - Riverpod initialization with brand config fetch on startup
 
 ---
@@ -180,7 +180,7 @@
 - `feature/epic-15-mobile-tour-screen` — PR #35
 - `feature/epic-15-mobile-hardening-docs` — PR #36
 
-**Goal:** Replace the mobile Search, Listing Detail, and Tour placeholders with real Flutter screens while preserving the locked Epic 15 scope.
+**Goal:** Deliver real Flutter Search, Listing Detail, and Tour screens while preserving the locked Epic 15 scope.
 
 **What was done:**
 - Mobile route contract: `/search`, `/listing/:id`, and `/tour` public; persisted user-data actions remain auth-gated
@@ -205,14 +205,14 @@
 
 ---
 
-### Pre-Epic-16 Hardening ✅ COMPLETE THROUGH PR #41
+### Pre-Epic-16 Hardening ✅ CORE COMPLETE; PR #42 DOCS CLEANUP IN REVIEW
 **Branches / PRs:**
 - `chore/epic-16-tour-contract-hardening` — PR #37
 - `chore/ci-generate-prisma-client` — PR #38
 - `docs/reconcile-hardening-pr-numbering` — PR #39
 - `chore/narration-contract-hardening` — PR #40
 - `ci/mobile-validation` — PR #41
-- `docs/post-epic-15-truth-cleanup` — final docs cleanup branch
+- `docs/post-epic-15-truth-cleanup` — PR #42
 
 **Goal:** Harden tour/narration contracts and CI gates before Epic 16 native/location/audio work begins.
 
