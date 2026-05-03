@@ -59,12 +59,12 @@
 | QA-ANDROID-MANUAL-003 | P3 polish | Android runtime logs | Non-fatal startup/input jank logs were observed. | Terminal logs included skipped frames and IME animation `JANK_COMPOSER` warnings; app remained alive and no fatal Flutter red screen was visible. | Monitor startup/input performance after core functional QA is complete. |
 
 ## 7. Skipped items / limitations
-- Signed-in tour save and logout/reset were not tested; no credentials are recorded in this report.
+- Signed-in tour save and logout/reset were skipped; no credentials are recorded in this report.
 - Signed-out UI did not expose Search; Search was only observed after sign-in.
-- Add to Tour was only partially validated: the button was visible on Listing Detail, but resulting tour state was not fully validated.
+- Add to Tour result state was not fully validated.
 - Tour screen was not opened during this pass.
 - API unavailable behavior was not run because stopping the local API was not approved.
-- No map was visible; embedded map, route polylines, and navigation handoff were not expected in this QA pass and remain future/out-of-scope.
+- Embedded map, route polylines, and navigation handoff were not expected in this QA pass and remain future/out-of-scope.
 - No screenshot binaries were committed.
 
 ## 8. Recommended next action
