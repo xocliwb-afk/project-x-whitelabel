@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:project_x_mobile/features/tour/application/active_tour_controller.dart';
 import 'package:project_x_mobile/features/tour/application/active_tour_state.dart';
 import 'package:project_x_mobile/features/tour/data/tour_repository.dart';
+import 'package:project_x_mobile/models/narration.dart';
 import 'package:project_x_mobile/models/tour.dart';
+import 'package:project_x_mobile/services/narration_service.dart';
 
 class FakeTourRepository implements TourRepository {
   final Map<String, Tour> tours;
@@ -57,6 +59,27 @@ class FakeTourRepository implements TourRepository {
   }
 }
 
+class FakeNarrationService implements NarrationService {
+  final Map<String, List<NarrationPayload>> narrationsByTourId;
+  Object? failure;
+  int fetchCalls = 0;
+
+  FakeNarrationService({
+    this.narrationsByTourId = const {},
+    this.failure,
+  });
+
+  @override
+  Future<List<NarrationPayload>> fetchTourNarrations(String tourId) async {
+    fetchCalls += 1;
+    final failure = this.failure;
+    if (failure != null) {
+      throw failure;
+    }
+    return narrationsByTourId[tourId] ?? const [];
+  }
+}
+
 TourStop tourStop(String id, int order) {
   return TourStop(
     id: id,
@@ -71,6 +94,7 @@ TourStop tourStop(String id, int order) {
 Tour tourWithStops(
   List<TourStop> stops, {
   String id = 'tour-1',
+  List<NarrationPayload>? narrationPayloads,
 }) {
   return Tour(
     id: id,
@@ -81,12 +105,43 @@ Tour tourWithStops(
     defaultDurationMinutes: 30,
     defaultBufferMinutes: 10,
     stops: stops,
+    narrationPayloads: narrationPayloads,
+  );
+}
+
+NarrationPayload narrationPayload({
+  required TourStop stop,
+  String trigger = ActiveTourNarrationTrigger.approaching,
+  String? text,
+}) {
+  return NarrationPayload(
+    tourStopId: stop.id,
+    listingId: stop.listingId,
+    trigger: trigger,
+    narrationText: text ?? 'Narration for ${stop.address}',
+    listingSummary: NarrationListingSummary(
+      address: stop.address,
+      price: '',
+      beds: null,
+      baths: null,
+      sqft: null,
+    ),
+  );
+}
+
+ActiveTourController buildController(
+  FakeTourRepository repository, {
+  FakeNarrationService? narrationService,
+}) {
+  return ActiveTourController(
+    repository,
+    narrationService ?? FakeNarrationService(),
   );
 }
 
 void main() {
   test('initial state is idle', () {
-    final controller = ActiveTourController(FakeTourRepository());
+    final controller = buildController(FakeTourRepository());
 
     expect(controller.state.status, ActiveTourStatus.idle);
     expect(controller.state.hasTour, isFalse);
@@ -101,7 +156,7 @@ void main() {
       tourStop('second-b', 1),
     ]);
     final repository = FakeTourRepository(tours: {tour.id: tour});
-    final controller = ActiveTourController(repository);
+    final controller = buildController(repository);
 
     await controller.load(tour.id);
 
@@ -117,13 +172,94 @@ void main() {
     ]);
   });
 
+  test('load success fetches narrations and stores payloads', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final narration = narrationPayload(
+      stop: first,
+      text: 'Approaching the first stop.',
+    );
+    final narrationService = FakeNarrationService(
+      narrationsByTourId: {
+        tour.id: [narration],
+      },
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+
+    expect(narrationService.fetchCalls, 1);
+    expect(controller.state.status, ActiveTourStatus.ready);
+    expect(controller.state.narrationLoadAttempted, isTrue);
+    expect(controller.state.narrationErrorMessage, isNull);
+    expect(
+      controller.state.narrationPayloadFor(
+        tourStopId: first.id,
+        trigger: ActiveTourNarrationTrigger.approaching,
+      ),
+      narration,
+    );
+  });
+
+  test('attached tour narrations are preferred over endpoint fetch', () async {
+    final first = tourStop('first', 0);
+    final attachedNarration = narrationPayload(
+      stop: first,
+      text: 'Attached narration.',
+    );
+    final tour = tourWithStops(
+      [first],
+      narrationPayloads: [attachedNarration],
+    );
+    final narrationService = FakeNarrationService(
+      failure: Exception('should not fetch'),
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+
+    expect(narrationService.fetchCalls, 0);
+    expect(controller.state.status, ActiveTourStatus.ready);
+    expect(
+      controller.narrationTextForCurrentStop(
+        ActiveTourNarrationTrigger.approaching,
+      ),
+      'Attached narration.',
+    );
+  });
+
+  test('narration fetch failure keeps loaded tour ready', () async {
+    final tour = tourWithStops([tourStop('first', 0)]);
+    final narrationService = FakeNarrationService(
+      failure: Exception('401 auth required'),
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+
+    expect(narrationService.fetchCalls, 1);
+    expect(controller.state.status, ActiveTourStatus.ready);
+    expect(controller.state.narrationLoadAttempted, isTrue);
+    expect(controller.state.narrationErrorMessage, contains('401'));
+    expect(controller.state.errorMessage, isNull);
+  });
+
   test('current next and previous stop getters are safe', () async {
     final tour = tourWithStops([
       tourStop('first', 0),
       tourStop('second', 1),
       tourStop('third', 2),
     ]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -144,9 +280,219 @@ void main() {
     expect(controller.state.isLastStop, isFalse);
   });
 
+  test('approaching trigger selects matching current stop narration', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final narrationService = FakeNarrationService(
+      narrationsByTourId: {
+        tour.id: [
+          narrationPayload(
+            stop: first,
+            text: 'Approaching selected text.',
+          ),
+        ],
+      },
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+    controller.selectNarrationForCurrentStop(
+      ActiveTourNarrationTrigger.approaching,
+    );
+
+    expect(controller.state.status, ActiveTourStatus.narrating);
+    expect(controller.state.currentNarrationText, 'Approaching selected text.');
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.speaking);
+  });
+
+  test('arrived trigger selects arrived payload when present', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final narrationService = FakeNarrationService(
+      narrationsByTourId: {
+        tour.id: [
+          narrationPayload(
+            stop: first,
+            trigger: ActiveTourNarrationTrigger.arrived,
+            text: 'Arrived selected text.',
+          ),
+        ],
+      },
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+
+    expect(
+      controller
+          .narrationTextForCurrentStop(ActiveTourNarrationTrigger.arrived),
+      'Arrived selected text.',
+    );
+  });
+
+  test('arrived trigger falls back to address-only text when missing',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+
+    expect(
+      controller
+          .narrationTextForCurrentStop(ActiveTourNarrationTrigger.arrived),
+      'Arrived at first Main Street.',
+    );
+  });
+
+  test('manual replay selects best available current stop payload', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final narrationService = FakeNarrationService(
+      narrationsByTourId: {
+        tour.id: [
+          narrationPayload(
+            stop: first,
+            trigger: ActiveTourNarrationTrigger.arrived,
+            text: 'Arrived text.',
+          ),
+          narrationPayload(
+            stop: first,
+            trigger: ActiveTourNarrationTrigger.approaching,
+            text: 'Approaching text.',
+          ),
+        ],
+      },
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+
+    expect(
+      controller.narrationTextForCurrentStop(ActiveTourNarrationTrigger.manual),
+      'Approaching text.',
+    );
+  });
+
+  test('missing payload falls back to current stop address', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+
+    expect(
+      controller.narrationTextForCurrentStop(
+        ActiveTourNarrationTrigger.approaching,
+      ),
+      'Approaching first Main Street.',
+    );
+  });
+
+  test('selecting narration with no loaded tour is safe', () {
+    final controller = buildController(FakeTourRepository());
+
+    controller.selectNarrationForCurrentStop(ActiveTourNarrationTrigger.manual);
+
+    expect(controller.state.status, ActiveTourStatus.idle);
+    expect(controller.state.currentNarrationText, isNull);
+    expect(
+      controller.narrationTextForCurrentStop(ActiveTourNarrationTrigger.manual),
+      isNull,
+    );
+  });
+
+  test('advance clears selected narration text', () async {
+    final first = tourStop('first', 0);
+    final second = tourStop('second', 1);
+    final tour = tourWithStops([first, second]);
+    final narrationService = FakeNarrationService(
+      narrationsByTourId: {
+        tour.id: [
+          narrationPayload(
+            stop: first,
+            text: 'First stop narration.',
+          ),
+        ],
+      },
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+    controller.selectNarrationForCurrentStop(
+      ActiveTourNarrationTrigger.approaching,
+    );
+    controller.advance();
+
+    expect(controller.state.status, ActiveTourStatus.driving);
+    expect(controller.state.currentStop?.id, second.id);
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+  });
+
+  test('duplicate payloads for same stop and trigger keep the first payload',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final narrationService = FakeNarrationService(
+      narrationsByTourId: {
+        tour.id: [
+          narrationPayload(stop: first, text: 'First duplicate.'),
+          narrationPayload(stop: first, text: 'Second duplicate.'),
+        ],
+      },
+    );
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: narrationService,
+    );
+
+    await controller.load(tour.id);
+
+    expect(
+      controller.narrationTextForCurrentStop(
+        ActiveTourNarrationTrigger.approaching,
+      ),
+      'First duplicate.',
+    );
+  });
+
+  test('auth-like narration failure does not enter active tour error',
+      () async {
+    final tour = tourWithStops([tourStop('first', 0)]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        failure: Exception('ApiException(401 AUTH_REQUIRED): auth required'),
+      ),
+    );
+
+    await controller.load(tour.id);
+
+    expect(controller.state.status, ActiveTourStatus.ready);
+    expect(controller.state.errorMessage, isNull);
+    expect(controller.state.narrationErrorMessage, contains('AUTH_REQUIRED'));
+  });
+
   test('empty stop tour enters error', () async {
     final tour = tourWithStops(const []);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -158,7 +504,7 @@ void main() {
   });
 
   test('repository failure enters error', () async {
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(failure: Exception('network down')),
     );
 
@@ -171,7 +517,7 @@ void main() {
 
   test('start enters driving from ready', () async {
     final tour = tourWithStops([tourStop('first', 0)]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -183,7 +529,7 @@ void main() {
   });
 
   test('start before load is a safe no-op', () {
-    final controller = ActiveTourController(FakeTourRepository());
+    final controller = buildController(FakeTourRepository());
 
     controller.start();
 
@@ -196,7 +542,7 @@ void main() {
       tourStop('first', 0),
       tourStop('second', 1),
     ]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -214,7 +560,7 @@ void main() {
       tourStop('first', 0),
       tourStop('second', 1),
     ]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -237,7 +583,7 @@ void main() {
       tourStop('first', 0),
       tourStop('second', 1),
     ]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -255,7 +601,7 @@ void main() {
       tourStop('first', 0),
       tourStop('second', 1),
     ]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -271,7 +617,7 @@ void main() {
 
   test('end enters finished and clears playback fields', () async {
     final tour = tourWithStops([tourStop('first', 0)]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -287,7 +633,7 @@ void main() {
 
   test('reset returns to idle', () async {
     final tour = tourWithStops([tourStop('first', 0)]);
-    final controller = ActiveTourController(
+    final controller = buildController(
       FakeTourRepository(tours: {tour.id: tour}),
     );
 
@@ -299,5 +645,6 @@ void main() {
     expect(controller.state.tour, isNull);
     expect(controller.state.orderedStops, isEmpty);
     expect(controller.state.currentStopIndex, 0);
+    expect(controller.state.narrationPayloadsByStopAndTrigger, isEmpty);
   });
 }

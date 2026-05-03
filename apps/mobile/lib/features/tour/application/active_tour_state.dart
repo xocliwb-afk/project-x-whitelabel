@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../../../models/narration.dart';
 import '../../../models/tour.dart';
 
@@ -29,22 +31,38 @@ class ActiveTourState {
   final Tour? tour;
   final List<TourStop> orderedStops;
   final int currentStopIndex;
+  final Map<String, NarrationPayload> narrationPayloadsByStopAndTrigger;
+  final bool narrationLoadAttempted;
+  final String? narrationErrorMessage;
   final ProximityEvent? lastProximityEvent;
   final String? currentNarrationText;
   final ActiveTourPlaybackStatus playbackStatus;
   final String? errorMessage;
 
-  const ActiveTourState({
+  ActiveTourState({
     this.status = ActiveTourStatus.idle,
     this.tourId,
     this.tour,
-    this.orderedStops = const [],
+    List<TourStop> orderedStops = const [],
     this.currentStopIndex = 0,
+    Map<String, NarrationPayload> narrationPayloadsByStopAndTrigger = const {},
+    this.narrationLoadAttempted = false,
+    this.narrationErrorMessage,
     this.lastProximityEvent,
     this.currentNarrationText,
     this.playbackStatus = ActiveTourPlaybackStatus.idle,
     this.errorMessage,
-  });
+  })  : orderedStops = List.unmodifiable(orderedStops),
+        narrationPayloadsByStopAndTrigger = UnmodifiableMapView(
+          Map.unmodifiable(narrationPayloadsByStopAndTrigger),
+        );
+
+  static String narrationPayloadKey({
+    required String tourStopId,
+    required String trigger,
+  }) {
+    return '$tourStopId::$trigger';
+  }
 
   bool get hasTour => tour != null && orderedStops.isNotEmpty;
 
@@ -86,12 +104,23 @@ class ActiveTourState {
 
   bool get isLastStop => hasTour && currentStopIndex == orderedStops.length - 1;
 
+  NarrationPayload? narrationPayloadFor({
+    required String tourStopId,
+    required String trigger,
+  }) {
+    return narrationPayloadsByStopAndTrigger[
+        narrationPayloadKey(tourStopId: tourStopId, trigger: trigger)];
+  }
+
   ActiveTourState copyWith({
     ActiveTourStatus? status,
     Object? tourId = _noChange,
     Object? tour = _noChange,
     List<TourStop>? orderedStops,
     int? currentStopIndex,
+    Map<String, NarrationPayload>? narrationPayloadsByStopAndTrigger,
+    bool? narrationLoadAttempted,
+    Object? narrationErrorMessage = _noChange,
     Object? lastProximityEvent = _noChange,
     Object? currentNarrationText = _noChange,
     ActiveTourPlaybackStatus? playbackStatus,
@@ -103,6 +132,13 @@ class ActiveTourState {
       tour: identical(tour, _noChange) ? this.tour : tour as Tour?,
       orderedStops: orderedStops ?? this.orderedStops,
       currentStopIndex: currentStopIndex ?? this.currentStopIndex,
+      narrationPayloadsByStopAndTrigger: narrationPayloadsByStopAndTrigger ??
+          this.narrationPayloadsByStopAndTrigger,
+      narrationLoadAttempted:
+          narrationLoadAttempted ?? this.narrationLoadAttempted,
+      narrationErrorMessage: identical(narrationErrorMessage, _noChange)
+          ? this.narrationErrorMessage
+          : narrationErrorMessage as String?,
       lastProximityEvent: identical(lastProximityEvent, _noChange)
           ? this.lastProximityEvent
           : lastProximityEvent as ProximityEvent?,
