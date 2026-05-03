@@ -1,6 +1,6 @@
 # Project X White Label — Master PR Tracker
 
-**Last Updated:** 2026-05-02
+**Last Updated:** 2026-05-03
 
 ---
 
@@ -148,9 +148,9 @@
 
 ---
 
-### Epic 10: Repo Truth Reconciliation ← CURRENT
+### Epic 10: Repo Truth Reconciliation ✅ COMPLETE
 **Branch:** `feature/phase-10-repo-truth-reconciliation`
-**Status:** In progress
+**Status:** Complete
 **Goal:** Cross-audit reconciliation — fix all drift between docs, code, and contracts
 
 **What was done:**
@@ -178,7 +178,7 @@
 - `feature/epic-15-mobile-search-screen` — PR #33
 - `feature/epic-15-mobile-listing-detail` — PR #34
 - `feature/epic-15-mobile-tour-screen` — PR #35
-- `feature/epic-15-mobile-hardening-docs` — PR #36 planned
+- `feature/epic-15-mobile-hardening-docs` — PR #36
 
 **Goal:** Replace the mobile Search, Listing Detail, and Tour placeholders with real Flutter screens while preserving the locked Epic 15 scope.
 
@@ -205,6 +205,33 @@
 
 ---
 
+### Pre-Epic-16 Hardening ✅ COMPLETE THROUGH PR #41
+**Branches / PRs:**
+- `chore/epic-16-tour-contract-hardening` — PR #37
+- `chore/ci-generate-prisma-client` — PR #38
+- `docs/reconcile-hardening-pr-numbering` — PR #39
+- `chore/narration-contract-hardening` — PR #40
+- `ci/mobile-validation` — PR #41
+- `docs/post-epic-15-truth-cleanup` — final docs cleanup branch
+
+**Goal:** Harden tour/narration contracts and CI gates before Epic 16 native/location/audio work begins.
+
+**What was done:**
+- Tour create/update validation and date/startTime/timeZone behavior hardened and tested
+- CI generates Prisma client before `@project-x/database` builds
+- Planning numbering reconciled after the CI/database fix consumed GitHub PR #38
+- Narration payload validation, malformed persisted payload handling, and listing enrichment dedupe/capping hardened
+- Blocking CI now runs `flutter pub get`, `flutter analyze`, and `flutter test` for `apps/mobile`
+- Remaining planning docs are being reconciled so completed hardening is not restarted
+
+**Still not started:**
+- Epic 16 geofencing
+- TTS playback
+- Android Auto production implementation
+- Embedded maps, route polylines, and navigation handoff
+
+---
+
 ## Dependency Graph
 
 ```
@@ -219,8 +246,10 @@ Epic 0 (Audit) ✅
       │       └── Epic 6 (Mobile Foundation) ✅
       │           └── Epic 8 (Android Auto/Narration) ✅
       └── Epic 7 depends on Epic 5 + 6
-Epic 10 (Repo Truth Reconciliation) ← CURRENT
+Epic 10 (Repo Truth Reconciliation) ✅
   └── depends on all Epics 0-9
+Epic 15 (Mobile Search, Listing Detail, and Tour Screens) ✅
+  └── Pre-Epic-16 hardening PRs #37-#41 ✅
 ```
 
 ## Anti-Absorption Rules

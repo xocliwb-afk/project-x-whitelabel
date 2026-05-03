@@ -124,7 +124,8 @@ The mobile app intentionally does not yet include embedded map SDK work, route p
 
 ## Testing and CI
 
-- Root CI installs dependencies, builds `@project-x/shared-types`, runs lint, runs build, and runs API tests
+- Root CI installs dependencies, generates the Prisma client, builds `@project-x/shared-types`, runs lint, runs build, and runs API tests
+- Blocking CI now runs mobile validation with `flutter pub get`, `flutter analyze`, and `flutter test` in `apps/mobile`
 - Lighthouse and hygiene workflows are present as non-blocking GitHub Actions
 - Playwright specs exist under `apps/web/e2e`, but there is no blocking GitHub Actions workflow that runs them today
 - The mobile app includes a focused Flutter test suite under `apps/mobile/test` covering routing, Search, Listing Detail, Tour draft/controller behavior, and Tour screen persistence states
@@ -138,5 +139,5 @@ The repo does not currently include checked-in `vercel.json`, `railway.json`, or
 - Web tenant resolution is still env-driven (`NEXT_PUBLIC_TENANT_ID`) rather than subdomain-driven
 - `config/brand.json` is still part of the runtime picture for marketing rewrites, local fallback, and seeding
 - `apps/web/next.config.js` marketing rewrites and neighborhood pages are static and not tenant-aware
-- Mobile Search, Listing Detail, and Tour planner/current-tour screens are implemented, but maps, navigation handoff, geofencing, TTS playback, Android Auto, and broader mobile platform hardening remain deferred
+- Mobile Search, Listing Detail, and Tour planner/current-tour screens are implemented and covered by blocking CI analyze/test, but maps, navigation handoff, geofencing, TTS playback, Android Auto, and broader mobile platform hardening remain deferred
 - E2E browser coverage exists, but it is not part of blocking CI

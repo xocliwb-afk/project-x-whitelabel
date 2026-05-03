@@ -1,6 +1,6 @@
 # Project X White Label — Feature Matrix
 
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-05-03
 
 ---
 
@@ -64,7 +64,7 @@
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
 | Tour domain models | ✅ Built | NOW | Tour, TourStop, PlanTourRequest, NarrationPayload in shared-types |
-| Tour planning service | ✅ Built | NOW | Time-based scheduling, narration generation, in-memory CRUD |
+| Tour planning service | ✅ Built | NOW | Prisma-backed tour persistence, strict time/timezone validation, narration generation |
 | Tour API routes | ✅ Built | NOW | GET/POST/PUT/DELETE /api/tours, GET /api/tours/:id/narrations |
 | Tour Builder web UI | ✅ Built | NOW | TourBuilderClient + TourPanel share unified Zustand store |
 | Add-to-tour from search | ⚠️ Partial | DESIGN NOW | AddToTourIcon exists but unused — needs search card integration |
@@ -92,7 +92,7 @@
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
 | Narration domain models | ✅ Built | NOW | NarrationPayload, ProximityEvent in shared-types + Dart models |
-| Narration service (API) | ✅ Built | NOW | Rich listing-based narration generation, GET /api/tours/:id/narrations |
+| Narration service (API) | ✅ Built | NOW | Rich listing-based narration generation, GET /api/tours/:id/narrations, payload validation, deduped/bounded enrichment |
 | Arrival detection | ⚠️ Stub | DESIGN NOW | ProximityService interface defined, simulateArrival for testing |
 | TTS integration | ⚠️ Stub | LATER (COMMITTED) | TtsEngine interface defined, NoOpTtsEngine for dev |
 | Android Auto surface | ⚠️ Stub | LATER (COMMITTED) | AndroidAutoService interface, architecture documented |
@@ -103,9 +103,10 @@
 | Feature | Status | Classification | Notes |
 |---------|--------|---------------|-------|
 | Monorepo (pnpm + Turborepo) | ✅ Built | NOW | Working |
-| CI pipeline | ✅ Built | NOW | GitHub Actions |
+| CI pipeline | ✅ Built | NOW | GitHub Actions: API/web lint/build/test plus blocking Flutter analyze/test |
 | E2E tests | ✅ Built | NOW | 8 Playwright specs |
-| API unit tests | ✅ Built | NOW | 83 tests, all passing |
+| API unit tests | ✅ Built | NOW | 20 Vitest files / 199 tests as of PR #40 validation |
+| Mobile validation | ✅ Built | NOW | `flutter pub get`, `flutter analyze`, and `flutter test` run in blocking CI |
 | Security headers | ✅ Built | NOW | CORS, CSP, XFO |
 | Bundle analysis | ✅ Built | NOW | @next/bundle-analyzer |
 | Lighthouse CI | ✅ Built | NOW | Non-blocking workflow |

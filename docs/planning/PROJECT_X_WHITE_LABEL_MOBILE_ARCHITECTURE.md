@@ -1,6 +1,6 @@
 # Project X White Label — Mobile Architecture
 
-**Last Updated:** 2026-05-02
+**Last Updated:** 2026-05-03
 
 ---
 
@@ -98,6 +98,8 @@ flutter pub get
 flutter analyze
 flutter test
 ```
+
+These commands now also run in the blocking GitHub CI workflow for pull requests and pushes to `main`.
 
 Repo-level validation should also include the API and web gates when closing cross-surface epics:
 

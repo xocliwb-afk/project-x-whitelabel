@@ -1,9 +1,9 @@
 # Project X White Label — Pre-Epic 16 Hardening Plan
 
-**Status:** Updated after GitHub PR #37 and PR #38 merges; Epic 16 not started  
+**Status:** Updated after GitHub PRs #37-#41 merged; Epic 16 not started  
 **Prepared:** 2026-05-02  
-**Context:** Epic 15 is complete on `main`; do not start Epic 16 until the P0 hardening items are complete.  
-**Latest hardening commits on `main`:** `69a0729 chore(epic-16): harden tour contract and timezone handling (#37)`, `f2c3ab8 chore(ci): generate Prisma client before database build (#38)`
+**Context:** Epic 15 is complete on `main`; PRs #37-#41 completed the core pre-Epic-16 hardening gates, and this docs cleanup reconciles remaining repo-truth drift before Epic 16 starts.  
+**Latest hardening commits on `main`:** `69a0729 chore(epic-16): harden tour contract and timezone handling (#37)`, `f2c3ab8 chore(ci): generate Prisma client before database build (#38)`, `4c5e9b2 docs: reconcile hardening PR numbering after CI fix (#39)`, `3df9dc0 chore(epic-16): harden narration contract and enrichment (#40)`, `0911617 ci: run Flutter analyze and tests (#41)`
 
 ---
 
@@ -18,11 +18,11 @@ The post-Epic 15 health reviews agree on the core conclusion:
 - `main` is clean and synced.
 - There is no current merge-blocking defect on `main`.
 - The next phase should **not** jump directly into Epic 16 geofencing/TTS/native work.
-- A short hardening sprint should happen first.
+- The core pre-Epic-16 hardening sprint has run; this final docs pass is reconciling status before Epic 16 begins.
 
 The reason is simple: Epic 16 will depend on tour timing, tour stops, narration payloads, authenticated tour state, and eventually location-aware behavior. Those foundations must be stricter before geofencing, TTS playback, or Android Auto work begins.
 
-This document locks the hardened plan.
+This document records the hardened plan and current completion status.
 
 ---
 
@@ -51,7 +51,7 @@ The post-Epic 15 Codex health review reported:
 - `pnpm --filter @project-x/api typecheck` passed
 - `pnpm --filter @project-x/api build` passed
 - `pnpm --filter @project-x/api test` passed
-- API tests: 17 test files / 163 tests
+- API tests: 20 test files / 199 tests as of PR #40 validation
 - `pnpm --filter web build` passed
 - `pnpm --filter web lint` passed
 - `flutter analyze` passed
@@ -73,6 +73,7 @@ The product now has:
 - Tour API/data foundation
 - Flutter mobile app with real Search, Listing Detail, and Tour screens
 - Mobile tests
+- Flutter analyze/test in blocking GitHub CI
 - Strong planning and implementation guardrails
 
 ---
@@ -128,29 +129,29 @@ Those capabilities depend on a reliable tour/narration contract. Starting native
 
 ## 5. P0/P1 Findings From Post-Epic 15 Review
 
-### P0 / must address before Epic 16
+### P0 / addressed before Epic 16
 
-1. **Tour date/time/timezone semantics are weak**
-   - `PlanTourRequest.timeZone` exists and mobile sends it.
-   - API scheduling currently depends on naive date construction.
-   - Epic 16 geofence/TTS behavior needs reliable local tour timing.
+1. **Tour date/time/timezone semantics were weak** — addressed by GitHub PR #37.
+   - `POST /api/tours` and `PUT /api/tours/:id` now have stricter validation.
+   - Tour stop scheduling no longer silently depends on server-local timezone.
+   - Omitted `timeZone` behavior is explicit and tested.
 
-2. **Tour create/update validation is too shallow**
-   - Need strict validation for date, time, timezone, stops, coordinates, duration, buffer, and update payloads.
+2. **Tour create/update validation was too shallow** — addressed by GitHub PR #37.
+   - Date, start time, timezone, stops, coordinates, duration, buffer, and update payloads are covered by focused API tests.
 
-3. **Narration payload validation is weak**
-   - TTS/geofence layers need predictable narration payloads.
-   - Invalid JSON should not silently pass through.
+3. **Narration payload validation was weak** — addressed by GitHub PR #40.
+   - Incoming malformed narration payloads are rejected with stable validation errors.
+   - Malformed persisted payloads are sanitized/filtered during tour mapping so reads do not crash.
 
-4. **Narration enrichment has N+1 behavior**
-   - Per-stop listing fetches are acceptable for tiny tours but should be deduped/capped or explicitly bounded before narration/TTS work.
+4. **Narration enrichment had N+1 behavior** — addressed by GitHub PR #40.
+   - Listing enrichment now fetches each unique listing ID at most once and is capped at 50 unique lookups.
 
-5. **Mobile validation is not blocking CI**
+5. **Mobile validation was not blocking CI** — addressed by GitHub PR #41.
    - Mobile is now a real product surface.
-   - Flutter analyze/test should be part of blocking CI.
+   - Blocking CI now runs `flutter pub get`, `flutter analyze`, and `flutter test` for `apps/mobile`.
 
-6. **Remaining docs drift exists**
-   - Docs are greatly improved, but some feature matrix/tracker/current-state references still need cleanup.
+6. **Remaining docs drift exists** — addressed by this docs-only cleanup branch.
+   - Feature matrix, tracker, current-state, and mobile architecture references are being reconciled so the next agent does not restart completed hardening or start Epic 16 early.
 
 ### Important but not blockers before Epic 16
 
@@ -177,31 +178,32 @@ These must happen before Epic 16 starts:
 
 1. GitHub PR #37 — Tour contract/timezone hardening — merged
 2. GitHub PR #38 — CI/database Prisma client generation fix — merged
-3. Next hardening PR — Narration contract/enrichment hardening — not started
-4. Planning label PR 39 — Mobile validation in blocking CI
-5. Planning label PR 40 — Remaining repo-truth docs cleanup
+3. GitHub PR #39 — Docs/planning PR numbering reconciliation — merged
+4. GitHub PR #40 — Narration contract/enrichment hardening — merged
+5. GitHub PR #41 — Flutter analyze/test blocking in CI — merged
+6. Final docs truth cleanup — this branch
 
-**Numbering note:** GitHub PR #38 was consumed by the CI/database Prisma client generation fix. Remaining planned PR labels in this document are planning labels, not guaranteed future GitHub PR numbers.
+**Numbering note:** GitHub PR #38 was consumed by the CI/database Prisma client generation fix, and GitHub PR #40/#41 were used for narration hardening and mobile CI validation. Older planning labels are retained only as historical labels, not guaranteed GitHub PR numbers.
 
 ### Phase 2 — Pre-demo / production hardening
 
 Important before serious demos, pilots, or production:
 
-5. PR 41 — Public listing/search rate limiting
-6. PR 42 — CORS preflight cleanup
-7. PR 48 — Full mobile device/emulator QA
-8. PR 49 — Android SDK setup
+1. Public listing/search rate limiting
+2. CORS preflight cleanup
+3. Full mobile device/emulator QA
+4. Android SDK setup
 
 ### Phase 3 — Maintainability / diligence polish
 
 Useful before major external diligence or heavy future modifications:
 
-9. PR 43 — Split large Flutter screens
-10. PR 44 — Decompose large web Search files
-11. PR 45 — Remove unused web database dependency
-12. PR 46 — Static marketing/vendor string cleanup
-13. PR 47 — Tour ID strategy review
-14. PR 50 — Static marketing multi-tenant modernization
+1. Split large Flutter screens
+2. Decompose large web Search files
+3. Remove unused web database dependency
+4. Static marketing/vendor string cleanup
+5. Tour ID strategy review
+6. Static marketing multi-tenant modernization
 
 ---
 
@@ -296,13 +298,15 @@ pnpm --filter web lint
 
 ---
 
-## Next Hardening PR — Narration Contract / Enrichment Hardening
+## GitHub PR #40 — Narration Contract / Enrichment Hardening
 
+**GitHub PR:** #40  
 **Branch:** `chore/narration-contract-hardening`  
-**Status:** Not started  
+**Status:** Merged on 2026-05-02  
 **Priority:** P0/P1  
 **Size:** Medium  
 **Type:** API/service validation hardening + tests
+**Status note:** Completed; retained for historical context.
 
 ### Goal
 
@@ -345,12 +349,15 @@ Epic 16 may trigger narration playback from proximity events. Malformed narratio
 
 ---
 
-## Planning Label PR 39 — Mobile Validation In Blocking CI
+## GitHub PR #41 — Mobile Validation In Blocking CI
 
+**GitHub PR:** #41  
 **Branch:** `ci/mobile-validation`  
+**Status:** Merged on 2026-05-03  
 **Priority:** P0  
 **Size:** Small/Medium  
 **Type:** CI hardening
+**Status note:** Completed; retained for historical context.
 
 ### Goal
 
@@ -362,10 +369,11 @@ Mobile is now a real product surface. Future native/location/TTS work will be ri
 
 ### Scope
 
-Update CI to run:
+Blocking CI now runs:
 
 ```bash
 cd apps/mobile
+flutter pub get
 flutter analyze
 flutter test
 ```
@@ -391,9 +399,10 @@ flutter test
 
 ---
 
-## Planning Label PR 40 — Remaining Repo-Truth Docs Cleanup
+## Final Docs Cleanup — Remaining Repo-Truth Docs Cleanup
 
 **Branch:** `docs/post-epic-15-truth-cleanup`  
+**Status:** In progress  
 **Priority:** P1  
 **Size:** Small/Medium  
 **Type:** docs only
@@ -407,8 +416,8 @@ Remove remaining stale repo-truth drift after Epic 15.
 Clean:
 
 - feature matrix stale status
-- PR tracker “PR #36 planned” language after merge
-- old API/mobile test counts
+- PR tracker stale PR status language
+- old API/mobile test counts and CI status
 - old claims that mobile is skeleton/placeholder
 - old claims that tours are purely in-memory if the live repo says otherwise
 - docs implying maps/geofencing/TTS/Android Auto are part of Epic 15
@@ -676,18 +685,18 @@ Epic 16 can start only after:
 - [x] GitHub PR #37 merged: tour create/update validation strict and tested
 - [x] GitHub PR #37 merged: tour timezone/date/startTime behavior explicit and tested
 - [x] GitHub PR #38 merged: CI/database generates Prisma client before database build
-- [ ] Next hardening PR merged: narration payload validation strict enough for TTS work
-- [ ] Next hardening PR merged: narration enrichment N+1/dedupe/cap addressed or safely bounded
-- [ ] Planning label PR 39 merged: Flutter analyze/test blocking in CI
-- [ ] Planning label PR 40 merged: remaining stale docs do not mislead agents/reviewers
-- [ ] full local validation green:
-  - [ ] `pnpm --filter @project-x/api typecheck`
-  - [ ] `pnpm --filter @project-x/api build`
-  - [ ] `pnpm --filter @project-x/api test`
-  - [ ] `pnpm --filter web build`
-  - [ ] `pnpm --filter web lint`
-  - [ ] `cd apps/mobile && flutter analyze`
-  - [ ] `cd apps/mobile && flutter test`
+- [x] GitHub PR #40 merged: narration payload validation strict enough for TTS work
+- [x] GitHub PR #40 merged: narration enrichment N+1/dedupe/cap addressed or safely bounded
+- [x] GitHub PR #41 merged: Flutter analyze/test blocking in CI
+- [ ] Final docs cleanup merged: remaining stale docs do not mislead agents/reviewers
+- [x] local validation was green for PRs #37, #40, and #41:
+  - [x] `pnpm --filter @project-x/api typecheck`
+  - [x] `pnpm --filter @project-x/api build`
+  - [x] `pnpm --filter @project-x/api test`
+  - [x] `pnpm --filter web build`
+  - [x] `pnpm --filter web lint`
+  - [x] `cd apps/mobile && flutter analyze`
+  - [x] `cd apps/mobile && flutter test`
 
 ---
 
@@ -721,7 +730,7 @@ Current status:
 - Epic 14 is complete.
 - Epic 15 is complete on main.
 - Latest known main includes:
-  d665791 chore(epic-15): harden mobile routes and reconcile docs (#36)
+  0911617 ci: run Flutter analyze and tests (#41)
 - Mobile now has real:
   - public Search screen
   - public Listing Detail screen
@@ -747,13 +756,13 @@ Codex inspected the live repo and passed validation:
 The key conclusion:
 The repo is engineered and solid, not sloppy vibe-coded, but we should run a pre-Epic-16 hardening sprint before adding location/TTS/native complexity.
 
-Critical live-code findings:
-1. Tour date/startTime/timeZone semantics need hardening.
-2. Tour create/update validation is too shallow.
-3. Narration payload validation is weak.
-4. Narration enrichment has N+1 listing fetch behavior.
-5. Flutter analyze/test is not yet blocking CI.
-6. Some docs still contain stale repo-truth drift.
+Completed pre-Epic-16 hardening:
+1. GitHub PR #37 hardened tour date/startTime/timeZone semantics.
+2. GitHub PR #37 hardened tour create/update validation.
+3. GitHub PR #40 hardened narration payload validation.
+4. GitHub PR #40 deduped/bounded narration listing enrichment.
+5. GitHub PR #41 made Flutter analyze/test blocking CI.
+6. This docs cleanup reconciles remaining repo-truth drift.
 
 Important, but not blockers before Epic 16:
 - splitting big Flutter screen files
@@ -780,16 +789,20 @@ GitHub PR #38 — merged:
 - Goal: generate Prisma client before database build in CI
 - Note: this was a CI/database fix, not narration hardening
 
-Next hardening PR candidate:
+GitHub PR #39 — merged:
+- Branch: docs/reconcile-hardening-pr-numbering
+- Goal: reconcile planning labels after GitHub PR #38 was used for the CI/database fix
+
+GitHub PR #40 — merged:
 - Branch: chore/narration-contract-hardening
 - Goal: validate narration payloads and fix/bound narration enrichment N+1
 - No TTS playback, no geofencing, no Android Auto
 
-Planning label PR 39:
+GitHub PR #41 — merged:
 - Branch: ci/mobile-validation
 - Goal: make Flutter analyze/test blocking in CI
 
-Planning label PR 40:
+Final docs cleanup — in progress:
 - Branch: docs/post-epic-15-truth-cleanup
 - Goal: remove remaining stale repo-truth docs drift
 
@@ -839,9 +852,7 @@ Your job in this new chat:
 7. After each Codex result, help me review, commit, push, PR, review, and merge.
 
 Next task:
-Give me the Codex VS Code prompt for the next hardening PR candidate:
-“chore/narration-contract-hardening”
-Narration contract/enrichment hardening only.
+Review and merge the final docs cleanup PR. Do not start Epic 16 until that PR is merged.
 ```
 
 ---
@@ -1002,14 +1013,15 @@ Do not open a PR.
 
 ## 11. Final Recommendation
 
-GitHub PR #37 and GitHub PR #38 are merged. Do **the next hardening PR candidate** next: narration contract/enrichment hardening.
+GitHub PRs #37, #38, #39, #40, and #41 are merged. Finish the final docs cleanup PR next.
 
 Do not start Epic 16 until Phase 1 is complete:
 
 1. tour contract/timezone hardening — done
 2. CI/database Prisma generation fix — done
-3. narration contract/enrichment hardening — not started
-4. mobile validation in CI
-5. final repo-truth docs cleanup
+3. docs/planning PR numbering reconciliation — done
+4. narration contract/enrichment hardening — done
+5. mobile validation in CI — done
+6. final repo-truth docs cleanup — in progress
 
-After that, Epic 16 can begin from a much safer foundation.
+After the docs cleanup merges, Epic 16 can begin from a much safer foundation.
