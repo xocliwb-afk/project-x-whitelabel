@@ -1,6 +1,6 @@
 # Epic 15 Mobile Completion Summary
 
-**Date:** 2026-05-02
+**Date:** 2026-05-03
 
 ## Scope Completed
 
@@ -43,7 +43,7 @@ Mobile tests cover:
 
 ## Validation Gate
 
-Epic 15 closeout validation should run:
+Epic 15 closeout validation was run locally during the Epic 15 closeout and later made blocking in GitHub CI by PR #41:
 
 ```bash
 cd apps/mobile

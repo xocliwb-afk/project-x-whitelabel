@@ -1,12 +1,12 @@
 # Project X White Label — Mobile Architecture
 
-**Last Updated:** 2026-05-02
+**Last Updated:** 2026-05-03
 
 ---
 
 ## 1. Current State
 
-`apps/mobile` is a real Flutter client, not a decorative skeleton. It includes:
+`apps/mobile` is a real Flutter client with production-facing product surfaces. It includes:
 
 - Supabase initialization and auth state management
 - Riverpod providers for auth, API transport, brand config, search, listing detail, and tour draft/current-tour state
@@ -98,6 +98,8 @@ flutter pub get
 flutter analyze
 flutter test
 ```
+
+These commands now also run in the blocking GitHub CI workflow for pull requests and pushes to `main`.
 
 Repo-level validation should also include the API and web gates when closing cross-surface epics:
 
