@@ -1,4 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/narration.dart';
+import '../providers/api_provider.dart';
 import 'api_client.dart';
 
 /// Service for fetching and consuming tour narrations.
@@ -17,6 +20,10 @@ class NarrationService {
     return response;
   }
 }
+
+final narrationServiceProvider = Provider<NarrationService>((ref) {
+  return NarrationService(apiClient: ref.watch(apiClientProvider));
+});
 
 /// Placeholder TTS wrapper — defines the interface for text-to-speech.
 ///

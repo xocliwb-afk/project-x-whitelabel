@@ -1,13 +1,43 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../models/narration.dart';
 import '../../../models/tour.dart';
+import '../../../services/narration_service.dart';
 import '../data/tour_repository.dart';
 import 'active_tour_state.dart';
 
+class ActiveTourNarrationTrigger {
+  static const approaching = 'approaching';
+  static const arrived = 'arrived';
+  static const departed = 'departed';
+  static const manual = 'manual';
+
+  static const allowed = {
+    approaching,
+    arrived,
+    departed,
+    manual,
+  };
+}
+
+class _NarrationLoadResult {
+  final Map<String, NarrationPayload> payloadsByKey;
+  final String? errorMessage;
+
+  const _NarrationLoadResult({
+    required this.payloadsByKey,
+    this.errorMessage,
+  });
+}
+
 class ActiveTourController extends StateNotifier<ActiveTourState> {
   final TourRepository _repository;
+  final NarrationService _narrationService;
 
-  ActiveTourController(this._repository) : super(const ActiveTourState());
+  ActiveTourController(
+    this._repository,
+    this._narrationService,
+  ) : super(ActiveTourState());
 
   Future<void> load(String tourId) async {
     state = ActiveTourState(
@@ -29,12 +59,17 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
         return;
       }
 
+      final narrationResult = await _loadNarrationPayloads(tour, orderedStops);
+
       state = ActiveTourState(
         status: ActiveTourStatus.ready,
         tourId: tour.id,
         tour: tour,
         orderedStops: orderedStops,
         currentStopIndex: 0,
+        narrationPayloadsByStopAndTrigger: narrationResult.payloadsByKey,
+        narrationLoadAttempted: true,
+        narrationErrorMessage: narrationResult.errorMessage,
       );
     } catch (error) {
       state = ActiveTourState(
@@ -43,6 +78,46 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
         errorMessage: 'Unable to load tour: ${_describeError(error)}',
       );
     }
+  }
+
+  String? narrationTextForCurrentStop(String trigger) {
+    final currentStop = state.currentStop;
+    if (currentStop == null) {
+      return null;
+    }
+
+    final payload = _payloadForCurrentStop(trigger, currentStop);
+    return payload?.narrationText ??
+        _fallbackNarrationText(currentStop, trigger);
+  }
+
+  void selectNarrationForCurrentStop(String trigger) {
+    final narrationText = narrationTextForCurrentStop(trigger);
+    if (narrationText == null) {
+      return;
+    }
+
+    state = state.copyWith(
+      status: ActiveTourStatus.narrating,
+      currentNarrationText: narrationText,
+      playbackStatus: ActiveTourPlaybackStatus.speaking,
+      errorMessage: null,
+    );
+  }
+
+  void clearNarration() {
+    if (state.currentNarrationText == null &&
+        state.playbackStatus == ActiveTourPlaybackStatus.idle) {
+      return;
+    }
+
+    state = state.copyWith(
+      status: state.status == ActiveTourStatus.narrating
+          ? ActiveTourStatus.driving
+          : state.status,
+      currentNarrationText: null,
+      playbackStatus: ActiveTourPlaybackStatus.idle,
+    );
   }
 
   void start() {
@@ -119,7 +194,7 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
   }
 
   void reset() {
-    state = const ActiveTourState();
+    state = ActiveTourState();
   }
 
   bool get _canMoveWithinLoadedTour {
@@ -164,10 +239,108 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
     return [for (final item in indexedStops) item.stop];
   }
 
+  Future<_NarrationLoadResult> _loadNarrationPayloads(
+    Tour tour,
+    List<TourStop> orderedStops,
+  ) async {
+    final validTourStopIds = orderedStops.map((stop) => stop.id).toSet();
+    final attachedPayloadsByKey = _payloadsByKey(
+      tour.narrationPayloads ?? const [],
+      validTourStopIds,
+    );
+
+    if (attachedPayloadsByKey.isNotEmpty) {
+      return _NarrationLoadResult(payloadsByKey: attachedPayloadsByKey);
+    }
+
+    try {
+      final fetchedPayloads =
+          await _narrationService.fetchTourNarrations(tour.id);
+      return _NarrationLoadResult(
+        payloadsByKey: _payloadsByKey(fetchedPayloads, validTourStopIds),
+      );
+    } catch (error) {
+      return _NarrationLoadResult(
+        payloadsByKey: const {},
+        errorMessage: 'Unable to load narrations: ${_describeError(error)}',
+      );
+    }
+  }
+
+  Map<String, NarrationPayload> _payloadsByKey(
+    List<NarrationPayload> payloads,
+    Set<String> validTourStopIds,
+  ) {
+    final payloadsByKey = <String, NarrationPayload>{};
+
+    for (final payload in payloads) {
+      if (!_isValidNarrationPayload(payload, validTourStopIds)) {
+        continue;
+      }
+
+      final key = ActiveTourState.narrationPayloadKey(
+        tourStopId: payload.tourStopId,
+        trigger: payload.trigger,
+      );
+      payloadsByKey.putIfAbsent(key, () => payload);
+    }
+
+    return payloadsByKey;
+  }
+
+  bool _isValidNarrationPayload(
+    NarrationPayload payload,
+    Set<String> validTourStopIds,
+  ) {
+    return validTourStopIds.contains(payload.tourStopId) &&
+        ActiveTourNarrationTrigger.allowed.contains(payload.trigger) &&
+        payload.narrationText.trim().isNotEmpty;
+  }
+
+  NarrationPayload? _payloadForCurrentStop(
+    String trigger,
+    TourStop currentStop,
+  ) {
+    if (trigger == ActiveTourNarrationTrigger.manual) {
+      return state.narrationPayloadFor(
+            tourStopId: currentStop.id,
+            trigger: ActiveTourNarrationTrigger.approaching,
+          ) ??
+          state.narrationPayloadFor(
+            tourStopId: currentStop.id,
+            trigger: ActiveTourNarrationTrigger.arrived,
+          ) ??
+          state.narrationPayloadFor(
+            tourStopId: currentStop.id,
+            trigger: ActiveTourNarrationTrigger.manual,
+          );
+    }
+
+    return state.narrationPayloadFor(
+      tourStopId: currentStop.id,
+      trigger: trigger,
+    );
+  }
+
+  String _fallbackNarrationText(TourStop stop, String trigger) {
+    if (trigger == ActiveTourNarrationTrigger.arrived) {
+      return 'Arrived at ${stop.address}.';
+    }
+
+    if (trigger == ActiveTourNarrationTrigger.departed) {
+      return 'Departed ${stop.address}.';
+    }
+
+    return 'Approaching ${stop.address}.';
+  }
+
   String _describeError(Object error) => error.toString();
 }
 
 final activeTourControllerProvider =
     StateNotifierProvider<ActiveTourController, ActiveTourState>((ref) {
-  return ActiveTourController(ref.watch(tourRepositoryProvider));
+  return ActiveTourController(
+    ref.watch(tourRepositoryProvider),
+    ref.watch(narrationServiceProvider),
+  );
 });
