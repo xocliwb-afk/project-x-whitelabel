@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
 import crypto from "crypto";
+import { buildCorsOptions, parseAllowedOrigins } from "./cors-options";
 import listingsRouter from "./routes/listings.route";
 import leadsRouter from "./routes/leads.route";
 import toursRouter from "./routes/tours.route";
@@ -44,47 +45,11 @@ const resolvePort = () => {
 
 const PORT = resolvePort();
 
-const parseAllowedOrigins = () => {
-  const raw = process.env.ALLOWED_ORIGINS;
-  if (raw) {
-    return raw
-      .split(",")
-      .map((o) => o.trim())
-      .filter(Boolean);
-  }
-  // default: allow localhost/127.* for dev
-  return undefined;
-};
-
 const allowedOrigins = parseAllowedOrigins();
+const corsOptions = buildCorsOptions(allowedOrigins);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // non-browser or curl
-
-      if (!allowedOrigins) {
-        // dev/default: allow localhost/127.*
-        if (
-          origin.startsWith("http://localhost:") ||
-          origin.startsWith("http://127.0.0.1:")
-        ) {
-          return callback(null, true);
-        }
-        return callback(null, false);
-      }
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(null, false);
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-tenant-id"],
-  })
-);
-app.options("*", cors());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.use((req, res, next) => {
