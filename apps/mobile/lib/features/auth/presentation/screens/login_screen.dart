@@ -90,8 +90,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (v) =>
-                        (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                    validator: (v) => (v == null || !v.contains('@'))
+                        ? 'Enter a valid email'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -102,8 +103,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.lock_outline),
                     ),
-                    validator: (v) =>
-                        (v == null || v.length < 6) ? 'At least 6 characters' : null,
+                    validator: (v) => (v == null || v.length < 6)
+                        ? 'At least 6 characters'
+                        : null,
                   ),
                   const SizedBox(height: 24),
                   FilledButton(
@@ -117,6 +119,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : const Text('Sign In'),
                   ),
                   const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => context.go('/search'),
+                    child: const Text('Browse listings'),
+                  ),
+                  const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => context.go('/register'),
                     child: const Text("Don't have an account? Register"),

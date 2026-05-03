@@ -195,6 +195,38 @@ void main() {
     expect(find.text('0 stops in local draft'), findsOneWidget);
   });
 
+  testWidgets('signed-out users can browse listings from login screen',
+      (tester) async {
+    await pumpAppRouter(
+      tester,
+      authState: const AuthState(isInitialized: true),
+    );
+
+    expect(find.text('Welcome Back'), findsOneWidget);
+
+    await tester.tap(find.text('Browse listings'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('search-input')), findsOneWidget);
+  });
+
+  testWidgets('signed-out users can browse listings from register screen',
+      (tester) async {
+    final router = await pumpAppRouter(
+      tester,
+      authState: const AuthState(isInitialized: true),
+    );
+
+    router.go('/register');
+    await tester.pumpAndSettle();
+    expect(find.text('Sign up to get started'), findsOneWidget);
+
+    await tester.tap(find.text('Browse listings'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('search-input')), findsOneWidget);
+  });
+
   testWidgets('authenticated users are redirected away from auth entry routes',
       (tester) async {
     final router = await pumpAppRouter(
