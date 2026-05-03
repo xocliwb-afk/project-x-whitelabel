@@ -42,10 +42,11 @@
 
 ## 6. Findings table
 
+Launch smoke result: PASS — the Android app installed and launched to the Create Account screen with no visible fatal crash and without the previous app configuration error.
+
 | ID | Severity | Area | Summary | Evidence | Follow-up |
 | --- | --- | --- | --- | --- | --- |
 | QA-ANDROID-CONFIG-001 | ENV/setup | Local API/database connectivity | RESOLVED: Local API brand config 500 fixed by Session Pooler. | `/api/brand` returned 200 with `x-tenant-id: ac5caf15-572b-43d5-8b7f-943cbbb5134d` after switching local `apps/api/.env` `DATABASE_URL` to Supabase Session Pooler. | Keep local API database configuration on the Session Pooler path for emulator runtime smoke tests. |
-| QA-ANDROID-LAUNCH-001 | none | Android runtime launch | PASS/no P0/P1 blocker: Android app launches to Create Account screen with runtime config. | `Pixel_6_API_36` was visible as `emulator-5554`; `flutter run -d emulator-5554` was attempted with runtime Dart defines; app installed and launched without the previous app configuration error or visible fatal crash. | Run full Android manual QA next. |
 | QA-ANDROID-MANUAL-001 | OUT_OF_SCOPE/FUTURE | Full Android manual QA | Full manual QA was not run as part of this docs-only runtime launch report. | This report only documents the successful emulator launch smoke with real runtime config. | Complete full Android manual QA before starting Epic 16 unless risk is explicitly accepted. |
 
 ## 7. Recommended next action
