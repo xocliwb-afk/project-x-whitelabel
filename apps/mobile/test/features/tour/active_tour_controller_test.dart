@@ -129,6 +129,23 @@ NarrationPayload narrationPayload({
   );
 }
 
+ProximityEvent proximityEvent({
+  required Tour tour,
+  required TourStop stop,
+  String type = ActiveTourNarrationTrigger.approaching,
+  int distanceMeters = 200,
+}) {
+  return ProximityEvent(
+    tourId: tour.id,
+    tourStopId: stop.id,
+    listingId: stop.listingId,
+    type: type,
+    location: ProximityLocation(lat: stop.lat, lng: stop.lng),
+    distanceMeters: distanceMeters,
+    timestamp: '2026-05-03T00:00:00.000Z',
+  );
+}
+
 ActiveTourController buildController(
   FakeTourRepository repository, {
   FakeNarrationService? narrationService,
@@ -413,6 +430,248 @@ void main() {
       controller.narrationTextForCurrentStop(ActiveTourNarrationTrigger.manual),
       isNull,
     );
+  });
+
+  test('proximity event with no loaded tour is ignored', () {
+    final stop = tourStop('first', 0);
+    final tour = tourWithStops([stop]);
+    final controller = buildController(FakeTourRepository());
+
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: stop));
+
+    expect(controller.state.status, ActiveTourStatus.idle);
+    expect(controller.state.lastProximityEvent, isNull);
+    expect(controller.state.currentNarrationText, isNull);
+  });
+
+  test('proximity event with wrong tour id is ignored', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final otherTour = tourWithStops([first], id: 'other-tour');
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(tour: otherTour, stop: first),
+    );
+
+    expect(controller.state.currentStop?.id, first.id);
+    expect(controller.state.lastProximityEvent, isNull);
+    expect(controller.state.currentNarrationText, isNull);
+  });
+
+  test('proximity event with unknown tour stop id is ignored', () async {
+    final first = tourStop('first', 0);
+    final unknown = tourStop('unknown', 99);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: unknown));
+
+    expect(controller.state.currentStop?.id, first.id);
+    expect(controller.state.lastProximityEvent, isNull);
+    expect(controller.state.currentNarrationText, isNull);
+  });
+
+  test('approaching proximity event selects matching narration', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        narrationsByTourId: {
+          tour.id: [
+            narrationPayload(
+              stop: first,
+              text: 'Approaching from proximity.',
+            ),
+          ],
+        },
+      ),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+
+    expect(controller.state.status, ActiveTourStatus.narrating);
+    expect(controller.state.lastProximityEvent?.tourStopId, first.id);
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching from proximity.',
+    );
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.speaking);
+  });
+
+  test('arrived proximity event selects arrived narration when present',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        narrationsByTourId: {
+          tour.id: [
+            narrationPayload(
+              stop: first,
+              trigger: ActiveTourNarrationTrigger.arrived,
+              text: 'Arrived from proximity.',
+            ),
+          ],
+        },
+      ),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(
+        tour: tour,
+        stop: first,
+        type: ActiveTourNarrationTrigger.arrived,
+        distanceMeters: 0,
+      ),
+    );
+
+    expect(controller.state.status, ActiveTourStatus.narrating);
+    expect(controller.state.lastProximityEvent?.type, 'arrived');
+    expect(controller.state.currentNarrationText, 'Arrived from proximity.');
+  });
+
+  test('arrived proximity event falls back when payload is missing', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(
+        tour: tour,
+        stop: first,
+        type: ActiveTourNarrationTrigger.arrived,
+        distanceMeters: 0,
+      ),
+    );
+
+    expect(controller.state.lastProximityEvent?.type, 'arrived');
+    expect(
+        controller.state.currentNarrationText, 'Arrived at first Main Street.');
+  });
+
+  test('proximity event for later stop updates current stop index', () async {
+    final first = tourStop('first', 0);
+    final second = tourStop('second', 1);
+    final tour = tourWithStops([first, second]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(tour: tour, stop: second),
+    );
+
+    expect(controller.state.currentStopIndex, 1);
+    expect(controller.state.currentStop?.id, second.id);
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching second Main Street.',
+    );
+  });
+
+  test('proximity event for earlier stop updates current stop index', () async {
+    final first = tourStop('first', 0);
+    final second = tourStop('second', 1);
+    final tour = tourWithStops([first, second]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(tour: tour, stop: second),
+    );
+    controller.handleProximityEvent(
+      proximityEvent(tour: tour, stop: first),
+    );
+
+    expect(controller.state.currentStopIndex, 0);
+    expect(controller.state.currentStop?.id, first.id);
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching first Main Street.',
+    );
+  });
+
+  test('duplicate proximity event is deterministic and safe', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final event = proximityEvent(tour: tour, stop: first);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(event);
+    controller.handleProximityEvent(event);
+
+    expect(controller.state.currentStopIndex, 0);
+    expect(controller.state.lastProximityEvent, event);
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching first Main Street.',
+    );
+  });
+
+  test('departed proximity event is stored without selecting narration',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(tour: tour, stop: first),
+    );
+    controller.handleProximityEvent(
+      proximityEvent(
+        tour: tour,
+        stop: first,
+        type: ActiveTourNarrationTrigger.departed,
+        distanceMeters: 50,
+      ),
+    );
+
+    expect(controller.state.status, ActiveTourStatus.driving);
+    expect(controller.state.lastProximityEvent?.type, 'departed');
+    expect(controller.state.currentStopIndex, 0);
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+  });
+
+  test('proximity events do not require a TTS engine', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+    );
+
+    await controller.load(tour.id);
+
+    expect(
+      () => controller.handleProximityEvent(
+        proximityEvent(tour: tour, stop: first),
+      ),
+      returnsNormally,
+    );
+    expect(controller.state.currentNarrationText, isNotNull);
   });
 
   test('advance clears selected narration text', () async {

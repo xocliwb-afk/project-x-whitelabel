@@ -120,6 +120,35 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
     );
   }
 
+  void handleProximityEvent(ProximityEvent event) {
+    if (!state.hasTour || state.tourId != event.tourId) {
+      return;
+    }
+
+    final stopIndex = state.orderedStops.indexWhere(
+      (stop) => stop.id == event.tourStopId,
+    );
+    if (stopIndex == -1) {
+      return;
+    }
+
+    state = state.copyWith(
+      currentStopIndex: stopIndex,
+      lastProximityEvent: event,
+      errorMessage: null,
+    );
+
+    if (event.type == ActiveTourNarrationTrigger.approaching ||
+        event.type == ActiveTourNarrationTrigger.arrived) {
+      selectNarrationForCurrentStop(event.type);
+      return;
+    }
+
+    if (event.type == ActiveTourNarrationTrigger.departed) {
+      clearNarration();
+    }
+  }
+
   void start() {
     if (state.status != ActiveTourStatus.ready || !state.hasTour) {
       return;
