@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_x_mobile/models/narration.dart';
 import 'package:project_x_mobile/models/tour.dart';
@@ -76,5 +77,21 @@ void main() {
 
     expect(() => source.emit(proximityEvent(stop)), returnsNormally);
     await source.close();
+  });
+
+  test('proximityEventSourceProvider closes source on dispose', () async {
+    final container = ProviderContainer();
+    final stop = tourStop('first', 0);
+    final source = container.read(proximityEventSourceProvider);
+    var streamClosed = false;
+    source.events.listen(null, onDone: () {
+      streamClosed = true;
+    });
+
+    container.dispose();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(streamClosed, isTrue);
+    expect(() => source.emit(proximityEvent(stop)), returnsNormally);
   });
 }

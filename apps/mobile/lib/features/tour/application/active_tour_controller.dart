@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/narration.dart';
 import '../../../models/tour.dart';
 import '../../../services/narration_service.dart';
+import '../../../services/proximity_event_source.dart';
 import '../data/tour_repository.dart';
 import 'active_tour_state.dart';
 
@@ -33,11 +36,16 @@ class _NarrationLoadResult {
 class ActiveTourController extends StateNotifier<ActiveTourState> {
   final TourRepository _repository;
   final NarrationService _narrationService;
+  StreamSubscription<ProximityEvent>? _proximitySubscription;
 
   ActiveTourController(
     this._repository,
     this._narrationService,
-  ) : super(ActiveTourState());
+    ProximityEventSource? proximityEventSource,
+  ) : super(ActiveTourState()) {
+    _proximitySubscription =
+        proximityEventSource?.events.listen(handleProximityEvent);
+  }
 
   Future<void> load(String tourId) async {
     state = ActiveTourState(
@@ -226,6 +234,13 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
     state = ActiveTourState();
   }
 
+  @override
+  void dispose() {
+    _proximitySubscription?.cancel();
+    _proximitySubscription = null;
+    super.dispose();
+  }
+
   bool get _canMoveWithinLoadedTour {
     return state.hasTour &&
         (state.status == ActiveTourStatus.ready ||
@@ -371,5 +386,6 @@ final activeTourControllerProvider =
   return ActiveTourController(
     ref.watch(tourRepositoryProvider),
     ref.watch(narrationServiceProvider),
+    ref.watch(proximityEventSourceProvider),
   );
 });
