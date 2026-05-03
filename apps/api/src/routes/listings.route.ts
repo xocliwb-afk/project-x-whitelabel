@@ -1,4 +1,6 @@
+import crypto from 'crypto';
 import { Router } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { getListingProvider } from '../utils/provider.factory';
 import { ListingSearchParams, NormalizedListing, ApiError } from '@project-x/shared-types';
 import {
@@ -11,8 +13,83 @@ import {
 } from '../utils/listingSearch.util';
 import { ListingsCache } from '../services/listingsCache.service';
 import { applyListingCompliance, applyListingsCompliance } from '../services/compliance';
+import { checkDailyLimit, takeToken } from '../services/rateLimiter.service';
 
 const router = Router();
+
+const getRateLimitConfig = () => {
+  const enabledEnv = process.env.LISTINGS_RATE_LIMIT_ENABLED;
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    enabled:
+      typeof enabledEnv === 'string' && enabledEnv.length > 0
+        ? enabledEnv === 'true'
+        : isProd,
+    rpm: Number(process.env.LISTINGS_RATE_LIMIT_RPM) || 120,
+    maxPerDay: Number(process.env.LISTINGS_RATE_LIMIT_MAX_PER_DAY) || 2000,
+    ipHashSalt: process.env.LISTINGS_LOG_IP_HASH_SALT || 'listings-ip-salt',
+  };
+};
+
+const getIp = (req: Request) => {
+  const xf = req.headers?.['x-forwarded-for'];
+  if (typeof xf === 'string') {
+    return xf.split(',')[0].trim();
+  }
+  if (Array.isArray(xf) && xf.length > 0) {
+    return xf[0];
+  }
+  return req.ip || req.connection?.remoteAddress || 'unknown';
+};
+
+const hashIp = (ip: string, salt: string) =>
+  crypto.createHash('sha256').update(`${salt}${ip}`).digest('hex').slice(0, 12);
+
+const sendRateLimitError = (res: Response, message: string) =>
+  res.status(429).json({
+    error: true,
+    message,
+    code: 'RATE_LIMITED',
+    status: 429,
+  });
+
+const applyListingsRateLimit = (req: Request, res: Response, next: NextFunction) => {
+  const cfg = getRateLimitConfig();
+  if (!cfg.enabled) {
+    return next();
+  }
+
+  const ipHash = hashIp(getIp(req), cfg.ipHashSalt);
+  const logRateLimit = (type: 'daily' | 'rpm', retryAfterSeconds: number) => {
+    console.log(
+      JSON.stringify({
+        event: 'listings.rate_limited',
+        type,
+        ipHash,
+        retryAfterSeconds,
+        path: `${req.baseUrl}${req.path}`,
+      }),
+    );
+  };
+
+  const daily = checkDailyLimit(`listings:daily:${ipHash}`, cfg.maxPerDay);
+  if (!daily.allowed) {
+    res.setHeader('Retry-After', String(daily.retryAfterSeconds));
+    logRateLimit('daily', daily.retryAfterSeconds);
+    return sendRateLimitError(res, 'Daily listing request limit reached');
+  }
+
+  const rpm = takeToken(`listings:request:${ipHash}`, cfg.rpm);
+  if (!rpm.allowed) {
+    res.setHeader('Retry-After', String(rpm.retryAfterSeconds));
+    logRateLimit('rpm', rpm.retryAfterSeconds);
+    return sendRateLimitError(res, 'Too many requests');
+  }
+
+  return next();
+};
+
+router.use(applyListingsRateLimit);
 
 const parseStringArray = (value: unknown): string[] | undefined => {
   if (Array.isArray(value)) {
