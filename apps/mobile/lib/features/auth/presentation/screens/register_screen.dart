@@ -120,8 +120,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (v) =>
-                        (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                    validator: (v) => (v == null || !v.contains('@'))
+                        ? 'Enter a valid email'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -132,8 +133,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.lock_outline),
                     ),
-                    validator: (v) =>
-                        (v == null || v.length < 6) ? 'At least 6 characters' : null,
+                    validator: (v) => (v == null || v.length < 6)
+                        ? 'At least 6 characters'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -166,6 +168,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         : const Text('Create Account'),
                   ),
                   const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => context.go('/search'),
+                    child: const Text('Browse listings'),
+                  ),
+                  const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => context.go('/login'),
                     child: const Text('Already have an account? Sign In'),
