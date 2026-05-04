@@ -6,6 +6,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/listing_detail/presentation/screens/listing_detail_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
+import '../../features/tour/presentation/screens/active_tour_screen.dart';
 import '../../features/tour/presentation/screens/tour_screen.dart';
 import '../../models/listing.dart';
 import '../../providers/auth_provider.dart';
@@ -25,7 +26,13 @@ class SplashScreen extends StatelessWidget {
 }
 
 /// Routes that don't require authentication.
-const _publicRoutes = {'/login', '/register', '/search', '/tour'};
+const _publicRoutes = {
+  '/login',
+  '/register',
+  '/search',
+  '/tour',
+  '/tour/drive/:tourId',
+};
 
 bool _isPublicRoute(GoRouterState state) {
   final location = state.matchedLocation;
@@ -35,8 +42,13 @@ bool _isPublicRoute(GoRouterState state) {
 
   final pathSegments = state.uri.pathSegments;
   return location == '/listing/:id' ||
+      location == '/tour/drive/:tourId' ||
       (pathSegments.length == 2 &&
           pathSegments.first == 'listing' &&
+          pathSegments.last.isNotEmpty) ||
+      (pathSegments.length == 3 &&
+          pathSegments.first == 'tour' &&
+          pathSegments[1] == 'drive' &&
           pathSegments.last.isNotEmpty);
 }
 
@@ -129,6 +141,13 @@ GoRouter createRouter(Ref ref) {
             listingId: id,
             previewListing: extra is Listing ? extra : null,
           );
+        },
+      ),
+      GoRoute(
+        path: '/tour/drive/:tourId',
+        builder: (context, state) {
+          final tourId = state.pathParameters['tourId']!;
+          return ActiveTourScreen(tourId: tourId);
         },
       ),
       GoRoute(

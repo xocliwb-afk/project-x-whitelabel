@@ -11,9 +11,11 @@ import 'package:project_x_mobile/models/auth_user.dart';
 import 'package:project_x_mobile/models/brand_config.dart';
 import 'package:project_x_mobile/models/listing.dart';
 import 'package:project_x_mobile/models/listing_search_response.dart';
+import 'package:project_x_mobile/models/narration.dart';
 import 'package:project_x_mobile/models/tour.dart';
 import 'package:project_x_mobile/providers/api_provider.dart';
 import 'package:project_x_mobile/providers/auth_provider.dart';
+import 'package:project_x_mobile/services/narration_service.dart';
 
 import '../../test_support/listing_fixtures.dart';
 import '../../test_support/tour_fixtures.dart';
@@ -88,6 +90,13 @@ class FakeTourRepository implements TourRepository {
   Future<void> deleteTour(String id) async {}
 }
 
+class FakeNarrationService implements NarrationService {
+  @override
+  Future<List<NarrationPayload>> fetchTourNarrations(String tourId) async {
+    return const [];
+  }
+}
+
 AuthUser buildUser() {
   return const AuthUser(
     id: 'user-1',
@@ -152,6 +161,8 @@ Future<GoRouter> pumpAppRouter(
         listingsRepositoryProvider.overrideWithValue(FakeListingsRepository()),
         listingDetailRepositoryProvider
             .overrideWithValue(FakeListingDetailRepository()),
+        tourRepositoryProvider.overrideWithValue(FakeTourRepository()),
+        narrationServiceProvider.overrideWithValue(FakeNarrationService()),
         tourDraftControllerProvider.overrideWith((ref) {
           return TourDraftController(FakeTourRepository());
         }),
@@ -193,6 +204,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Planner'), findsOneWidget);
     expect(find.text('0 stops in local draft'), findsOneWidget);
+
+    router.go('/tour/drive/tour-1');
+    await tester.pumpAndSettle();
+    expect(find.text('Active Tour'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('active-tour-current-stop')), findsOneWidget);
   });
 
   testWidgets('signed-out users can browse listings from login screen',

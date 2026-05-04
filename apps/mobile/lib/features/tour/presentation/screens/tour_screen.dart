@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../models/tour.dart';
 import '../../../../providers/api_provider.dart';
@@ -117,6 +118,9 @@ class _TourScreenState extends ConsumerState<TourScreen> {
                   onDelete: () => _deleteCurrentTour(
                     state.currentTour!,
                     authState.isAuthenticated,
+                  ),
+                  onDrive: () => context.go(
+                    '/tour/drive/${state.currentTour!.id}',
                   ),
                 ),
               ],
@@ -586,12 +590,14 @@ class _SavedTourCard extends StatelessWidget {
   final bool isDeleting;
   final bool canDelete;
   final VoidCallback onDelete;
+  final VoidCallback onDrive;
 
   const _SavedTourCard({
     required this.tour,
     required this.isDeleting,
     required this.canDelete,
     required this.onDelete,
+    required this.onDrive,
   });
 
   @override
@@ -627,6 +633,11 @@ class _SavedTourCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            TextButton(
+              key: const ValueKey('drive-current-tour'),
+              onPressed: onDrive,
+              child: const Text('Drive mode'),
             ),
             TextButton(
               key: const ValueKey('delete-current-tour'),
