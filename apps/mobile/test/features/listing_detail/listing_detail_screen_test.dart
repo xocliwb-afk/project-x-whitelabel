@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:project_x_mobile/features/listing_detail/data/listing_detail_repository.dart';
 import 'package:project_x_mobile/features/listing_detail/presentation/screens/listing_detail_screen.dart';
 import 'package:project_x_mobile/features/tour/application/tour_draft_controller.dart';
@@ -100,12 +101,42 @@ BrandConfig brandConfig({bool tourEngine = false}) {
   );
 }
 
-Future<void> pumpListingDetailScreen(
+class PumpedListingDetailScreen {
+  final GoRouter router;
+  final TourDraftController tourController;
+
+  const PumpedListingDetailScreen({
+    required this.router,
+    required this.tourController,
+  });
+}
+
+Future<PumpedListingDetailScreen> pumpListingDetailScreen(
   WidgetTester tester,
   FakeListingDetailRepository repository, {
   Listing? preview,
   bool tourEngine = false,
 }) async {
+  final tourController = TourDraftController(FakeTourRepository());
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => ListingDetailScreen(
+          listingId: preview?.id ?? 'listing-1',
+          previewListing: preview,
+        ),
+      ),
+      GoRoute(
+        path: '/tour',
+        builder: (context, state) => const Scaffold(
+          body: Text('Tour route'),
+        ),
+      ),
+    ],
+  );
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -114,16 +145,16 @@ Future<void> pumpListingDetailScreen(
           return brandConfig(tourEngine: tourEngine);
         }),
         tourDraftControllerProvider.overrideWith((ref) {
-          return TourDraftController(FakeTourRepository());
+          return tourController;
         }),
       ],
-      child: MaterialApp(
-        home: ListingDetailScreen(
-          listingId: preview?.id ?? 'listing-1',
-          previewListing: preview,
-        ),
-      ),
+      child: MaterialApp.router(routerConfig: router),
     ),
+  );
+
+  return PumpedListingDetailScreen(
+    router: router,
+    tourController: tourController,
   );
 }
 
@@ -222,7 +253,7 @@ void main() {
 
   testWidgets('adds to local tour draft when tour engine is enabled',
       (tester) async {
-    await pumpListingDetailScreen(
+    final harness = await pumpListingDetailScreen(
       tester,
       FakeListingDetailRepository([buildListing('listing-1')]),
       tourEngine: true,
@@ -231,7 +262,15 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('detail-add-to-tour')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
+    expect(harness.tourController.state.stops.single.listingId, 'listing-1');
     expect(find.text('Added to tour draft'), findsOneWidget);
+    expect(find.text('View tour'), findsOneWidget);
+
+    await tester.tap(find.text('View tour'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tour route'), findsOneWidget);
   });
 }

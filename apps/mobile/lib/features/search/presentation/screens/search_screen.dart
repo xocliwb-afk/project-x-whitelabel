@@ -67,7 +67,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Added to tour draft')),
+      SnackBar(
+        content: const Text('Added to tour draft'),
+        action: SnackBarAction(
+          label: 'View tour',
+          onPressed: () => context.go('/tour'),
+        ),
+      ),
     );
   }
 
