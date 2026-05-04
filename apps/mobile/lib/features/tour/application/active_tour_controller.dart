@@ -38,13 +38,16 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
   final NarrationService _narrationService;
   final TtsEngine ttsEngine;
   StreamSubscription<ProximityEvent>? _proximitySubscription;
+  String? _activeSpeechKey;
+  int _speechGeneration = 0;
+  bool _disposed = false;
 
   ActiveTourController(
     this._repository,
     this._narrationService,
     ProximityEventSource? proximityEventSource, {
     TtsEngine? ttsEngine,
-  }) : ttsEngine = ttsEngine ?? NoOpTtsEngine(),
+  })  : ttsEngine = ttsEngine ?? NoOpTtsEngine(),
         super(ActiveTourState()) {
     _proximitySubscription =
         proximityEventSource?.events.listen(handleProximityEvent);
@@ -103,31 +106,47 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
   }
 
   void selectNarrationForCurrentStop(String trigger) {
+    final currentStop = state.currentStop;
     final narrationText = narrationTextForCurrentStop(trigger);
-    if (narrationText == null) {
+    if (currentStop == null || narrationText == null) {
       return;
     }
+
+    final speechKey = _speechKey(
+      stop: currentStop,
+      trigger: trigger,
+      text: narrationText,
+    );
+    final isDuplicateSpeech = _activeSpeechKey == speechKey;
 
     state = state.copyWith(
       status: ActiveTourStatus.narrating,
       currentNarrationText: narrationText,
       playbackStatus: ActiveTourPlaybackStatus.speaking,
+      playbackErrorMessage: null,
       errorMessage: null,
     );
+
+    if (!isDuplicateSpeech) {
+      _speakNarrationText(narrationText, speechKey);
+    }
   }
 
   void clearNarration() {
     if (state.currentNarrationText == null &&
-        state.playbackStatus == ActiveTourPlaybackStatus.idle) {
+        state.playbackStatus == ActiveTourPlaybackStatus.idle &&
+        _activeSpeechKey == null) {
       return;
     }
 
+    _stopSpeech();
     state = state.copyWith(
       status: state.status == ActiveTourStatus.narrating
           ? ActiveTourStatus.driving
           : state.status,
       currentNarrationText: null,
-      playbackStatus: ActiveTourPlaybackStatus.idle,
+      playbackStatus: ActiveTourPlaybackStatus.stopped,
+      playbackErrorMessage: null,
     );
   }
 
@@ -177,6 +196,7 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
       return;
     }
 
+    final stoppedSpeech = _stopSpeech();
     final lastIndex = state.orderedStops.length - 1;
     final currentIndex = _clampStopIndex(state.currentStopIndex);
 
@@ -186,6 +206,7 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
         currentStopIndex: lastIndex,
         currentNarrationText: null,
         playbackStatus: ActiveTourPlaybackStatus.stopped,
+        playbackErrorMessage: null,
       );
       return;
     }
@@ -194,7 +215,10 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
       status: ActiveTourStatus.driving,
       currentStopIndex: currentIndex + 1,
       currentNarrationText: null,
-      playbackStatus: ActiveTourPlaybackStatus.idle,
+      playbackStatus: stoppedSpeech
+          ? ActiveTourPlaybackStatus.stopped
+          : ActiveTourPlaybackStatus.idle,
+      playbackErrorMessage: null,
       errorMessage: null,
     );
   }
@@ -204,9 +228,16 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
       return;
     }
 
+    final stoppedSpeech = _stopSpeech();
     final currentIndex = _clampStopIndex(state.currentStopIndex);
     if (currentIndex == 0) {
-      state = state.copyWith(currentStopIndex: 0);
+      state = state.copyWith(
+        currentStopIndex: 0,
+        playbackStatus: stoppedSpeech
+            ? ActiveTourPlaybackStatus.stopped
+            : state.playbackStatus,
+        playbackErrorMessage: null,
+      );
       return;
     }
 
@@ -214,7 +245,10 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
       status: ActiveTourStatus.driving,
       currentStopIndex: currentIndex - 1,
       currentNarrationText: null,
-      playbackStatus: ActiveTourPlaybackStatus.idle,
+      playbackStatus: stoppedSpeech
+          ? ActiveTourPlaybackStatus.stopped
+          : ActiveTourPlaybackStatus.idle,
+      playbackErrorMessage: null,
       errorMessage: null,
     );
   }
@@ -224,21 +258,26 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
       return;
     }
 
+    _stopSpeech();
     state = state.copyWith(
       status: ActiveTourStatus.finished,
       currentStopIndex: _clampStopIndex(state.currentStopIndex),
       currentNarrationText: null,
       playbackStatus: ActiveTourPlaybackStatus.stopped,
+      playbackErrorMessage: null,
       errorMessage: null,
     );
   }
 
   void reset() {
+    _stopSpeech();
     state = ActiveTourState();
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _stopSpeech();
     _proximitySubscription?.cancel();
     _proximitySubscription = null;
     super.dispose();
@@ -379,6 +418,84 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
     }
 
     return 'Approaching ${stop.address}.';
+  }
+
+  String _speechKey({
+    required TourStop stop,
+    required String trigger,
+    required String text,
+  }) {
+    return '${state.tourId ?? ''}::${stop.id}::$trigger::$text';
+  }
+
+  void _speakNarrationText(String text, String speechKey) {
+    _activeSpeechKey = speechKey;
+    final generation = ++_speechGeneration;
+    unawaited(_speakNarrationTextAsync(text, speechKey, generation));
+  }
+
+  Future<void> _speakNarrationTextAsync(
+    String text,
+    String speechKey,
+    int generation,
+  ) async {
+    try {
+      await ttsEngine.stop();
+      if (!_isCurrentSpeech(speechKey, generation)) {
+        return;
+      }
+
+      await ttsEngine.speakText(text);
+      if (!_isCurrentSpeech(speechKey, generation)) {
+        return;
+      }
+
+      _activeSpeechKey = null;
+      state = state.copyWith(
+        playbackStatus: ActiveTourPlaybackStatus.idle,
+        playbackErrorMessage: null,
+      );
+    } catch (_) {
+      if (!_isCurrentSpeech(speechKey, generation)) {
+        return;
+      }
+
+      _activeSpeechKey = null;
+      state = state.copyWith(
+        playbackStatus: ActiveTourPlaybackStatus.error,
+        playbackErrorMessage: 'Unable to play narration audio.',
+      );
+    }
+  }
+
+  bool _stopSpeech() {
+    final shouldStop = _activeSpeechKey != null ||
+        ttsEngine.isSpeaking ||
+        state.playbackStatus == ActiveTourPlaybackStatus.loading ||
+        state.playbackStatus == ActiveTourPlaybackStatus.speaking ||
+        state.playbackStatus == ActiveTourPlaybackStatus.error;
+
+    _activeSpeechKey = null;
+    if (shouldStop) {
+      _speechGeneration += 1;
+      unawaited(_stopSpeechBestEffort());
+    }
+
+    return shouldStop;
+  }
+
+  Future<void> _stopSpeechBestEffort() async {
+    try {
+      await ttsEngine.stop();
+    } catch (_) {
+      // Speech stop failures are recoverable and should not block tour controls.
+    }
+  }
+
+  bool _isCurrentSpeech(String speechKey, int generation) {
+    return !_disposed &&
+        _activeSpeechKey == speechKey &&
+        _speechGeneration == generation;
   }
 
   String _describeError(Object error) => error.toString();

@@ -26,14 +26,13 @@ final narrationServiceProvider = Provider<NarrationService>((ref) {
   return NarrationService(apiClient: ref.watch(apiClientProvider));
 });
 
-/// Placeholder TTS wrapper — defines the interface for text-to-speech.
-///
-/// Actual TTS integration (flutter_tts plugin) is deferred to a later epic.
-/// This class defines the contract so that narration consumers can be
-/// built and tested against this interface now.
+/// App boundary for foreground text-to-speech playback.
 abstract class TtsEngine {
   /// Speak the narration text aloud.
   Future<void> speak(NarrationPayload payload);
+
+  /// Speak arbitrary narration text, including fallback text without payload.
+  Future<void> speakText(String text);
 
   /// Stop any currently playing narration.
   Future<void> stop();
@@ -52,15 +51,21 @@ class TtsEngineException implements Exception {
 }
 
 /// No-op TTS implementation for development and testing.
-/// Logs narration text instead of speaking it.
 class NoOpTtsEngine implements TtsEngine {
   bool _speaking = false;
 
   @override
   Future<void> speak(NarrationPayload payload) async {
+    await speakText(payload.narrationText);
+  }
+
+  @override
+  Future<void> speakText(String text) async {
+    if (text.trim().isEmpty) {
+      return;
+    }
+
     _speaking = true;
-    // In development, this would log the narration text.
-    // In production, this will be replaced with flutter_tts.
     await Future.delayed(const Duration(milliseconds: 100));
     _speaking = false;
   }
@@ -96,8 +101,13 @@ class FlutterTtsEngine implements TtsEngine {
 
   @override
   Future<void> speak(NarrationPayload payload) async {
-    final text = payload.narrationText.trim();
-    if (text.isEmpty) {
+    await speakText(payload.narrationText);
+  }
+
+  @override
+  Future<void> speakText(String text) async {
+    final normalizedText = text.trim();
+    if (normalizedText.isEmpty) {
       return;
     }
 
@@ -106,7 +116,7 @@ class FlutterTtsEngine implements TtsEngine {
       await _flutterTts.stop();
       _speaking = false;
 
-      final result = await _flutterTts.speak(text);
+      final result = await _flutterTts.speak(normalizedText);
       if (result != 1 && result != true) {
         _speaking = false;
         throw const TtsEngineException(
@@ -145,5 +155,5 @@ final flutterTtsEngineProvider = Provider<TtsEngine>((ref) {
 });
 
 final ttsEngineProvider = Provider<TtsEngine>((ref) {
-  return NoOpTtsEngine();
+  return ref.watch(flutterTtsEngineProvider);
 });

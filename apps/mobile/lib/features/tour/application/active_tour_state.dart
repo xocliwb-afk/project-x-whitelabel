@@ -37,6 +37,7 @@ class ActiveTourState {
   final ProximityEvent? lastProximityEvent;
   final String? currentNarrationText;
   final ActiveTourPlaybackStatus playbackStatus;
+  final String? playbackErrorMessage;
   final String? errorMessage;
 
   ActiveTourState({
@@ -51,6 +52,7 @@ class ActiveTourState {
     this.lastProximityEvent,
     this.currentNarrationText,
     this.playbackStatus = ActiveTourPlaybackStatus.idle,
+    this.playbackErrorMessage,
     this.errorMessage,
   })  : orderedStops = List.unmodifiable(orderedStops),
         narrationPayloadsByStopAndTrigger = UnmodifiableMapView(
@@ -124,6 +126,7 @@ class ActiveTourState {
     Object? lastProximityEvent = _noChange,
     Object? currentNarrationText = _noChange,
     ActiveTourPlaybackStatus? playbackStatus,
+    Object? playbackErrorMessage = _noChange,
     Object? errorMessage = _noChange,
   }) {
     return ActiveTourState(
@@ -146,6 +149,9 @@ class ActiveTourState {
           ? this.currentNarrationText
           : currentNarrationText as String?,
       playbackStatus: playbackStatus ?? this.playbackStatus,
+      playbackErrorMessage: identical(playbackErrorMessage, _noChange)
+          ? this.playbackErrorMessage
+          : playbackErrorMessage as String?,
       errorMessage: identical(errorMessage, _noChange)
           ? this.errorMessage
           : errorMessage as String?,
