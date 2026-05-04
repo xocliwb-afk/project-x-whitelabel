@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../models/listing.dart';
 import '../../../../providers/api_provider.dart';
@@ -55,7 +56,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
           ),
         );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Added to tour draft')),
+      SnackBar(
+        content: const Text('Added to tour draft'),
+        action: SnackBarAction(
+          label: 'View tour',
+          onPressed: () => context.go('/tour'),
+        ),
+      ),
     );
   }
 

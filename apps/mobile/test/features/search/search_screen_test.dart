@@ -118,11 +118,22 @@ BrandConfig brandConfig({bool tourEngine = false}) {
   );
 }
 
-Future<GoRouter> pumpSearchScreen(
+class PumpedSearchScreen {
+  final GoRouter router;
+  final TourDraftController tourController;
+
+  const PumpedSearchScreen({
+    required this.router,
+    required this.tourController,
+  });
+}
+
+Future<PumpedSearchScreen> pumpSearchScreen(
   WidgetTester tester,
   FakeListingsRepository repository, {
   bool tourEngine = false,
 }) async {
+  final tourController = TourDraftController(FakeTourRepository());
   final router = GoRouter(
     initialLocation: '/search',
     routes: [
@@ -142,6 +153,12 @@ Future<GoRouter> pumpSearchScreen(
           );
         },
       ),
+      GoRoute(
+        path: '/tour',
+        builder: (context, state) => const Scaffold(
+          body: Text('Tour route'),
+        ),
+      ),
     ],
   );
 
@@ -153,14 +170,17 @@ Future<GoRouter> pumpSearchScreen(
           return brandConfig(tourEngine: tourEngine);
         }),
         tourDraftControllerProvider.overrideWith((ref) {
-          return TourDraftController(FakeTourRepository());
+          return tourController;
         }),
       ],
       child: MaterialApp.router(routerConfig: router),
     ),
   );
 
-  return router;
+  return PumpedSearchScreen(
+    router: router,
+    tourController: tourController,
+  );
 }
 
 void main() {
@@ -245,12 +265,21 @@ void main() {
       searchResponse(ids: ['listing-1']),
     ]);
 
-    await pumpSearchScreen(tester, repository, tourEngine: true);
+    final harness =
+        await pumpSearchScreen(tester, repository, tourEngine: true);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('add-to-tour-listing-1')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
+    expect(harness.tourController.state.stops.single.listingId, 'listing-1');
     expect(find.text('Added to tour draft'), findsOneWidget);
+    expect(find.text('View tour'), findsOneWidget);
+
+    await tester.tap(find.text('View tour'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tour route'), findsOneWidget);
   });
 }
