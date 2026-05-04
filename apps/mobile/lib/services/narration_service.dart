@@ -63,3 +63,7 @@ class NoOpTtsEngine implements TtsEngine {
   @override
   bool get isSpeaking => _speaking;
 }
+
+final ttsEngineProvider = Provider<TtsEngine>((ref) {
+  return NoOpTtsEngine();
+});
