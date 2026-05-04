@@ -17,10 +17,15 @@ class ActiveTourScreen extends ConsumerStatefulWidget {
   ConsumerState<ActiveTourScreen> createState() => _ActiveTourScreenState();
 }
 
-class _ActiveTourScreenState extends ConsumerState<ActiveTourScreen> {
+class _ActiveTourScreenState extends ConsumerState<ActiveTourScreen>
+    with WidgetsBindingObserver {
+  late ActiveTourController _controller;
+
   @override
   void initState() {
     super.initState();
+    _controller = ref.read(activeTourControllerProvider.notifier);
+    WidgetsBinding.instance.addObserver(this);
     _loadActiveTour();
   }
 
@@ -30,6 +35,22 @@ class _ActiveTourScreenState extends ConsumerState<ActiveTourScreen> {
     if (oldWidget.tourId != widget.tourId) {
       _loadActiveTour();
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      return;
+    }
+
+    _controller.stopNarration();
+  }
+
+  @override
+  void dispose() {
+    _controller.stopNarration(updateState: false);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   void _loadActiveTour() {
@@ -44,7 +65,7 @@ class _ActiveTourScreenState extends ConsumerState<ActiveTourScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(activeTourControllerProvider);
-    final controller = ref.read(activeTourControllerProvider.notifier);
+    final controller = _controller;
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +79,11 @@ class _ActiveTourScreenState extends ConsumerState<ActiveTourScreen> {
             const SizedBox(height: 16),
             _StopSection(state: state),
             const SizedBox(height: 16),
-            _NarrationSection(state: state),
+            _NarrationSection(
+              state: state,
+              onStopNarration: controller.stopNarration,
+              onReplayNarration: controller.replayNarration,
+            ),
             const SizedBox(height: 16),
             _ActiveTourControls(
               state: state,
@@ -190,20 +215,67 @@ class _StopSection extends StatelessWidget {
 
 class _NarrationSection extends StatelessWidget {
   final ActiveTourState state;
+  final VoidCallback onStopNarration;
+  final VoidCallback onReplayNarration;
 
-  const _NarrationSection({required this.state});
+  const _NarrationSection({
+    required this.state,
+    required this.onStopNarration,
+    required this.onReplayNarration,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final narrationText = state.currentNarrationText;
+    final hasNarrationText =
+        narrationText != null && narrationText.trim().isNotEmpty;
+    final showAudioControls = hasNarrationText ||
+        state.playbackStatus != ActiveTourPlaybackStatus.idle;
+
     return _Section(
       title: 'Narration',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            state.currentNarrationText ?? 'No narration selected',
+            narrationText ?? 'No narration selected',
             key: const ValueKey('active-tour-narration'),
           ),
+          if (showAudioControls) ...[
+            const SizedBox(height: 12),
+            Text(
+              _playbackStatusLabel(state.playbackStatus),
+              key: const ValueKey('active-tour-playback-status'),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  key: const ValueKey('active-tour-stop-narration'),
+                  onPressed: onStopNarration,
+                  icon: const Icon(Icons.volume_off_outlined),
+                  label: const Text('Stop narration'),
+                ),
+                if (hasNarrationText)
+                  FilledButton.tonalIcon(
+                    key: const ValueKey('active-tour-replay-narration'),
+                    onPressed: onReplayNarration,
+                    icon: const Icon(Icons.replay),
+                    label: const Text('Replay narration'),
+                  ),
+              ],
+            ),
+          ],
+          if (state.playbackErrorMessage != null) ...[
+            const SizedBox(height: 8),
+            _RuntimeMessage(
+              key: const ValueKey('active-tour-playback-error'),
+              message: state.playbackErrorMessage!,
+              isError: true,
+            ),
+          ],
           if (state.narrationErrorMessage != null) ...[
             const SizedBox(height: 8),
             _RuntimeMessage(
@@ -215,6 +287,23 @@ class _NarrationSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _playbackStatusLabel(ActiveTourPlaybackStatus status) {
+    switch (status) {
+      case ActiveTourPlaybackStatus.loading:
+        return 'Audio: preparing narration';
+      case ActiveTourPlaybackStatus.speaking:
+        return 'Audio: speaking';
+      case ActiveTourPlaybackStatus.stopped:
+        return 'Audio: stopped';
+      case ActiveTourPlaybackStatus.error:
+        return 'Audio: needs attention';
+      case ActiveTourPlaybackStatus.paused:
+        return 'Audio: paused';
+      case ActiveTourPlaybackStatus.idle:
+        return 'Audio: idle';
+    }
   }
 }
 

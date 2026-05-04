@@ -875,6 +875,112 @@ void main() {
     expect(controller.state.errorMessage, isNull);
   });
 
+  test('stop narration stops speech and keeps narration visible', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine(completeSpeakImmediately: false);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.speaking);
+
+    controller.stopNarration();
+    await flushTtsWork();
+
+    expect(controller.state.currentNarrationText,
+        'Approaching first Main Street.');
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
+    expect(controller.state.playbackErrorMessage, isNull);
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Approaching first Main Street.',
+      'stop',
+    ]);
+
+    controller.dispose();
+    ttsEngine.completeSpeak();
+    await flushTtsWork();
+  });
+
+  test('replay narration speaks current narration text', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    controller.replayNarration();
+    await flushTtsWork();
+
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Approaching first Main Street.',
+      'stop',
+      'speak:Approaching first Main Street.',
+    ]);
+    expect(ttsEngine.speakCalls, 2);
+    expect(controller.state.currentNarrationText,
+        'Approaching first Main Street.');
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+  });
+
+  test('replay narration is safe with no current narration text', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.replayNarration();
+    await flushTtsWork();
+
+    expect(ttsEngine.calls, isEmpty);
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+  });
+
+  test('replay narration failure keeps narration visible and marks error',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    ttsEngine.speakFailure = const TtsEngineException('raw plugin failure');
+    controller.replayNarration();
+    await flushTtsWork();
+
+    expect(controller.state.currentNarrationText,
+        'Approaching first Main Street.');
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.error);
+    expect(
+      controller.state.playbackErrorMessage,
+      'Unable to play narration audio.',
+    );
+  });
+
   test('proximity event for later stop updates current stop index', () async {
     final first = tourStop('first', 0);
     final second = tourStop('second', 1);
