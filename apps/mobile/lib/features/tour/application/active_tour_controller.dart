@@ -36,13 +36,16 @@ class _NarrationLoadResult {
 class ActiveTourController extends StateNotifier<ActiveTourState> {
   final TourRepository _repository;
   final NarrationService _narrationService;
+  final TtsEngine ttsEngine;
   StreamSubscription<ProximityEvent>? _proximitySubscription;
 
   ActiveTourController(
     this._repository,
     this._narrationService,
-    ProximityEventSource? proximityEventSource,
-  ) : super(ActiveTourState()) {
+    ProximityEventSource? proximityEventSource, {
+    TtsEngine? ttsEngine,
+  }) : ttsEngine = ttsEngine ?? NoOpTtsEngine(),
+        super(ActiveTourState()) {
     _proximitySubscription =
         proximityEventSource?.events.listen(handleProximityEvent);
   }
@@ -387,5 +390,6 @@ final activeTourControllerProvider =
     ref.watch(tourRepositoryProvider),
     ref.watch(narrationServiceProvider),
     ref.watch(proximityEventSourceProvider),
+    ttsEngine: ref.watch(ttsEngineProvider),
   );
 });

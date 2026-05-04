@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_x_mobile/features/tour/application/active_tour_controller.dart';
 import 'package:project_x_mobile/features/tour/application/active_tour_state.dart';
@@ -81,6 +82,27 @@ class FakeNarrationService implements NarrationService {
   }
 }
 
+class FakeTtsEngine implements TtsEngine {
+  int speakCalls = 0;
+  int stopCalls = 0;
+  bool _speaking = false;
+
+  @override
+  Future<void> speak(NarrationPayload payload) async {
+    speakCalls += 1;
+    _speaking = true;
+  }
+
+  @override
+  Future<void> stop() async {
+    stopCalls += 1;
+    _speaking = false;
+  }
+
+  @override
+  bool get isSpeaking => _speaking;
+}
+
 TourStop tourStop(String id, int order) {
   return TourStop(
     id: id,
@@ -151,21 +173,56 @@ ActiveTourController buildController(
   FakeTourRepository repository, {
   FakeNarrationService? narrationService,
   ProximityEventSource? proximityEventSource,
+  TtsEngine? ttsEngine,
 }) {
   return ActiveTourController(
     repository,
     narrationService ?? FakeNarrationService(),
     proximityEventSource,
+    ttsEngine: ttsEngine,
   );
 }
 
 void main() {
+  test('ttsEngineProvider defaults to NoOpTtsEngine', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    expect(container.read(ttsEngineProvider), isA<NoOpTtsEngine>());
+  });
+
   test('initial state is idle', () {
     final controller = buildController(FakeTourRepository());
 
     expect(controller.state.status, ActiveTourStatus.idle);
     expect(controller.state.hasTour, isFalse);
     expect(controller.state.currentStop, isNull);
+  });
+
+  test('controller accepts injected TTS engine without speaking yet',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(tour: tour, stop: first),
+    );
+
+    expect(controller.ttsEngine, same(ttsEngine));
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching first Main Street.',
+    );
+    expect(ttsEngine.speakCalls, 0);
+    expect(ttsEngine.stopCalls, 0);
+    expect(ttsEngine.isSpeaking, isFalse);
   });
 
   test('load success enters ready and orders stops by order', () async {
