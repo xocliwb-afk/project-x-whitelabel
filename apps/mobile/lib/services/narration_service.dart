@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../models/narration.dart';
 import '../providers/api_provider.dart';
@@ -41,6 +42,15 @@ abstract class TtsEngine {
   bool get isSpeaking;
 }
 
+class TtsEngineException implements Exception {
+  final String message;
+
+  const TtsEngineException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 /// No-op TTS implementation for development and testing.
 /// Logs narration text instead of speaking it.
 class NoOpTtsEngine implements TtsEngine {
@@ -63,6 +73,76 @@ class NoOpTtsEngine implements TtsEngine {
   @override
   bool get isSpeaking => _speaking;
 }
+
+class FlutterTtsEngine implements TtsEngine {
+  final FlutterTts _flutterTts;
+  bool _speaking = false;
+
+  FlutterTtsEngine({FlutterTts? flutterTts})
+      : _flutterTts = flutterTts ?? FlutterTts() {
+    _flutterTts.setStartHandler(() {
+      _speaking = true;
+    });
+    _flutterTts.setCompletionHandler(() {
+      _speaking = false;
+    });
+    _flutterTts.setCancelHandler(() {
+      _speaking = false;
+    });
+    _flutterTts.setErrorHandler((_) {
+      _speaking = false;
+    });
+  }
+
+  @override
+  Future<void> speak(NarrationPayload payload) async {
+    final text = payload.narrationText.trim();
+    if (text.isEmpty) {
+      return;
+    }
+
+    try {
+      await _flutterTts.awaitSpeakCompletion(true);
+      await _flutterTts.stop();
+      _speaking = false;
+
+      final result = await _flutterTts.speak(text);
+      if (result != 1 && result != true) {
+        _speaking = false;
+        throw const TtsEngineException(
+          'Text-to-speech playback did not start.',
+        );
+      }
+    } on TtsEngineException {
+      rethrow;
+    } catch (_) {
+      _speaking = false;
+      throw const TtsEngineException(
+        'Unable to start text-to-speech playback.',
+      );
+    }
+  }
+
+  @override
+  Future<void> stop() async {
+    try {
+      await _flutterTts.stop();
+      _speaking = false;
+    } catch (_) {
+      _speaking = false;
+      throw const TtsEngineException(
+        'Unable to stop text-to-speech playback.',
+      );
+    }
+  }
+
+  @override
+  bool get isSpeaking => _speaking;
+}
+
+final flutterTtsEngineProvider = Provider<TtsEngine>((ref) {
+  return FlutterTtsEngine();
+});
 
 final ttsEngineProvider = Provider<TtsEngine>((ref) {
   return NoOpTtsEngine();

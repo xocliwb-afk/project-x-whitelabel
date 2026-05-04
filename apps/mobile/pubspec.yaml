@@ -30,6 +30,7 @@ dependencies:
 
   # Supabase auth
   supabase_flutter: ^2.0.0
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:
