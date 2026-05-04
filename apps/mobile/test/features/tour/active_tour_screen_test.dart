@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,6 +72,61 @@ class FakeNarrationService implements NarrationService {
   }
 }
 
+class FakeTtsEngine implements TtsEngine {
+  final bool completeSpeakImmediately;
+  int speakCalls = 0;
+  int stopCalls = 0;
+  Object? speakFailure;
+  final List<String> calls = [];
+  bool _speaking = false;
+  Completer<void>? _pendingSpeak;
+
+  FakeTtsEngine({
+    this.completeSpeakImmediately = true,
+  });
+
+  @override
+  Future<void> speak(NarrationPayload payload) async {
+    await speakText(payload.narrationText);
+  }
+
+  @override
+  Future<void> speakText(String text) async {
+    calls.add('speak:$text');
+    speakCalls += 1;
+    final failure = speakFailure;
+    if (failure != null) {
+      throw failure;
+    }
+
+    _speaking = true;
+    if (!completeSpeakImmediately) {
+      _pendingSpeak = Completer<void>();
+      await _pendingSpeak!.future;
+    }
+    _speaking = false;
+  }
+
+  @override
+  Future<void> stop() async {
+    calls.add('stop');
+    stopCalls += 1;
+    _speaking = false;
+  }
+
+  @override
+  bool get isSpeaking => _speaking;
+
+  void completeSpeak() {
+    final pendingSpeak = _pendingSpeak;
+    if (pendingSpeak == null || pendingSpeak.isCompleted) {
+      return;
+    }
+
+    pendingSpeak.complete();
+  }
+}
+
 TourStop tourStop(String id, int order, String address) {
   return TourStop(
     id: id,
@@ -122,6 +179,7 @@ Future<void> pumpActiveTourScreen(
   Object? failure,
   List<NarrationPayload> narrationPayloads = const [],
   SimulatedProximityEventSource? source,
+  TtsEngine? ttsEngine,
 }) async {
   final proximitySource = source ?? SimulatedProximityEventSource();
   addTearDown(proximitySource.close);
@@ -140,7 +198,7 @@ Future<void> pumpActiveTourScreen(
           FakeNarrationService(payloads: narrationPayloads),
         ),
         proximityEventSourceProvider.overrideWithValue(proximitySource),
-        ttsEngineProvider.overrideWithValue(NoOpTtsEngine()),
+        ttsEngineProvider.overrideWithValue(ttsEngine ?? NoOpTtsEngine()),
       ],
       child: MaterialApp(
         home: ActiveTourScreen(tourId: activeTour.id),
@@ -218,6 +276,10 @@ void main() {
 
     expect(find.text('Status: narrating'), findsOneWidget);
     expect(find.text('Approaching the first stop.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('active-tour-stop-narration')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('active-tour-replay-narration')),
+        findsOneWidget);
   });
 
   testWidgets('simulate arrived displays fallback narration when missing',
@@ -228,6 +290,74 @@ void main() {
 
     expect(find.text('Status: narrating'), findsOneWidget);
     expect(find.text('Arrived at 1 Main Street.'), findsOneWidget);
+  });
+
+  testWidgets('audio controls are hidden until narration exists',
+      (tester) async {
+    await pumpActiveTourScreen(tester);
+
+    expect(
+        find.byKey(const ValueKey('active-tour-stop-narration')), findsNothing);
+    expect(find.byKey(const ValueKey('active-tour-replay-narration')),
+        findsNothing);
+
+    await tapControl(tester, const ValueKey('active-tour-simulate-arrived'));
+
+    expect(find.byKey(const ValueKey('active-tour-stop-narration')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('active-tour-replay-narration')),
+        findsOneWidget);
+  });
+
+  testWidgets('stop narration keeps visible text and updates audio status',
+      (tester) async {
+    final ttsEngine = FakeTtsEngine(completeSpeakImmediately: false);
+    await pumpActiveTourScreen(tester, ttsEngine: ttsEngine);
+
+    await tapControl(tester, const ValueKey('active-tour-simulate-arrived'));
+    await tapControl(tester, const ValueKey('active-tour-stop-narration'));
+
+    expect(find.text('Arrived at 1 Main Street.'), findsOneWidget);
+    expect(find.text('Audio: stopped'), findsOneWidget);
+    expect(ttsEngine.stopCalls, 2);
+
+    ttsEngine.completeSpeak();
+    await tester.pump();
+  });
+
+  testWidgets('replay narration speaks current visible narration text',
+      (tester) async {
+    final ttsEngine = FakeTtsEngine();
+    await pumpActiveTourScreen(tester, ttsEngine: ttsEngine);
+
+    await tapControl(tester, const ValueKey('active-tour-simulate-arrived'));
+    expect(ttsEngine.speakCalls, 1);
+
+    await tapControl(tester, const ValueKey('active-tour-replay-narration'));
+
+    expect(find.text('Arrived at 1 Main Street.'), findsOneWidget);
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Arrived at 1 Main Street.',
+      'stop',
+      'speak:Arrived at 1 Main Street.',
+    ]);
+  });
+
+  testWidgets('playback error is visible and non-blocking', (tester) async {
+    final ttsEngine = FakeTtsEngine()
+      ..speakFailure = const TtsEngineException('raw plugin failure');
+    await pumpActiveTourScreen(tester, ttsEngine: ttsEngine);
+
+    await tapControl(tester, const ValueKey('active-tour-simulate-arrived'));
+
+    expect(find.byKey(const ValueKey('active-tour-playback-error')),
+        findsOneWidget);
+    expect(find.text('Unable to play narration audio.'), findsOneWidget);
+
+    await tapControl(tester, const ValueKey('active-tour-next'));
+
+    expect(find.text('Stop 2 of 2'), findsOneWidget);
   });
 
   testWidgets('load failure displays graceful error', (tester) async {

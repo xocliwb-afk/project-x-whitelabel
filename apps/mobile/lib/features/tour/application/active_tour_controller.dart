@@ -150,6 +150,41 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
     );
   }
 
+  void stopNarration({bool updateState = true}) {
+    if (state.currentNarrationText == null &&
+        state.playbackStatus == ActiveTourPlaybackStatus.idle &&
+        _activeSpeechKey == null) {
+      return;
+    }
+
+    _stopSpeech();
+    if (!updateState) {
+      return;
+    }
+
+    state = state.copyWith(
+      playbackStatus: ActiveTourPlaybackStatus.stopped,
+      playbackErrorMessage: null,
+    );
+  }
+
+  void replayNarration() {
+    final narrationText = state.currentNarrationText;
+    if (narrationText == null || narrationText.trim().isEmpty) {
+      return;
+    }
+
+    state = state.copyWith(
+      status: state.hasTour ? ActiveTourStatus.narrating : state.status,
+      playbackStatus: ActiveTourPlaybackStatus.speaking,
+      playbackErrorMessage: null,
+    );
+    _speakNarrationText(
+      narrationText,
+      _manualSpeechKey(narrationText),
+    );
+  }
+
   void handleProximityEvent(ProximityEvent event) {
     if (!state.hasTour || state.tourId != event.tourId) {
       return;
@@ -426,6 +461,11 @@ class ActiveTourController extends StateNotifier<ActiveTourState> {
     required String text,
   }) {
     return '${state.tourId ?? ''}::${stop.id}::$trigger::$text';
+  }
+
+  String _manualSpeechKey(String text) {
+    final stopKey = state.currentStop?.id ?? 'no-stop';
+    return '${state.tourId ?? ''}::$stopKey::${ActiveTourNarrationTrigger.manual}::${_speechGeneration + 1}::$text';
   }
 
   void _speakNarrationText(String text, String speechKey) {
