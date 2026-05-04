@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:project_x_mobile/core/theme/app_theme.dart';
 import 'package:project_x_mobile/features/tour/application/tour_draft_controller.dart';
 import 'package:project_x_mobile/features/tour/data/tour_repository.dart';
 import 'package:project_x_mobile/features/tour/presentation/screens/tour_screen.dart';
@@ -150,6 +152,24 @@ Future<TourDraftController> pumpTourScreen(
   if (date.isNotEmpty) {
     controller.setSchedule(date: date);
   }
+  final brand = brandConfig(tourEngine: tourEngine);
+  final router = GoRouter(
+    initialLocation: '/tour',
+    routes: [
+      GoRoute(
+        path: '/tour',
+        builder: (context, state) => const TourScreen(),
+      ),
+      GoRoute(
+        path: '/tour/drive/:tourId',
+        builder: (context, state) {
+          return Scaffold(
+            body: Text('Drive route ${state.pathParameters['tourId']}'),
+          );
+        },
+      ),
+    ],
+  );
 
   await tester.pumpWidget(
     ProviderScope(
@@ -163,11 +183,14 @@ Future<TourDraftController> pumpTourScreen(
           );
         }),
         brandConfigProvider.overrideWith((ref) async {
-          return brandConfig(tourEngine: tourEngine);
+          return brand;
         }),
         tourDraftControllerProvider.overrideWith((ref) => controller),
       ],
-      child: const MaterialApp(home: TourScreen()),
+      child: MaterialApp.router(
+        theme: AppTheme(brand: brand).build(),
+        routerConfig: router,
+      ),
     ),
   );
 
@@ -247,6 +270,13 @@ void main() {
 
   testWidgets('signed-in save persists and shows saved tour status',
       (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final repository = FakeTourRepository()..planResult = buildTour('tour-9');
     await pumpTourScreen(
       tester,
@@ -265,7 +295,18 @@ void main() {
     expect(repository.lastRequest?.date, '2026-05-02');
     expect(find.text('Saved tour'), findsOneWidget);
     expect(find.text('Planned Tour • 1 stop'), findsOneWidget);
-    expect(find.byKey(const ValueKey('drive-current-tour')), findsOneWidget);
+
+    final driveButton = find.byKey(const ValueKey('drive-current-tour'));
+    await scrollUntilFound(tester, driveButton);
+    expect(driveButton, findsOneWidget);
+    expect(find.text('Drive mode'), findsOneWidget);
+    expect(tester.widget<FilledButton>(driveButton).onPressed, isNotNull);
+    expect(find.byKey(const ValueKey('delete-current-tour')), findsOneWidget);
+
+    await tester.tap(driveButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Drive route tour-9'), findsOneWidget);
   });
 
   testWidgets('failed signed-in save preserves local draft', (tester) async {

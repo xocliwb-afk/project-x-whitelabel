@@ -611,38 +611,61 @@ class _SavedTourCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(Icons.check_circle_outline,
-                color: colorScheme.onPrimaryContainer),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Saved tour',
-                    style: TextStyle(
-                      color: colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
+            Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Saved tour',
+                        style: TextStyle(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        '${tour.title} • ${tour.stops.length} ${tour.stops.length == 1 ? 'stop' : 'stops'}',
+                        style: TextStyle(color: colorScheme.onPrimaryContainer),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${tour.title} • ${tour.stops.length} ${tour.stops.length == 1 ? 'stop' : 'stops'}',
-                    style: TextStyle(color: colorScheme.onPrimaryContainer),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              children: [
+                FilledButton.icon(
+                  key: const ValueKey('drive-current-tour'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.onPrimaryContainer,
+                    foregroundColor: colorScheme.primaryContainer,
                   ),
-                ],
-              ),
-            ),
-            TextButton(
-              key: const ValueKey('drive-current-tour'),
-              onPressed: onDrive,
-              child: const Text('Drive mode'),
-            ),
-            TextButton(
-              key: const ValueKey('delete-current-tour'),
-              onPressed: canDelete && !isDeleting ? onDelete : null,
-              child: Text(isDeleting ? 'Deleting...' : 'Delete'),
+                  onPressed: onDrive,
+                  icon: const Icon(Icons.assistant_direction_outlined),
+                  label: const Text('Drive mode'),
+                ),
+                TextButton(
+                  key: const ValueKey('delete-current-tour'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.onPrimaryContainer,
+                  ),
+                  onPressed: canDelete && !isDeleting ? onDelete : null,
+                  child: Text(isDeleting ? 'Deleting...' : 'Delete'),
+                ),
+              ],
             ),
           ],
         ),
