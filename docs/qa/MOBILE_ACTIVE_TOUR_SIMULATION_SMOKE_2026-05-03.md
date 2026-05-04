@@ -2,9 +2,9 @@
 
 ## 1. Header
 - Branch: `qa/mobile-active-tour-simulation-smoke`
-- Commit tested: `e60e960 feat(mobile): add active-tour simulation screen (#61)`
+- Commit tested: `5b0ee96 qa(mobile): update active-tour simulation smoke after View tour action`, rebased on `dc53308 fix(mobile): make Drive mode visible on saved tour card (#64)`
 - Date: 2026-05-03
-- Mode: Android emulator active-tour simulation QA
+- Mode: Android emulator active-tour simulation QA rerun
 - Target: Pixel_6_API_36 / emulator-5554
 - Epic status: Epic 16 active-tour simulation, no native/location/audio scope
 
@@ -15,8 +15,9 @@
 - PR #60 wired event source to active-tour runtime.
 - PR #61 added `/tour/drive/:tourId` and ActiveTourScreen.
 - PR #63 added `View tour` actions to Add-to-Tour snackbars.
-- This QA validates the simulation-only runtime path.
-- No real TTS, GPS, geofencing, Android Auto, maps, route polylines, or navigation handoff expected.
+- PR #64 made Drive mode visible on the saved/current tour card.
+- This QA validates the simulation-only runtime path after the navigation and Drive mode visibility fixes.
+- No real TTS, GPS, geofencing, Android Auto, maps, route polylines, or navigation handoff was expected.
 
 ## 3. Environment
 - Android emulator: Pixel_6_API_36 / emulator-5554
@@ -39,66 +40,68 @@
 
 | Flow | Status | Evidence / notes | Severity if issue |
 | --- | --- | --- | --- |
-| App boot / brand bootstrap | PASS | App launched on Pixel_6_API_36 / `emulator-5554`. No fatal Flutter red screen was reported. Previous app configuration error was not observed. First captured observation was Search. | N/A |
-| Signed-out Browse listings | PARTIAL | Search was observed on Android with listings visible. The explicit Sign In `Browse listings` tap was not separately re-confirmed during this focused pass. Screenshot observed locally: `/home/bwilcox/Pictures/Screenshots/Screenshot_20260503_202643.png`; image not committed. | ENV/setup |
+| App boot / brand bootstrap | PASS | App launched on Pixel_6_API_36 / `emulator-5554`. First visible screen was Sign In / `Welcome Back`. No fatal Flutter red screen. | N/A |
+| Signed-out Browse listings | PASS | Tapping `Browse listings` opened Search without signing in. | N/A |
 | Search results | PASS | Search rendered with `20 listings shown` and listing cards containing photos, prices, addresses, bed/bath/sqft/status, and days on market. | N/A |
-| Listing Detail | PASS | Tapping a listing opened Listing Detail. Hero image, price, address, status, facts, description, and `Add to tour` button were visible. Screenshot observed locally: `/home/bwilcox/Pictures/Screenshots/Screenshot_20260503_202736.png`; image not committed. | N/A |
-| Add to Tour | PARTIAL | `Add to tour` button was visible and user confirmed it worked. App stayed stable with no fatal red screen. Exact feedback/state was not fully captured, and no Tour screen path became visible. | P1 major |
-| Tour screen | FAIL | User confirmed there was no visible Tour screen path after Add to Tour in the observed flow. | P1 major |
-| Drive mode entry | SKIPPED / BLOCKED | Blocked because the Tour screen/current saved tour card was not reachable in the observed UI flow. `Drive mode` was therefore not visible. | P1 major |
-| Active Tour screen baseline | SKIPPED / BLOCKED | Not run because Drive mode was not reachable. | P1 major |
-| Start control | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| Simulate approaching | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| Simulate arrived | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| Next / Previous | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| End control | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| TTS/audio | OUT_OF_SCOPE/FUTURE | Real audio/TTS not expected in this pass. | N/A |
-| Map/navigation/GPS | OUT_OF_SCOPE/FUTURE | Maps, route polylines, navigation handoff, real GPS/geofencing, and Android Auto not expected. | N/A |
+| Listing Detail | PASS | Tapping a listing opened Listing Detail for `475 Northland Court NE`. Hero image, price, address, status, facts, description, and `Add to tour` button were visible. | N/A |
+| Add to Tour | PASS | Tapping `Add to tour` showed snackbar text `Added to tour draft`. | N/A |
+| View tour action | PASS | Snackbar included `View tour`; tapping it opened `/tour`. | N/A |
+| Tour screen local draft | PASS | Tour screen opened and showed `1 stop in local draft` with `475 Northland Court NE`. Date/start-time/save controls were visible. | N/A |
+| Save tour / currentTour creation | PASS | Entering `2026-05-03` enabled `Save tour`; tapping it showed a saved/current tour card: `Saved tour` / `Planned Tour · 1 stop`. | N/A |
+| Drive mode entry | PASS | After PR #64, the saved/current tour card displayed a high-contrast `Drive mode` action. Tapping it opened Active Tour. | N/A |
+| Active Tour screen baseline | PASS | Active Tour screen rendered title `Active Tour`, status `ready`, `Planned Tour`, `Stop 1 of 1`, current stop `475 Northland Court NE`, narration area, and controls. | N/A |
+| Start control | PASS | Tapping `Start` changed status from `ready` to `driving`; no fatal red screen. | N/A |
+| Simulate approaching | PASS | Tapping `Simulate approaching` changed status to `narrating` and showed fallback narration: `Approaching 475 Northland Court NE.` | N/A |
+| Simulate arrived | PASS | Tapping `Simulate arrived` kept status `narrating` and showed fallback narration: `Arrived at 475 Northland Court NE.` | N/A |
+| Next / Previous | PASS | One-stop tour: tapping `Next` changed status to `finished`, cleared narration, and left Previous/Next disabled. Previous could not move below first stop. | N/A |
+| End control | PASS | Tapping `End` while already finished stayed stable on Active Tour with no fatal red screen. | N/A |
+| TTS/audio | OUT_OF_SCOPE/FUTURE | Real audio/TTS was not expected or tested in this pass. | N/A |
+| Map/navigation/GPS | OUT_OF_SCOPE/FUTURE | Maps, route polylines, navigation handoff, real GPS/geofencing, and Android Auto were not expected or tested. | N/A |
 
-## 6. Rerun after PR #63 — View tour affordance
-- PR #63 added `View tour` actions to Add-to-Tour snackbars.
+## 6. Rerun after PR #63/#64
+- PR #63 resolved the Add-to-Tour to Tour navigation blocker by adding `View tour` to Add-to-Tour snackbars.
+- PR #64 resolved the Drive mode visibility blocker by making `Drive mode` prominent and high contrast on the saved/current tour card.
 - Rerun date: 2026-05-03.
 - Device: Pixel_6_API_36 / `emulator-5554`.
 - Local API validation: `/health`, `/ready`, `/api/brand`, and `/api/listings?limit=3` returned 200 OK.
-- Automated validation passed: `flutter pub get`, `flutter analyze`, `flutter test`, and `flutter build apk --debug`. Non-fatal pub.dev advisory decode warnings were printed during dependency resolution.
-- Runtime launch: app launched with runtime config and rendered Sign In (`Welcome Back`) first. No fatal Flutter red screen was visible.
+- Automated validation passed: `flutter pub get`, `flutter analyze`, `flutter test`, and `flutter build apk --debug`.
+- Runtime launch: app launched with runtime config and rendered Sign In first. No fatal Flutter red screen was visible.
 
 | Flow | Status | Evidence / notes | Severity if issue |
 | --- | --- | --- | --- |
-| Add to Tour snackbar shows View tour | PASS | From Listing Detail, tapping `Add to tour` showed `Added to tour draft` and `View tour` in the snackbar. Screenshot observed locally: `/home/bwilcox/Pictures/Screenshots/Screenshot_20260503_210759.png`; image not committed. | N/A |
+| Add to Tour snackbar shows View tour | PASS | From Listing Detail, tapping `Add to tour` showed `Added to tour draft` and `View tour` in the snackbar. | N/A |
 | View tour opens Tour screen | PASS | Tapping `View tour` navigated to the Tour screen. | N/A |
-| Local draft stop appears on Tour screen | PASS | Tour screen showed `1 stop in local draft` with the added listing stop. Screenshot observed locally: `/home/bwilcox/Pictures/Screenshots/Screenshot_20260503_210832.png`; image not committed. | N/A |
-| Save tour / currentTour creation | PASS | Entering date `2026-05-03` enabled `Save tour`; tapping it showed a saved/current tour card: `Saved tour` / `Planned Tour · 1 stop`. Screenshots observed locally: `/home/bwilcox/Pictures/Screenshots/Screenshot_20260503_211155.png` and `/home/bwilcox/Pictures/Screenshots/Screenshot_20260503_211211.png`; images not committed. | N/A |
-| Drive mode button appears | FAIL | After the saved/current tour card appeared, the tester did not see `Drive mode` on Pixel_6_API_36. ActiveTourScreen remained unreachable from the visible UI. | P1 major |
-| Active Tour screen opens | SKIPPED / BLOCKED | Not run because `Drive mode` was not visible after Save Tour. | P1 major |
-| Simulate approaching | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| Simulate arrived | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
-| Next / Previous / End | SKIPPED / BLOCKED | Not run because Active Tour screen was not reached. | P1 major |
+| Local draft stop appears on Tour screen | PASS | Tour screen showed `1 stop in local draft` with `475 Northland Court NE`. | N/A |
+| Save tour / currentTour creation | PASS | Entering date `2026-05-03` enabled `Save tour`; tapping it showed `Saved tour` / `Planned Tour · 1 stop`. | N/A |
+| Drive mode button appears | PASS | Saved/current tour card displayed visible `Drive mode` action after PR #64. | N/A |
+| Active Tour screen opens | PASS | Tapping `Drive mode` opened Active Tour with runtime status, current stop, narration, and controls. | N/A |
+| Simulate approaching | PASS | Simulated approaching event selected fallback narration text and changed status to `narrating`. | N/A |
+| Simulate arrived | PASS | Simulated arrived event selected fallback narration text and kept status `narrating`. | N/A |
+| Next / Previous / End | PASS | One-stop tour final-stop behavior and end-state stability were confirmed. | N/A |
 
 ## 7. Findings table
 
-The original "no Tour screen path after Add to Tour" blocker is resolved by PR #63: the snackbar action opened `/tour` and the local draft stop was visible. Active-tour simulation is still blocked because `Drive mode` was not visible after a saved/current tour card appeared.
+No active P0/P1 blockers were found for the simulation-only active-tour path after PR #63 and PR #64.
 
 | ID | Severity | Area | Summary | Evidence | Follow-up |
 | --- | --- | --- | --- | --- | --- |
-| QA-ACTIVE-TOUR-SMOKE-001 | N/A / resolved | Add-to-Tour navigation | PR #63 resolved the previous no-Tour-screen-path blocker. | `View tour` appeared in the Add-to-Tour snackbar, opened `/tour`, and Tour showed the local draft stop. | No follow-up needed for the Tour screen navigation affordance. |
-| QA-ACTIVE-TOUR-SMOKE-004 | P1 major | Drive mode access | Drive mode was not visible after Save Tour created a saved/current tour card. | Saved/current card displayed `Saved tour` / `Planned Tour · 1 stop`, but tester reported `i dont see drive mode`. ActiveTourScreen and simulation controls were not reached. | Create a focused fix PR to make Drive mode visible/accessibly reachable on the saved/current tour card, then rerun ActiveTourScreen simulation QA. |
-| QA-ACTIVE-TOUR-SMOKE-003 | P3 polish | Android runtime logs | Non-fatal startup jank logs were observed. | Terminal logs included skipped frames; app remained alive and no fatal red screen was reported. | Monitor runtime performance after core simulation access is fixed. |
+| QA-ACTIVE-TOUR-SMOKE-001 | Resolved | Add-to-Tour navigation | PR #63 resolved the previous no-Tour-screen-path blocker. | `View tour` appeared in the Add-to-Tour snackbar, opened `/tour`, and Tour showed the local draft stop. | No follow-up needed for the Tour screen navigation affordance. |
+| QA-ACTIVE-TOUR-SMOKE-004 | Resolved | Drive mode access | PR #64 resolved the previous Drive mode visibility blocker. | Saved/current tour card displayed visible `Drive mode`; tapping it opened Active Tour. | No follow-up needed for Drive mode visibility. |
+| QA-ACTIVE-TOUR-SMOKE-005 | P3 polish | One-stop control state | On a one-stop tour, Previous/Next become disabled after finishing, which is correct but leaves simulation focused on single-stop final-state behavior. | `Next` on the only stop changed status to `finished`, cleared narration, and disabled Previous/Next. | Optional future QA can repeat with a multi-stop persisted tour to exercise forward/back movement between stops. |
+| QA-ACTIVE-TOUR-SMOKE-003 | P3 polish | Android runtime logs | Non-fatal startup jank logs were observed. | Terminal logs included skipped frames; app remained alive and no fatal red screen was reported. | Monitor runtime performance in later Android QA passes. |
 
 ## 8. Skipped items / limitations
-- Active Tour screen baseline and controls were skipped because Drive mode was not visible after a saved/current tour card appeared.
-- The original Add-to-Tour → Tour screen path was rerun and passed after PR #63.
-- Save Tour/currentTour creation was rerun and passed in the available session.
-- No real TTS/audio was expected or tested.
-- No real GPS/geofencing was expected or tested.
-- No maps/navigation/route polylines were expected or tested.
-- No Android Auto behavior was expected or tested.
+- Multi-stop movement was not fully exercised because the saved tour used one stop.
+- Real TTS/audio was out of scope and not tested.
+- Real GPS/geofencing was out of scope and not tested.
+- Maps/navigation/route polylines were out of scope and not tested.
+- Android Auto behavior was out of scope and not tested.
 - No screenshot binaries were committed.
 
 ## 9. Recommended next action
-- Create a focused fix PR for Drive mode visibility/accessibility on the saved/current tour card.
-- After Drive mode is visible, rerun Android active-tour simulation QA for ActiveTourScreen baseline, Start, Simulate approaching, Simulate arrived, Next/Previous, and End.
-- Do not start real TTS/geolocation/Android Auto work until the simulation path is reachable and accepted.
+- Treat the simulation-only active-tour Android path as QA-passed for the one-stop smoke scenario.
+- Optionally run a separate multi-stop smoke pass before moving into real TTS planning.
+- Do not start real TTS/geolocation/Android Auto work until the simulation path is accepted.
 
 ## 10. Scope confirmation
 - No app/API/web/mobile source changes.
