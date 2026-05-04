@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_x_mobile/features/tour/application/active_tour_controller.dart';
@@ -83,25 +85,64 @@ class FakeNarrationService implements NarrationService {
 }
 
 class FakeTtsEngine implements TtsEngine {
+  final bool completeSpeakImmediately;
   int speakCalls = 0;
   int stopCalls = 0;
+  Object? speakFailure;
+  Object? stopFailure;
+  final List<String> calls = [];
   bool _speaking = false;
+  Completer<void>? _pendingSpeak;
+
+  FakeTtsEngine({
+    this.completeSpeakImmediately = true,
+  });
 
   @override
   Future<void> speak(NarrationPayload payload) async {
+    await speakText(payload.narrationText);
+  }
+
+  @override
+  Future<void> speakText(String text) async {
+    calls.add('speak:$text');
     speakCalls += 1;
+    final failure = speakFailure;
+    if (failure != null) {
+      throw failure;
+    }
     _speaking = true;
+    if (!completeSpeakImmediately) {
+      _pendingSpeak = Completer<void>();
+      await _pendingSpeak!.future;
+    }
+    _speaking = false;
   }
 
   @override
   Future<void> stop() async {
+    calls.add('stop');
     stopCalls += 1;
+    final failure = stopFailure;
+    if (failure != null) {
+      throw failure;
+    }
     _speaking = false;
   }
 
   @override
   bool get isSpeaking => _speaking;
+
+  void completeSpeak() {
+    final pendingSpeak = _pendingSpeak;
+    if (pendingSpeak == null || pendingSpeak.isCompleted) {
+      return;
+    }
+    pendingSpeak.complete();
+  }
 }
+
+Future<void> flushTtsWork() => pumpEventQueue();
 
 TourStop tourStop(String id, int order) {
   return TourStop(
@@ -184,11 +225,12 @@ ActiveTourController buildController(
 }
 
 void main() {
-  test('ttsEngineProvider defaults to NoOpTtsEngine', () {
+  test('ttsEngineProvider defaults to FlutterTtsEngine', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    expect(container.read(ttsEngineProvider), isA<NoOpTtsEngine>());
+    expect(container.read(ttsEngineProvider), isA<FlutterTtsEngine>());
   });
 
   test('initial state is idle', () {
@@ -199,7 +241,7 @@ void main() {
     expect(controller.state.currentStop, isNull);
   });
 
-  test('controller accepts injected TTS engine without speaking yet',
+  test('successful TTS completion keeps narration visible and marks idle',
       () async {
     final first = tourStop('first', 0);
     final tour = tourWithStops([first]);
@@ -214,15 +256,22 @@ void main() {
     controller.handleProximityEvent(
       proximityEvent(tour: tour, stop: first),
     );
+    await flushTtsWork();
 
     expect(controller.ttsEngine, same(ttsEngine));
     expect(
       controller.state.currentNarrationText,
       'Approaching first Main Street.',
     );
-    expect(ttsEngine.speakCalls, 0);
-    expect(ttsEngine.stopCalls, 0);
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Approaching first Main Street.',
+    ]);
+    expect(ttsEngine.speakCalls, 1);
+    expect(ttsEngine.stopCalls, 1);
     expect(ttsEngine.isSpeaking, isFalse);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+    expect(controller.state.playbackErrorMessage, isNull);
   });
 
   test('load success enters ready and orders stops by order', () async {
@@ -623,6 +672,209 @@ void main() {
         controller.state.currentNarrationText, 'Arrived at first Main Street.');
   });
 
+  test('approaching proximity event speaks selected payload once', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        narrationsByTourId: {
+          tour.id: [
+            narrationPayload(
+              stop: first,
+              text: 'Approaching spoken payload.',
+            ),
+          ],
+        },
+      ),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Approaching spoken payload.',
+    ]);
+    expect(ttsEngine.speakCalls, 1);
+  });
+
+  test('arrived proximity event speaks selected payload once', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        narrationsByTourId: {
+          tour.id: [
+            narrationPayload(
+              stop: first,
+              trigger: ActiveTourNarrationTrigger.arrived,
+              text: 'Arrived spoken payload.',
+            ),
+          ],
+        },
+      ),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(
+      proximityEvent(
+        tour: tour,
+        stop: first,
+        type: ActiveTourNarrationTrigger.arrived,
+      ),
+    );
+    await flushTtsWork();
+
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Arrived spoken payload.',
+    ]);
+    expect(ttsEngine.speakCalls, 1);
+  });
+
+  test('new narration interrupts previous speech before speaking', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+    controller.handleProximityEvent(
+      proximityEvent(
+        tour: tour,
+        stop: first,
+        type: ActiveTourNarrationTrigger.arrived,
+      ),
+    );
+    await flushTtsWork();
+
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Approaching first Main Street.',
+      'stop',
+      'speak:Arrived at first Main Street.',
+    ]);
+  });
+
+  test('duplicate same event does not stack overlapping speech', () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine();
+    final event = proximityEvent(tour: tour, stop: first);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(event);
+    controller.handleProximityEvent(event);
+    await flushTtsWork();
+
+    expect(ttsEngine.calls, [
+      'stop',
+      'speak:Approaching first Main Street.',
+    ]);
+    expect(ttsEngine.speakCalls, 1);
+  });
+
+  test('clear before TTS completion is not overwritten by stale completion',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine(completeSpeakImmediately: false);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.speaking);
+
+    controller.clearNarration();
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
+
+    ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
+  });
+
+  test('advance before TTS completion is not overwritten by stale completion',
+      () async {
+    final first = tourStop('first', 0);
+    final second = tourStop('second', 1);
+    final tour = tourWithStops([first, second]);
+    final ttsEngine = FakeTtsEngine(completeSpeakImmediately: false);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.speaking);
+
+    controller.advance();
+    expect(controller.state.currentStop?.id, second.id);
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
+
+    ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    expect(controller.state.currentStop?.id, second.id);
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
+  });
+
+  test('TTS speak failure leaves narration visible and marks playback error',
+      () async {
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final ttsEngine = FakeTtsEngine()
+      ..speakFailure = const TtsEngineException('raw plugin failure');
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      ttsEngine: ttsEngine,
+    );
+
+    await controller.load(tour.id);
+    controller.handleProximityEvent(proximityEvent(tour: tour, stop: first));
+    await flushTtsWork();
+
+    expect(controller.state.status, ActiveTourStatus.narrating);
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching first Main Street.',
+    );
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.error);
+    expect(
+      controller.state.playbackErrorMessage,
+      'Unable to play narration audio.',
+    );
+    expect(controller.state.errorMessage, isNull);
+  });
+
   test('proximity event for later stop updates current stop index', () async {
     final first = tourStop('first', 0);
     final second = tourStop('second', 1);
@@ -713,7 +965,7 @@ void main() {
     expect(controller.state.lastProximityEvent?.type, 'departed');
     expect(controller.state.currentStopIndex, 0);
     expect(controller.state.currentNarrationText, isNull);
-    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
   });
 
   test('proximity events do not require a TTS engine', () async {
@@ -885,7 +1137,7 @@ void main() {
     expect(controller.state.status, ActiveTourStatus.driving);
     expect(controller.state.lastProximityEvent?.type, 'departed');
     expect(controller.state.currentNarrationText, isNull);
-    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
   });
 
   test('disposing controller cancels proximity source subscription safely',
@@ -939,7 +1191,101 @@ void main() {
     expect(controller.state.status, ActiveTourStatus.driving);
     expect(controller.state.currentStop?.id, second.id);
     expect(controller.state.currentNarrationText, isNull);
-    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.stopped);
+  });
+
+  test('clear advance previous end reset and dispose stop active speech',
+      () async {
+    Future<({ActiveTourController controller, FakeTtsEngine ttsEngine})>
+        buildSpeakingController({bool onSecondStop = false}) async {
+      final first = tourStop('first', 0);
+      final second = tourStop('second', 1);
+      final tour = tourWithStops([first, second]);
+      final ttsEngine = FakeTtsEngine(completeSpeakImmediately: false);
+      final controller = buildController(
+        FakeTourRepository(tours: {tour.id: tour}),
+        ttsEngine: ttsEngine,
+      );
+
+      await controller.load(tour.id);
+      controller.start();
+      if (onSecondStop) {
+        controller.advance();
+        await flushTtsWork();
+      }
+      controller.selectNarrationForCurrentStop(
+        ActiveTourNarrationTrigger.approaching,
+      );
+      await flushTtsWork();
+      ttsEngine.calls.clear();
+      ttsEngine.speakCalls = 0;
+      ttsEngine.stopCalls = 0;
+      return (controller: controller, ttsEngine: ttsEngine);
+    }
+
+    final clearSetup = await buildSpeakingController();
+    clearSetup.controller.clearNarration();
+    await flushTtsWork();
+    expect(clearSetup.ttsEngine.calls, ['stop']);
+    expect(
+      clearSetup.controller.state.playbackStatus,
+      ActiveTourPlaybackStatus.stopped,
+    );
+    clearSetup.controller.dispose();
+    clearSetup.ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    final advanceSetup = await buildSpeakingController();
+    advanceSetup.controller.advance();
+    await flushTtsWork();
+    expect(advanceSetup.ttsEngine.calls, ['stop']);
+    expect(
+      advanceSetup.controller.state.playbackStatus,
+      ActiveTourPlaybackStatus.stopped,
+    );
+    advanceSetup.controller.dispose();
+    advanceSetup.ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    final previousSetup = await buildSpeakingController(onSecondStop: true);
+    previousSetup.controller.previous();
+    await flushTtsWork();
+    expect(previousSetup.ttsEngine.calls, ['stop']);
+    expect(
+      previousSetup.controller.state.playbackStatus,
+      ActiveTourPlaybackStatus.stopped,
+    );
+    previousSetup.controller.dispose();
+    previousSetup.ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    final endSetup = await buildSpeakingController();
+    endSetup.controller.end();
+    await flushTtsWork();
+    expect(endSetup.ttsEngine.calls, ['stop']);
+    expect(
+      endSetup.controller.state.playbackStatus,
+      ActiveTourPlaybackStatus.stopped,
+    );
+    endSetup.controller.dispose();
+    endSetup.ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    final resetSetup = await buildSpeakingController();
+    resetSetup.controller.reset();
+    await flushTtsWork();
+    expect(resetSetup.ttsEngine.calls, ['stop']);
+    expect(resetSetup.controller.state.status, ActiveTourStatus.idle);
+    resetSetup.controller.dispose();
+    resetSetup.ttsEngine.completeSpeak();
+    await flushTtsWork();
+
+    final disposeSetup = await buildSpeakingController();
+    disposeSetup.controller.dispose();
+    await flushTtsWork();
+    expect(disposeSetup.ttsEngine.calls, ['stop']);
+    disposeSetup.ttsEngine.completeSpeak();
+    await flushTtsWork();
   });
 
   test('duplicate payloads for same stop and trigger keep the first payload',

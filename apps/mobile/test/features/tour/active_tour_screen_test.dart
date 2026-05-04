@@ -140,6 +140,7 @@ Future<void> pumpActiveTourScreen(
           FakeNarrationService(payloads: narrationPayloads),
         ),
         proximityEventSourceProvider.overrideWithValue(proximitySource),
+        ttsEngineProvider.overrideWithValue(NoOpTtsEngine()),
       ],
       child: MaterialApp(
         home: ActiveTourScreen(tourId: activeTour.id),
