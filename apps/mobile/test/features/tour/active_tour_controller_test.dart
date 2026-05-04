@@ -5,6 +5,7 @@ import 'package:project_x_mobile/features/tour/data/tour_repository.dart';
 import 'package:project_x_mobile/models/narration.dart';
 import 'package:project_x_mobile/models/tour.dart';
 import 'package:project_x_mobile/services/narration_service.dart';
+import 'package:project_x_mobile/services/proximity_event_source.dart';
 
 class FakeTourRepository implements TourRepository {
   final Map<String, Tour> tours;
@@ -149,10 +150,12 @@ ProximityEvent proximityEvent({
 ActiveTourController buildController(
   FakeTourRepository repository, {
   FakeNarrationService? narrationService,
+  ProximityEventSource? proximityEventSource,
 }) {
   return ActiveTourController(
     repository,
     narrationService ?? FakeNarrationService(),
+    proximityEventSource,
   );
 }
 
@@ -672,6 +675,183 @@ void main() {
       returnsNormally,
     );
     expect(controller.state.currentNarrationText, isNotNull);
+  });
+
+  test('subscribed proximity source handles emitted approaching event',
+      () async {
+    final source = SimulatedProximityEventSource();
+    addTearDown(source.close);
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        narrationsByTourId: {
+          tour.id: [
+            narrationPayload(
+              stop: first,
+              text: 'Approaching from emitted event.',
+            ),
+          ],
+        },
+      ),
+      proximityEventSource: source,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.load(tour.id);
+    source.simulateApproaching(
+      tourId: tour.id,
+      stop: first,
+      timestamp: '2026-05-03T00:00:00.000Z',
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.state.status, ActiveTourStatus.narrating);
+    expect(controller.state.lastProximityEvent?.type, 'approaching');
+    expect(
+      controller.state.currentNarrationText,
+      'Approaching from emitted event.',
+    );
+  });
+
+  test('subscribed proximity source handles emitted arrived event', () async {
+    final source = SimulatedProximityEventSource();
+    addTearDown(source.close);
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      narrationService: FakeNarrationService(
+        narrationsByTourId: {
+          tour.id: [
+            narrationPayload(
+              stop: first,
+              trigger: ActiveTourNarrationTrigger.arrived,
+              text: 'Arrived from emitted event.',
+            ),
+          ],
+        },
+      ),
+      proximityEventSource: source,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.load(tour.id);
+    source.simulateArrived(
+      tourId: tour.id,
+      stop: first,
+      timestamp: '2026-05-03T00:00:00.000Z',
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.state.status, ActiveTourStatus.narrating);
+    expect(controller.state.lastProximityEvent?.type, 'arrived');
+    expect(
+        controller.state.currentNarrationText, 'Arrived from emitted event.');
+  });
+
+  test('subscribed proximity source ignores wrong-tour events', () async {
+    final source = SimulatedProximityEventSource();
+    addTearDown(source.close);
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      proximityEventSource: source,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.load(tour.id);
+    source.simulateApproaching(
+      tourId: 'wrong-tour',
+      stop: first,
+      timestamp: '2026-05-03T00:00:00.000Z',
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.state.status, ActiveTourStatus.ready);
+    expect(controller.state.lastProximityEvent, isNull);
+    expect(controller.state.currentNarrationText, isNull);
+  });
+
+  test('subscribed proximity source ignores unknown stops', () async {
+    final source = SimulatedProximityEventSource();
+    addTearDown(source.close);
+    final first = tourStop('first', 0);
+    final unknown = tourStop('unknown', 99);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      proximityEventSource: source,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.load(tour.id);
+    source.simulateApproaching(
+      tourId: tour.id,
+      stop: unknown,
+      timestamp: '2026-05-03T00:00:00.000Z',
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.state.status, ActiveTourStatus.ready);
+    expect(controller.state.lastProximityEvent, isNull);
+    expect(controller.state.currentNarrationText, isNull);
+  });
+
+  test('subscribed proximity source handles emitted departed event', () async {
+    final source = SimulatedProximityEventSource();
+    addTearDown(source.close);
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      proximityEventSource: source,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.load(tour.id);
+    source.simulateApproaching(
+      tourId: tour.id,
+      stop: first,
+      timestamp: '2026-05-03T00:00:00.000Z',
+    );
+    await Future<void>.delayed(Duration.zero);
+    source.emit(proximityEvent(
+      tour: tour,
+      stop: first,
+      type: ActiveTourNarrationTrigger.departed,
+    ));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.state.status, ActiveTourStatus.driving);
+    expect(controller.state.lastProximityEvent?.type, 'departed');
+    expect(controller.state.currentNarrationText, isNull);
+    expect(controller.state.playbackStatus, ActiveTourPlaybackStatus.idle);
+  });
+
+  test('disposing controller cancels proximity source subscription safely',
+      () async {
+    final source = SimulatedProximityEventSource();
+    addTearDown(source.close);
+    final first = tourStop('first', 0);
+    final tour = tourWithStops([first]);
+    final controller = buildController(
+      FakeTourRepository(tours: {tour.id: tour}),
+      proximityEventSource: source,
+    );
+
+    await controller.load(tour.id);
+    controller.dispose();
+    source.simulateApproaching(
+      tourId: tour.id,
+      stop: first,
+      timestamp: '2026-05-03T00:00:00.000Z',
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(source, isA<SimulatedProximityEventSource>());
   });
 
   test('advance clears selected narration text', () async {

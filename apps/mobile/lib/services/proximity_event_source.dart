@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/narration.dart';
 import '../models/tour.dart';
 
@@ -110,3 +112,13 @@ class SimulatedProximityEventSource implements ProximityEventSource {
     );
   }
 }
+
+final proximityEventSourceProvider = Provider<SimulatedProximityEventSource>((
+  ref,
+) {
+  final source = SimulatedProximityEventSource();
+  ref.onDispose(() {
+    source.close();
+  });
+  return source;
+});
