@@ -265,6 +265,7 @@ void main() {
     expect(repository.lastRequest?.date, '2026-05-02');
     expect(find.text('Saved tour'), findsOneWidget);
     expect(find.text('Planned Tour • 1 stop'), findsOneWidget);
+    expect(find.byKey(const ValueKey('drive-current-tour')), findsOneWidget);
   });
 
   testWidgets('failed signed-in save preserves local draft', (tester) async {
