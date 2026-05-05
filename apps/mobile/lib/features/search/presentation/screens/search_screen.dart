@@ -39,14 +39,51 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
+  ListingSearchQuery _queryWithSearchControls(ListingSearchQuery base) {
+    final searchText = _searchController.text.trim();
+    final committedBbox = ref
+        .read(listingSearchControllerProvider)
+        .mapViewport
+        .committedSearchBbox;
+
+    return base.copyWith(
+      q: searchText.isEmpty ? null : searchText,
+      bbox: committedBbox?.toQueryParam() ?? base.bbox,
+      sort: _selectedSort,
+      page: 1,
+    );
+  }
+
   void _submitSearch() {
-    final query = _searchController.text.trim();
     ref.read(listingSearchControllerProvider.notifier).search(
-          ListingSearchQuery(
-            q: query.isEmpty ? null : query,
-            sort: _selectedSort,
+          _queryWithSearchControls(
+            ref.read(listingSearchControllerProvider).query,
           ),
         );
+  }
+
+  Future<void> _openFilters() async {
+    final currentQuery = ref.read(listingSearchControllerProvider).query;
+    final filterValues = await showModalBottomSheet<_SearchFilterValues>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return _SearchFilterSheet(
+          initialValues: _SearchFilterValues.fromQuery(currentQuery),
+        );
+      },
+    );
+
+    if (!mounted || filterValues == null) {
+      return;
+    }
+
+    final nextQuery = filterValues.applyTo(
+      _queryWithSearchControls(
+        ref.read(listingSearchControllerProvider).query,
+      ),
+    );
+    await ref.read(listingSearchControllerProvider.notifier).search(nextQuery);
   }
 
   void _retry() {
@@ -130,6 +167,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 child: _SearchControls(
                   controller: _searchController,
                   selectedSort: _selectedSort,
+                  activeFilterCount: state.query.activeFilterCount,
+                  onFiltersPressed: _openFilters,
                   onSortChanged: (value) {
                     setState(() => _selectedSort = value);
                     _submitSearch();
@@ -385,12 +424,16 @@ class _SearchResultsList extends StatelessWidget {
 class _SearchControls extends StatelessWidget {
   final TextEditingController controller;
   final String? selectedSort;
+  final int activeFilterCount;
+  final VoidCallback onFiltersPressed;
   final ValueChanged<String?> onSortChanged;
   final VoidCallback onSubmit;
 
   const _SearchControls({
     required this.controller,
     required this.selectedSort,
+    required this.activeFilterCount,
+    required this.onFiltersPressed,
     required this.onSortChanged,
     required this.onSubmit,
   });
@@ -419,25 +462,441 @@ class _SearchControls extends StatelessWidget {
           onSubmitted: (_) => onSubmit(),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          key: const ValueKey('sort-select'),
-          initialValue: selectedSort,
-          decoration: const InputDecoration(
-            labelText: 'Sort',
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(value: null, child: Text('Default')),
-            DropdownMenuItem(value: 'newest', child: Text('Newest')),
-            DropdownMenuItem(
-                value: 'price-asc', child: Text('Price: low to high')),
-            DropdownMenuItem(
-                value: 'price-desc', child: Text('Price: high to low')),
-            DropdownMenuItem(value: 'dom', child: Text('Days on market')),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                key: const ValueKey('sort-select'),
+                initialValue: selectedSort,
+                decoration: const InputDecoration(
+                  labelText: 'Sort',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('Default')),
+                  DropdownMenuItem(value: 'newest', child: Text('Newest')),
+                  DropdownMenuItem(
+                    value: 'price-asc',
+                    child: Text('Price: low to high'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'price-desc',
+                    child: Text('Price: high to low'),
+                  ),
+                  DropdownMenuItem(value: 'dom', child: Text('Days on market')),
+                ],
+                onChanged: onSortChanged,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 56,
+              child: OutlinedButton.icon(
+                key: const ValueKey('filter-button'),
+                onPressed: onFiltersPressed,
+                icon: const Icon(Icons.tune),
+                label: Text(
+                  activeFilterCount == 0
+                      ? 'Filters'
+                      : 'Filters ($activeFilterCount)',
+                ),
+              ),
+            ),
           ],
-          onChanged: onSortChanged,
         ),
+        if (activeFilterCount > 0) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Chip(
+              key: const ValueKey('active-filter-summary'),
+              label: Text(
+                activeFilterCount == 1
+                    ? '1 filter active'
+                    : '$activeFilterCount filters active',
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+class _SearchFilterSheet extends StatefulWidget {
+  final _SearchFilterValues initialValues;
+
+  const _SearchFilterSheet({required this.initialValues});
+
+  @override
+  State<_SearchFilterSheet> createState() => _SearchFilterSheetState();
+}
+
+class _SearchFilterSheetState extends State<_SearchFilterSheet> {
+  late final TextEditingController _minPriceController;
+  late final TextEditingController _maxPriceController;
+  late final TextEditingController _bedsController;
+  late final TextEditingController _bathsController;
+  late final TextEditingController _propertyTypeController;
+  late final TextEditingController _statusController;
+  late final TextEditingController _minSqftController;
+  late final TextEditingController _maxSqftController;
+  late final TextEditingController _minYearBuiltController;
+  late final TextEditingController _maxYearBuiltController;
+  late final TextEditingController _maxDaysOnMarketController;
+  late final TextEditingController _keywordsController;
+
+  @override
+  void initState() {
+    super.initState();
+    final values = widget.initialValues;
+    _minPriceController = _controllerForInt(values.minPrice);
+    _maxPriceController = _controllerForInt(values.maxPrice);
+    _bedsController = _controllerForInt(values.beds);
+    _bathsController = _controllerForInt(values.baths);
+    _propertyTypeController = TextEditingController(
+      text: values.propertyType ?? '',
+    );
+    _statusController = TextEditingController(
+      text: values.status?.join(', ') ?? '',
+    );
+    _minSqftController = _controllerForInt(values.minSqft);
+    _maxSqftController = _controllerForInt(values.maxSqft);
+    _minYearBuiltController = _controllerForInt(values.minYearBuilt);
+    _maxYearBuiltController = _controllerForInt(values.maxYearBuilt);
+    _maxDaysOnMarketController = _controllerForInt(values.maxDaysOnMarket);
+    _keywordsController = TextEditingController(text: values.keywords ?? '');
+  }
+
+  @override
+  void dispose() {
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
+    _bedsController.dispose();
+    _bathsController.dispose();
+    _propertyTypeController.dispose();
+    _statusController.dispose();
+    _minSqftController.dispose();
+    _maxSqftController.dispose();
+    _minYearBuiltController.dispose();
+    _maxYearBuiltController.dispose();
+    _maxDaysOnMarketController.dispose();
+    _keywordsController.dispose();
+    super.dispose();
+  }
+
+  TextEditingController _controllerForInt(int? value) {
+    return TextEditingController(text: value?.toString() ?? '');
+  }
+
+  int? _parseInt(TextEditingController controller) {
+    final value = controller.text.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+    return int.tryParse(value);
+  }
+
+  String? _parseText(TextEditingController controller) {
+    final value = controller.text.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  List<String>? _parseStatus() {
+    final values = _statusController.text
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    return values.isEmpty ? null : values;
+  }
+
+  _SearchFilterValues _valuesFromFields() {
+    return _SearchFilterValues(
+      minPrice: _parseInt(_minPriceController),
+      maxPrice: _parseInt(_maxPriceController),
+      beds: _parseInt(_bedsController),
+      baths: _parseInt(_bathsController),
+      propertyType: _parseText(_propertyTypeController),
+      status: _parseStatus(),
+      minSqft: _parseInt(_minSqftController),
+      maxSqft: _parseInt(_maxSqftController),
+      minYearBuilt: _parseInt(_minYearBuiltController),
+      maxYearBuilt: _parseInt(_maxYearBuiltController),
+      maxDaysOnMarket: _parseInt(_maxDaysOnMarketController),
+      keywords: _parseText(_keywordsController),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+
+    return SafeArea(
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(bottom: viewInsets.bottom),
+        child: FractionallySizedBox(
+          heightFactor: 0.9,
+          child: Column(
+            key: const ValueKey('filter-sheet'),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Filters',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close filters',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    _FilterField(
+                      fieldKey: const ValueKey('filter-min-price'),
+                      controller: _minPriceController,
+                      label: 'Min price',
+                      keyboardType: TextInputType.number,
+                    ),
+                    _FilterField(
+                      fieldKey: const ValueKey('filter-max-price'),
+                      controller: _maxPriceController,
+                      label: 'Max price',
+                      keyboardType: TextInputType.number,
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FilterField(
+                            fieldKey: const ValueKey('filter-beds'),
+                            controller: _bedsController,
+                            label: 'Beds',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _FilterField(
+                            fieldKey: const ValueKey('filter-baths'),
+                            controller: _bathsController,
+                            label: 'Baths',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    _FilterField(
+                      fieldKey: const ValueKey('filter-property-type'),
+                      controller: _propertyTypeController,
+                      label: 'Property type',
+                      hintText: 'Residential',
+                    ),
+                    _FilterField(
+                      fieldKey: const ValueKey('filter-status'),
+                      controller: _statusController,
+                      label: 'Status',
+                      hintText: 'FOR_SALE, PENDING',
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FilterField(
+                            fieldKey: const ValueKey('filter-min-sqft'),
+                            controller: _minSqftController,
+                            label: 'Min sqft',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _FilterField(
+                            fieldKey: const ValueKey('filter-max-sqft'),
+                            controller: _maxSqftController,
+                            label: 'Max sqft',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FilterField(
+                            fieldKey: const ValueKey('filter-min-year-built'),
+                            controller: _minYearBuiltController,
+                            label: 'Min year',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _FilterField(
+                            fieldKey: const ValueKey('filter-max-year-built'),
+                            controller: _maxYearBuiltController,
+                            label: 'Max year',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    _FilterField(
+                      fieldKey: const ValueKey('filter-max-dom'),
+                      controller: _maxDaysOnMarketController,
+                      label: 'Max days on market',
+                      keyboardType: TextInputType.number,
+                    ),
+                    _FilterField(
+                      fieldKey: const ValueKey('filter-keywords'),
+                      controller: _keywordsController,
+                      label: 'Keywords',
+                      hintText: 'pool, garage',
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const ValueKey('filter-reset'),
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pop(const _SearchFilterValues());
+                        },
+                        child: const Text('Reset'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        key: const ValueKey('filter-apply'),
+                        onPressed: () {
+                          Navigator.of(context).pop(_valuesFromFields());
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterField extends StatelessWidget {
+  final Key fieldKey;
+  final TextEditingController controller;
+  final String label;
+  final String? hintText;
+  final TextInputType? keyboardType;
+
+  const _FilterField({
+    required this.fieldKey,
+    required this.controller,
+    required this.label,
+    this.hintText,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hintText,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchFilterValues {
+  final int? minPrice;
+  final int? maxPrice;
+  final int? beds;
+  final int? baths;
+  final String? propertyType;
+  final List<String>? status;
+  final int? minSqft;
+  final int? maxSqft;
+  final int? minYearBuilt;
+  final int? maxYearBuilt;
+  final int? maxDaysOnMarket;
+  final String? keywords;
+
+  const _SearchFilterValues({
+    this.minPrice,
+    this.maxPrice,
+    this.beds,
+    this.baths,
+    this.propertyType,
+    this.status,
+    this.minSqft,
+    this.maxSqft,
+    this.minYearBuilt,
+    this.maxYearBuilt,
+    this.maxDaysOnMarket,
+    this.keywords,
+  });
+
+  factory _SearchFilterValues.fromQuery(ListingSearchQuery query) {
+    return _SearchFilterValues(
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      beds: query.beds,
+      baths: query.baths,
+      propertyType: query.propertyType,
+      status: query.status,
+      minSqft: query.minSqft,
+      maxSqft: query.maxSqft,
+      minYearBuilt: query.minYearBuilt,
+      maxYearBuilt: query.maxYearBuilt,
+      maxDaysOnMarket: query.maxDaysOnMarket,
+      keywords: query.keywords,
+    );
+  }
+
+  ListingSearchQuery applyTo(ListingSearchQuery query) {
+    return query.copyWith(
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      beds: beds,
+      baths: baths,
+      propertyType: propertyType,
+      status: status,
+      minSqft: minSqft,
+      maxSqft: maxSqft,
+      minYearBuilt: minYearBuilt,
+      maxYearBuilt: maxYearBuilt,
+      maxDaysOnMarket: maxDaysOnMarket,
+      keywords: keywords,
+      page: 1,
     );
   }
 }

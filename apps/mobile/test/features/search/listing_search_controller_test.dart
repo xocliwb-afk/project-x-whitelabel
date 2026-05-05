@@ -60,6 +60,35 @@ void main() {
     expect(controller.state.hasLoaded, isFalse);
   });
 
+  test('query copyWith can clear nullable filters', () {
+    final query = const ListingSearchQuery(
+      q: 'detroit',
+      bbox: '-83.2,42.2,-83.1,42.3',
+      minPrice: 300000,
+      beds: 3,
+      propertyType: 'Residential',
+      status: ['FOR_SALE'],
+      keywords: 'garage',
+    );
+
+    final reset = query.copyWith(
+      minPrice: null,
+      beds: null,
+      propertyType: null,
+      status: null,
+      keywords: null,
+    );
+
+    expect(reset.q, 'detroit');
+    expect(reset.bbox, '-83.2,42.2,-83.1,42.3');
+    expect(reset.minPrice, isNull);
+    expect(reset.beds, isNull);
+    expect(reset.propertyType, isNull);
+    expect(reset.status, isNull);
+    expect(reset.keywords, isNull);
+    expect(reset.hasActiveFilters, isFalse);
+  });
+
   test('loads the first page for a committed query', () async {
     final repository = FakeListingsRepository([
       response(ids: ['listing-1', 'listing-2'], page: 1, hasMore: true),
@@ -256,7 +285,12 @@ void main() {
     );
 
     await controller.search(
-      ListingSearchQuery(bbox: committedBbox.toQueryParam()),
+      ListingSearchQuery(
+        bbox: committedBbox.toQueryParam(),
+        minPrice: 300000,
+        beds: 3,
+        sort: 'price-asc',
+      ),
     );
     controller.updateMapCamera(
       center: const LatLng(lat: 42.05, lng: -83.95),
@@ -268,6 +302,9 @@ void main() {
     expect(repository.queries.last.page, 2);
     expect(repository.queries.last.bbox, committedBbox.toQueryParam());
     expect(repository.queries.last.bbox, isNot(draftBbox.toQueryParam()));
+    expect(repository.queries.last.minPrice, 300000);
+    expect(repository.queries.last.beds, 3);
+    expect(repository.queries.last.sort, 'price-asc');
   });
 
   test('newer search cancels old request and drops stale response', () async {

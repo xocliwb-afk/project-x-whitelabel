@@ -245,6 +245,132 @@ void main() {
     expect(find.text('No listings match this search.'), findsOneWidget);
   });
 
+  testWidgets('filter sheet applies filters within committed bbox',
+      (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+      searchResponse(ids: ['listing-2']),
+      searchResponse(ids: ['listing-3']),
+    ]);
+    final bbox = MapSearchBbox(
+      minLng: -83.2,
+      minLat: 42.2,
+      maxLng: -83.1,
+      maxLat: 42.3,
+    );
+
+    final harness = await pumpSearchScreen(tester, repository);
+    await tester.pumpAndSettle();
+
+    harness.searchController.updateMapCamera(
+      center: const LatLng(lat: 42.25, lng: -83.15),
+      zoom: 12,
+      visibleBbox: bbox,
+      source: MapCameraChangeSource.user,
+    );
+    await harness.searchController.commitDraftVisibleBbox();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('filter-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('filter-sheet')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('filter-min-price')),
+      '300000',
+    );
+    await tester.enterText(find.byKey(const ValueKey('filter-beds')), '3');
+    await tester.enterText(
+      find.byKey(const ValueKey('filter-property-type')),
+      'Residential',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('filter-status')),
+      'FOR_SALE, PENDING',
+    );
+    await tester.tap(find.byKey(const ValueKey('filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.last.bbox, bbox.toQueryParam());
+    expect(repository.queries.last.minPrice, 300000);
+    expect(repository.queries.last.beds, 3);
+    expect(repository.queries.last.propertyType, 'Residential');
+    expect(repository.queries.last.status, ['FOR_SALE', 'PENDING']);
+    expect(repository.queries.last.page, 1);
+    expect(find.byKey(const ValueKey('active-filter-summary')), findsOneWidget);
+    expect(find.text('4 filters active'), findsOneWidget);
+  });
+
+  testWidgets('filter reset clears filters and keeps committed bbox',
+      (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+      searchResponse(ids: ['listing-2']),
+      searchResponse(ids: ['listing-3']),
+    ]);
+    final bbox = MapSearchBbox(
+      minLng: -83.2,
+      minLat: 42.2,
+      maxLng: -83.1,
+      maxLat: 42.3,
+    );
+
+    final harness = await pumpSearchScreen(tester, repository);
+    await tester.pumpAndSettle();
+
+    harness.searchController.updateMapCamera(
+      center: const LatLng(lat: 42.25, lng: -83.15),
+      zoom: 12,
+      visibleBbox: bbox,
+      source: MapCameraChangeSource.user,
+    );
+    await harness.searchController.commitDraftVisibleBbox();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('filter-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('filter-min-price')),
+      '300000',
+    );
+    await tester.tap(find.byKey(const ValueKey('filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.last.minPrice, 300000);
+    expect(find.text('1 filter active'), findsOneWidget);
+
+    repository.results.add(searchResponse(ids: ['listing-1']));
+    await tester.tap(find.byKey(const ValueKey('filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('filter-reset')));
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.last.bbox, bbox.toQueryParam());
+    expect(repository.queries.last.minPrice, isNull);
+    expect(repository.queries.last.hasActiveFilters, isFalse);
+    expect(find.byKey(const ValueKey('active-filter-summary')), findsNothing);
+  });
+
+  testWidgets('sort change reruns search with current shell query',
+      (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+      searchResponse(ids: ['listing-2']),
+    ]);
+
+    await pumpSearchScreen(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('sort-select')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Price: high to low').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.last.sort, 'price-desc');
+    expect(repository.queries.last.page, 1);
+  });
+
   testWidgets('renders error state with retry action', (tester) async {
     final repository = FakeListingsRepository([
       Exception('network failed'),
