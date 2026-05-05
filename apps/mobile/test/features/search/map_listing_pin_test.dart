@@ -39,5 +39,18 @@ void main() {
       expect(pins.first.isSelected, isFalse);
       expect(pins.last.isSelected, isTrue);
     });
+
+    test('marks favorited listing pins', () {
+      final pins = buildMapListingPins(
+        [
+          buildListing('listing-1'),
+          buildListing('listing-2'),
+        ],
+        favoritedListingIds: {'listing-1'},
+      );
+
+      expect(pins.first.isFavorited, isTrue);
+      expect(pins.last.isFavorited, isFalse);
+    });
   });
 }

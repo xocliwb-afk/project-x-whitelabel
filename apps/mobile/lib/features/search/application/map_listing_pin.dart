@@ -5,11 +5,13 @@ class MapListingPin {
   final Listing listing;
   final String label;
   final bool isSelected;
+  final bool isFavorited;
 
   const MapListingPin({
     required this.listing,
     required this.label,
     required this.isSelected,
+    required this.isFavorited,
   });
 
   String get listingId => listing.id;
@@ -23,6 +25,7 @@ class MapListingPin {
 List<MapListingPin> buildMapListingPins(
   List<Listing> listings, {
   String? selectedListingId,
+  Set<String> favoritedListingIds = const {},
 }) {
   return listings
       .where(hasValidListingCoordinate)
@@ -31,6 +34,7 @@ List<MapListingPin> buildMapListingPins(
           listing: listing,
           label: formatCompactPrice(listing.listPrice),
           isSelected: listing.id == selectedListingId,
+          isFavorited: favoritedListingIds.contains(listing.id),
         ),
       )
       .toList(growable: false);
