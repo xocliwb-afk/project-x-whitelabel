@@ -12,8 +12,8 @@ import '../../application/listing_search_controller.dart';
 import '../../data/listings_repository.dart';
 import '../widgets/mapbox_search_map.dart';
 
-const _mapSearchPanelInitialChildSize = 0.26;
-const _mapSearchPanelMinChildSize = 0.20;
+const _mapSearchPanelInitialChildSize = 0.22;
+const _mapSearchPanelMinChildSize = 0.18;
 const _mapSearchPanelMaxChildSize = 0.68;
 
 class SearchScreen extends ConsumerStatefulWidget {
