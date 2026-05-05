@@ -12,6 +12,10 @@ import '../../application/listing_search_controller.dart';
 import '../../data/listings_repository.dart';
 import '../widgets/mapbox_search_map.dart';
 
+const _mapSearchPanelInitialChildSize = 0.22;
+const _mapSearchPanelMinChildSize = 0.18;
+const _mapSearchPanelMaxChildSize = 0.68;
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -306,64 +310,68 @@ class _SearchResultsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final panelHeight = (screenHeight * 0.46).clamp(320.0, 460.0);
 
-    return Material(
-      key: const ValueKey('search-results-panel'),
-      color: colorScheme.surface,
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: 0.18),
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      clipBehavior: Clip.antiAlias,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: panelHeight,
-          width: double.infinity,
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(999),
+    return DraggableScrollableSheet(
+      key: const ValueKey('search-results-sheet'),
+      initialChildSize: _mapSearchPanelInitialChildSize,
+      minChildSize: _mapSearchPanelMinChildSize,
+      maxChildSize: _mapSearchPanelMaxChildSize,
+      expand: false,
+      builder: (context, scrollController) {
+        return Material(
+          key: const ValueKey('search-results-panel'),
+          color: colorScheme.surface,
+          elevation: 8,
+          shadowColor: Colors.black.withValues(alpha: 0.18),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: _SearchStatus(state: state),
-              ),
-              if (state.error != null && state.results.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: _InlineError(
-                    message: state.error!,
-                    onRetry: onRetry,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: _SearchStatus(state: state),
+                ),
+                if (state.error != null && state.results.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: _InlineError(
+                      message: state.error!,
+                      onRetry: onRetry,
+                    ),
+                  ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: onRefresh,
+                    child: _SearchResultsList(
+                      state: state,
+                      favoritesState: favoritesState,
+                      showAddToTour: showAddToTour,
+                      scrollController: scrollController,
+                      onRetry: onRetry,
+                      onLoadMore: onLoadMore,
+                      onOpenListing: onOpenListing,
+                      onSelectListing: onSelectListing,
+                      onToggleFavorite: onToggleFavorite,
+                      onAddToTour: onAddToTour,
+                    ),
                   ),
                 ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: onRefresh,
-                  child: _SearchResultsList(
-                    state: state,
-                    favoritesState: favoritesState,
-                    showAddToTour: showAddToTour,
-                    onRetry: onRetry,
-                    onLoadMore: onLoadMore,
-                    onOpenListing: onOpenListing,
-                    onSelectListing: onSelectListing,
-                    onToggleFavorite: onToggleFavorite,
-                    onAddToTour: onAddToTour,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -372,6 +380,7 @@ class _SearchResultsList extends StatelessWidget {
   final SearchState state;
   final FavoritesState favoritesState;
   final bool showAddToTour;
+  final ScrollController scrollController;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
   final ValueChanged<Listing> onOpenListing;
@@ -383,6 +392,7 @@ class _SearchResultsList extends StatelessWidget {
     required this.state,
     required this.favoritesState,
     required this.showAddToTour,
+    required this.scrollController,
     required this.onRetry,
     required this.onLoadMore,
     required this.onOpenListing,
@@ -396,6 +406,7 @@ class _SearchResultsList extends StatelessWidget {
     if (state.isLoading && state.results.isEmpty) {
       return ListView(
         key: const ValueKey('search-results-scroll'),
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
           SizedBox(height: 220, child: _LoadingState()),
@@ -406,6 +417,7 @@ class _SearchResultsList extends StatelessWidget {
     if (state.error != null && state.results.isEmpty) {
       return ListView(
         key: const ValueKey('search-results-scroll'),
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           SizedBox(
@@ -422,6 +434,7 @@ class _SearchResultsList extends StatelessWidget {
     if (state.hasLoaded && state.results.isEmpty) {
       return ListView(
         key: const ValueKey('search-results-scroll'),
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
           SizedBox(height: 220, child: _EmptyState()),
@@ -431,6 +444,7 @@ class _SearchResultsList extends StatelessWidget {
 
     return ListView.separated(
       key: const ValueKey('search-results-scroll'),
+      controller: scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       itemCount: state.results.length + 1,
@@ -485,6 +499,7 @@ class _SearchControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(

@@ -293,6 +293,37 @@ void main() {
     expect(find.byKey(const ValueKey('mapbox-token-missing')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-top-overlay')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-results-panel')), findsOneWidget);
+    final resultsSheet = tester.widget<DraggableScrollableSheet>(
+      find.byKey(const ValueKey('search-results-sheet')),
+    );
+    expect(resultsSheet.initialChildSize, lessThanOrEqualTo(0.25));
+    expect(resultsSheet.minChildSize, lessThanOrEqualTo(0.20));
+    expect(resultsSheet.maxChildSize, greaterThanOrEqualTo(0.60));
+    expect(resultsSheet.expand, isFalse);
+
+    final shellSize = tester.getSize(
+      find.byKey(const ValueKey('map-first-search-shell')),
+    );
+    final topOverlaySize = tester.getSize(
+      find.byKey(const ValueKey('search-top-overlay')),
+    );
+    expect(topOverlaySize.height, lessThanOrEqualTo(220));
+    expect(topOverlaySize.height, lessThan(shellSize.height * 0.35));
+
+    final mapSize =
+        tester.getSize(find.byKey(const ValueKey('mapbox-search-shell')));
+    expect(mapSize.width, shellSize.width);
+    expect(mapSize.height, shellSize.height);
+
+    final panelSize = tester.getSize(
+      find.byKey(const ValueKey('search-results-panel')),
+    );
+    expect(
+      panelSize.height,
+      lessThanOrEqualTo(shellSize.height * 0.30),
+      reason: 'Default sheet must collapse to expose most of the map',
+    );
+
     expect(find.byKey(const ValueKey('search-input')), findsOneWidget);
     expect(find.byKey(const ValueKey('sort-select')), findsOneWidget);
     expect(find.text('Search listings'), findsWidgets);
