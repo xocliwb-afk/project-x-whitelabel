@@ -161,6 +161,19 @@ void main() {
     expect(controller.state.mapViewport.hasPendingSearchArea, isFalse);
   });
 
+  test('selectListing shares selected listing state with map and list', () {
+    final repository = FakeListingsRepository([]);
+    final controller = ListingSearchController(repository);
+
+    controller.selectListing('listing-2');
+
+    expect(controller.state.mapViewport.selectedListingId, 'listing-2');
+
+    controller.selectListing(null);
+
+    expect(controller.state.mapViewport.selectedListingId, isNull);
+  });
+
   test('committing draft bbox drives the API query', () async {
     final repository = FakeListingsRepository([
       response(ids: ['listing-1'], page: 1, hasMore: false),

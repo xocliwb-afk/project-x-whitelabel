@@ -94,6 +94,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               brand: brand,
               height: null,
               borderRadius: BorderRadius.zero,
+              listings: state.results,
+              selectedListingId: state.mapViewport.selectedListingId,
+              onMapReady: () {
+                ref
+                    .read(listingSearchControllerProvider.notifier)
+                    .markMapReady();
+              },
+              onPinTap: (listingId) {
+                ref
+                    .read(listingSearchControllerProvider.notifier)
+                    .selectListing(listingId);
+              },
+              onCameraChanged: ({
+                required center,
+                required zoom,
+                required visibleBbox,
+                required source,
+              }) {
+                ref
+                    .read(listingSearchControllerProvider.notifier)
+                    .updateMapCamera(
+                      center: center,
+                      zoom: zoom,
+                      visibleBbox: visibleBbox,
+                      source: source,
+                    );
+              },
             ),
           ),
           SafeArea(
@@ -112,6 +139,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
           ),
+          if (state.mapViewport.hasPendingSearchArea)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 148),
+                  child: _SearchThisAreaButton(
+                    onPressed: () {
+                      ref
+                          .read(listingSearchControllerProvider.notifier)
+                          .commitDraftVisibleBbox();
+                    },
+                  ),
+                ),
+              ),
+            ),
           Align(
             alignment: Alignment.bottomCenter,
             child: _SearchResultsPanel(
@@ -122,7 +165,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               onRetry: _retry,
               onLoadMore: () =>
                   ref.read(listingSearchControllerProvider.notifier).loadMore(),
-              onOpenListing: _openListing,
+              onOpenListing: (listing) {
+                ref
+                    .read(listingSearchControllerProvider.notifier)
+                    .selectListing(listing.id);
+                _openListing(listing);
+              },
+              onSelectListing: (listing) {
+                ref
+                    .read(listingSearchControllerProvider.notifier)
+                    .selectListing(listing.id);
+              },
               onAddToTour: _addToTour,
             ),
           ),
@@ -162,6 +215,7 @@ class _SearchResultsPanel extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
   final ValueChanged<Listing> onOpenListing;
+  final ValueChanged<Listing> onSelectListing;
   final ValueChanged<Listing> onAddToTour;
 
   const _SearchResultsPanel({
@@ -171,6 +225,7 @@ class _SearchResultsPanel extends StatelessWidget {
     required this.onRetry,
     required this.onLoadMore,
     required this.onOpenListing,
+    required this.onSelectListing,
     required this.onAddToTour,
   });
 
@@ -224,6 +279,7 @@ class _SearchResultsPanel extends StatelessWidget {
                     onRetry: onRetry,
                     onLoadMore: onLoadMore,
                     onOpenListing: onOpenListing,
+                    onSelectListing: onSelectListing,
                     onAddToTour: onAddToTour,
                   ),
                 ),
@@ -242,6 +298,7 @@ class _SearchResultsList extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
   final ValueChanged<Listing> onOpenListing;
+  final ValueChanged<Listing> onSelectListing;
   final ValueChanged<Listing> onAddToTour;
 
   const _SearchResultsList({
@@ -250,6 +307,7 @@ class _SearchResultsList extends StatelessWidget {
     required this.onRetry,
     required this.onLoadMore,
     required this.onOpenListing,
+    required this.onSelectListing,
     required this.onAddToTour,
   });
 
@@ -313,8 +371,10 @@ class _SearchResultsList extends StatelessWidget {
         final listing = state.results[index];
         return _ListingCard(
           listing: listing,
+          isSelected: state.mapViewport.selectedListingId == listing.id,
           showAddToTour: showAddToTour,
           onTap: () => onOpenListing(listing),
+          onSelect: () => onSelectListing(listing),
           onAddToTour: () => onAddToTour(listing),
         );
       },
@@ -417,14 +477,18 @@ class _SearchStatus extends StatelessWidget {
 
 class _ListingCard extends StatelessWidget {
   final Listing listing;
+  final bool isSelected;
   final bool showAddToTour;
   final VoidCallback onTap;
+  final VoidCallback onSelect;
   final VoidCallback onAddToTour;
 
   const _ListingCard({
     required this.listing,
+    required this.isSelected,
     required this.showAddToTour,
     required this.onTap,
+    required this.onSelect,
     required this.onAddToTour,
   });
 
@@ -442,6 +506,14 @@ class _ListingCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
+      color: isSelected ? theme.colorScheme.primaryContainer : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+          width: isSelected ? 2 : 0,
+        ),
+      ),
       child: InkWell(
         key: ValueKey('listing-card-${listing.id}'),
         onTap: onTap,
@@ -486,6 +558,15 @@ class _ListingCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 4),
+              IconButton(
+                key: ValueKey('select-listing-${listing.id}'),
+                tooltip: 'Select on map',
+                icon: Icon(
+                  isSelected ? Icons.location_pin : Icons.location_on_outlined,
+                ),
+                onPressed: onSelect,
+              ),
               if (showAddToTour) ...[
                 const SizedBox(width: 4),
                 IconButton(
@@ -499,6 +580,22 @@ class _ListingCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SearchThisAreaButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _SearchThisAreaButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      key: const ValueKey('search-this-area'),
+      onPressed: onPressed,
+      icon: const Icon(Icons.search),
+      label: const Text('Search this area'),
     );
   }
 }
