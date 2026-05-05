@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +25,10 @@ class FakeListingsRepository implements ListingsRepository {
   FakeListingsRepository(this.results);
 
   @override
-  Future<ListingSearchResponse> searchListings(ListingSearchQuery query) async {
+  Future<ListingSearchResponse> searchListings(
+    ListingSearchQuery query, {
+    CancelToken? cancelToken,
+  }) async {
     queries.add(query);
     final next = results.removeAt(0);
     if (next is Exception) {

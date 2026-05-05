@@ -85,6 +85,7 @@ class ApiClient {
     List<String>? neighborhoods,
     List<String>? features,
     List<String>? subtype,
+    CancelToken? cancelToken,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -118,6 +119,7 @@ class ApiClient {
       final response = await _dio.get(
         '/api/listings',
         queryParameters: queryParams,
+        cancelToken: cancelToken,
       );
       return ListingSearchResponse.fromJson(
           response.data as Map<String, dynamic>);
