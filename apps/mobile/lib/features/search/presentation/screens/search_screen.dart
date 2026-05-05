@@ -7,6 +7,7 @@ import '../../../../providers/api_provider.dart';
 import '../../../tour/application/tour_draft_controller.dart';
 import '../../application/listing_search_controller.dart';
 import '../../data/listings_repository.dart';
+import '../widgets/mapbox_search_map.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -80,10 +81,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(listingSearchControllerProvider);
-    final tourEnabled = ref.watch(brandConfigProvider).maybeWhen(
-          data: (brand) => brand.features?.tourEngine == true,
-          orElse: () => false,
-        );
+    final brandConfigAsync = ref.watch(brandConfigProvider);
+    final brand = brandConfigAsync.asData?.value;
+    final tourEnabled = brand?.features?.tourEngine == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -96,6 +96,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: MapboxSearchMap(brand: brand),
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

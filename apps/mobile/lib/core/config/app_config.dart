@@ -20,6 +20,11 @@ class AppConfig {
     defaultValue: '',
   );
 
+  static const String _mapboxAccessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+    defaultValue: '',
+  );
+
   static String get supabaseUrl {
     if (_supabaseUrl.isEmpty) {
       throw StateError('Missing required SUPABASE_URL configuration');
@@ -39,5 +44,10 @@ class AppConfig {
       throw StateError('Missing required TENANT_ID configuration');
     }
     return _tenantId;
+  }
+
+  static String? get mapboxAccessToken {
+    final token = _mapboxAccessToken.trim();
+    return token.isEmpty ? null : token;
   }
 }

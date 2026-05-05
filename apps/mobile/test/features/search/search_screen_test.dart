@@ -191,6 +191,8 @@ void main() {
 
     await pumpSearchScreen(tester, repository);
 
+    expect(find.byKey(const ValueKey('mapbox-search-shell')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mapbox-token-missing')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-input')), findsOneWidget);
     expect(find.text('Search listings'), findsWidgets);
 
@@ -237,6 +239,8 @@ void main() {
     expect(find.text('Search unavailable'), findsOneWidget);
     expect(find.textContaining('network failed'), findsOneWidget);
 
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -160));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
 
