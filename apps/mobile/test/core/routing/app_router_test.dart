@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:project_x_mobile/core/routing/app_router.dart';
+import 'package:project_x_mobile/features/favorites/data/favorites_repository.dart';
 import 'package:project_x_mobile/features/listing_detail/data/listing_detail_repository.dart';
 import 'package:project_x_mobile/features/search/data/listings_repository.dart';
 import 'package:project_x_mobile/features/tour/application/tour_draft_controller.dart';
@@ -59,6 +60,17 @@ class FakeListingsRepository implements ListingsRepository {
       ),
     );
   }
+}
+
+class FakeFavoritesRepository implements FavoritesRepository {
+  @override
+  Future<Set<String>> listFavoriteIds() async => {};
+
+  @override
+  Future<void> addFavorite(String listingId) async {}
+
+  @override
+  Future<void> removeFavorite(String listingId) async {}
 }
 
 class FakeListingDetailRepository implements ListingDetailRepository {
@@ -163,6 +175,8 @@ Future<GoRouter> pumpAppRouter(
         authProvider.overrideWith((ref) => FakeAuthNotifier(authState)),
         brandConfigProvider.overrideWith((ref) async => brandConfig()),
         listingsRepositoryProvider.overrideWithValue(FakeListingsRepository()),
+        favoritesRepositoryProvider
+            .overrideWithValue(FakeFavoritesRepository()),
         listingDetailRepositoryProvider
             .overrideWithValue(FakeListingDetailRepository()),
         tourRepositoryProvider.overrideWithValue(FakeTourRepository()),

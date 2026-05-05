@@ -151,6 +151,45 @@ class ApiClient {
     }
   }
 
+  /// Fetch favorited listing IDs for the authenticated user.
+  /// GET /api/favorites/ids
+  Future<Set<String>> getFavoriteListingIds() async {
+    try {
+      final response = await _dio.get('/api/favorites/ids');
+      final data = response.data as Map<String, dynamic>;
+      final listingIds = data['listingIds'] as List<dynamic>? ?? const [];
+      return listingIds
+          .whereType<String>()
+          .where((listingId) => listingId.trim().isNotEmpty)
+          .toSet();
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Add a listing to the authenticated user's favorites.
+  /// POST /api/favorites
+  Future<void> addFavorite(String listingId) async {
+    try {
+      await _dio.post(
+        '/api/favorites',
+        data: {'listingId': listingId},
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Remove a listing from the authenticated user's favorites.
+  /// DELETE /api/favorites/:listingId
+  Future<void> removeFavorite(String listingId) async {
+    try {
+      await _dio.delete('/api/favorites/${Uri.encodeComponent(listingId)}');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   /// Submit a lead/contact form.
   /// POST /api/leads
   Future<LeadResponse> submitLead(LeadPayload payload) async {

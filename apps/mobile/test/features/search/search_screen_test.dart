@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:project_x_mobile/features/favorites/data/favorites_repository.dart';
 import 'package:project_x_mobile/features/search/application/listing_search_controller.dart';
 import 'package:project_x_mobile/features/search/application/map_viewport_state.dart';
 import 'package:project_x_mobile/features/search/data/listings_repository.dart';
@@ -16,9 +17,35 @@ import 'package:project_x_mobile/models/listing.dart';
 import 'package:project_x_mobile/models/listing_search_response.dart';
 import 'package:project_x_mobile/models/tour.dart';
 import 'package:project_x_mobile/providers/api_provider.dart';
+import 'package:project_x_mobile/providers/auth_provider.dart';
 
+import '../../test_support/auth_fixtures.dart';
 import '../../test_support/listing_fixtures.dart';
 import '../../test_support/tour_fixtures.dart';
+
+class FakeAuthNotifier extends StateNotifier<AuthState>
+    implements AuthNotifier {
+  FakeAuthNotifier(AuthState initialState) : super(initialState);
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> login(String email, String password) async {}
+
+  @override
+  Future<void> logout() async {
+    state = const AuthState(isInitialized: true);
+  }
+
+  @override
+  Future<void> register({
+    required String email,
+    required String password,
+    String? displayName,
+    String? phone,
+  }) async {}
+}
 
 class FakeListingsRepository implements ListingsRepository {
   final List<ListingSearchQuery> queries = [];
@@ -40,6 +67,47 @@ class FakeListingsRepository implements ListingsRepository {
       return next;
     }
     return next as ListingSearchResponse;
+  }
+}
+
+class FakeFavoritesRepository implements FavoritesRepository {
+  Set<String> ids;
+  Object? addError;
+  Object? removeError;
+  int listCalls = 0;
+  final List<String> addCalls = [];
+  final List<String> removeCalls = [];
+
+  FakeFavoritesRepository({
+    Set<String> initialIds = const {},
+    this.addError,
+    this.removeError,
+  }) : ids = Set<String>.from(initialIds);
+
+  @override
+  Future<Set<String>> listFavoriteIds() async {
+    listCalls += 1;
+    return Set<String>.from(ids);
+  }
+
+  @override
+  Future<void> addFavorite(String listingId) async {
+    addCalls.add(listingId);
+    final error = addError;
+    if (error != null) {
+      throw error;
+    }
+    ids.add(listingId);
+  }
+
+  @override
+  Future<void> removeFavorite(String listingId) async {
+    removeCalls.add(listingId);
+    final error = removeError;
+    if (error != null) {
+      throw error;
+    }
+    ids.remove(listingId);
   }
 }
 
@@ -128,11 +196,13 @@ class PumpedSearchScreen {
   final GoRouter router;
   final ListingSearchController searchController;
   final TourDraftController tourController;
+  final FakeFavoritesRepository favoritesRepository;
 
   const PumpedSearchScreen({
     required this.router,
     required this.searchController,
     required this.tourController,
+    required this.favoritesRepository,
   });
 }
 
@@ -140,9 +210,13 @@ Future<PumpedSearchScreen> pumpSearchScreen(
   WidgetTester tester,
   FakeListingsRepository repository, {
   bool tourEngine = false,
+  AuthState authState = const AuthState(isInitialized: true),
+  FakeFavoritesRepository? favoritesRepository,
 }) async {
   final searchController = ListingSearchController(repository);
   final tourController = TourDraftController(FakeTourRepository());
+  final fakeFavoritesRepository =
+      favoritesRepository ?? FakeFavoritesRepository();
   final router = GoRouter(
     initialLocation: '/search',
     routes: [
@@ -168,6 +242,12 @@ Future<PumpedSearchScreen> pumpSearchScreen(
           body: Text('Tour route'),
         ),
       ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const Scaffold(
+          body: Text('Login route'),
+        ),
+      ),
     ],
   );
 
@@ -175,6 +255,8 @@ Future<PumpedSearchScreen> pumpSearchScreen(
     ProviderScope(
       overrides: [
         listingsRepositoryProvider.overrideWithValue(repository),
+        favoritesRepositoryProvider.overrideWithValue(fakeFavoritesRepository),
+        authProvider.overrideWith((ref) => FakeAuthNotifier(authState)),
         listingSearchControllerProvider.overrideWith((ref) {
           return searchController;
         }),
@@ -193,6 +275,7 @@ Future<PumpedSearchScreen> pumpSearchScreen(
     router: router,
     searchController: searchController,
     tourController: tourController,
+    favoritesRepository: fakeFavoritesRepository,
   );
 }
 
@@ -433,6 +516,124 @@ void main() {
       find.descendant(
         of: find.byKey(const ValueKey('select-listing-listing-1')),
         matching: find.byIcon(Icons.location_pin),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('signed-out favorite tap shows login prompt and skips API',
+      (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+    ]);
+    final favoritesRepository = FakeFavoritesRepository();
+
+    await pumpSearchScreen(
+      tester,
+      repository,
+      favoritesRepository: favoritesRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('favorite-listing-listing-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Log in to save this home.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sign-in-to-save-sheet')), findsOneWidget);
+    expect(favoritesRepository.addCalls, isEmpty);
+    expect(favoritesRepository.removeCalls, isEmpty);
+  });
+
+  testWidgets('signed-in favorite tap toggles favorite state', (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+    ]);
+    final favoritesRepository = FakeFavoritesRepository();
+
+    await pumpSearchScreen(
+      tester,
+      repository,
+      authState: AuthState(
+        isInitialized: true,
+        user: buildAuthUser(),
+      ),
+      favoritesRepository: favoritesRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('favorite-listing-listing-1')));
+    await tester.pumpAndSettle();
+
+    expect(favoritesRepository.listCalls, 1);
+    expect(favoritesRepository.addCalls, ['listing-1']);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('favorite-listing-listing-1')),
+        matching: find.byIcon(Icons.favorite),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('hydrated favorite ids render favorite card state',
+      (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+    ]);
+    final favoritesRepository = FakeFavoritesRepository(
+      initialIds: {'listing-1'},
+    );
+
+    await pumpSearchScreen(
+      tester,
+      repository,
+      authState: AuthState(
+        isInitialized: true,
+        user: buildAuthUser(),
+      ),
+      favoritesRepository: favoritesRepository,
+    );
+    await tester.pumpAndSettle();
+
+    expect(favoritesRepository.listCalls, 1);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('favorite-listing-listing-1')),
+        matching: find.byIcon(Icons.favorite),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('failed favorite mutation rolls back and shows safe error',
+      (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+    ]);
+    final favoritesRepository = FakeFavoritesRepository(
+      addError: Exception('favorite failed'),
+    );
+
+    await pumpSearchScreen(
+      tester,
+      repository,
+      authState: AuthState(
+        isInitialized: true,
+        user: buildAuthUser(),
+      ),
+      favoritesRepository: favoritesRepository,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('favorite-listing-listing-1')));
+    await tester.pumpAndSettle();
+
+    expect(favoritesRepository.addCalls, ['listing-1']);
+    expect(find.textContaining('favorite failed'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('favorite-listing-listing-1')),
+        matching: find.byIcon(Icons.favorite_border),
       ),
       findsOneWidget,
     );

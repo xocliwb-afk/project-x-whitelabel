@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../models/listing.dart';
 import '../../../../providers/api_provider.dart';
+import '../../../favorites/application/favorites_controller.dart';
+import '../../../favorites/presentation/favorite_button.dart';
+import '../../../favorites/presentation/sign_in_to_save_sheet.dart';
 import '../../../tour/application/tour_draft_controller.dart';
 import '../../application/listing_search_controller.dart';
 import '../../data/listings_repository.dart';
@@ -115,10 +118,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
+  Future<void> _toggleFavorite(Listing listing) async {
+    final result = await ref
+        .read(favoritesControllerProvider.notifier)
+        .toggleFavorite(listing.id);
+    if (!mounted) {
+      return;
+    }
+
+    switch (result.outcome) {
+      case FavoriteToggleOutcome.toggled:
+        return;
+      case FavoriteToggleOutcome.loginRequired:
+        await showSignInToSaveSheet(context);
+        return;
+      case FavoriteToggleOutcome.failed:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Could not update favorite.'),
+          ),
+        );
+        return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(listingSearchControllerProvider);
     final brandConfigAsync = ref.watch(brandConfigProvider);
+    final favoritesState = ref.watch(favoritesControllerProvider);
     final brand = brandConfigAsync.asData?.value;
     final tourEnabled = brand?.features?.tourEngine == true;
 
@@ -133,6 +161,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               borderRadius: BorderRadius.zero,
               listings: state.results,
               selectedListingId: state.mapViewport.selectedListingId,
+              favoritedListingIds: favoritesState.favoriteIds,
               onMapReady: () {
                 ref
                     .read(listingSearchControllerProvider.notifier)
@@ -198,6 +227,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             alignment: Alignment.bottomCenter,
             child: _SearchResultsPanel(
               state: state,
+              favoritesState: favoritesState,
               showAddToTour: tourEnabled,
               onRefresh: () =>
                   ref.read(listingSearchControllerProvider.notifier).refresh(),
@@ -215,6 +245,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     .read(listingSearchControllerProvider.notifier)
                     .selectListing(listing.id);
               },
+              onToggleFavorite: _toggleFavorite,
               onAddToTour: _addToTour,
             ),
           ),
@@ -249,22 +280,26 @@ class _SearchTopOverlay extends StatelessWidget {
 
 class _SearchResultsPanel extends StatelessWidget {
   final SearchState state;
+  final FavoritesState favoritesState;
   final bool showAddToTour;
   final Future<void> Function() onRefresh;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
   final ValueChanged<Listing> onOpenListing;
   final ValueChanged<Listing> onSelectListing;
+  final ValueChanged<Listing> onToggleFavorite;
   final ValueChanged<Listing> onAddToTour;
 
   const _SearchResultsPanel({
     required this.state,
+    required this.favoritesState,
     required this.showAddToTour,
     required this.onRefresh,
     required this.onRetry,
     required this.onLoadMore,
     required this.onOpenListing,
     required this.onSelectListing,
+    required this.onToggleFavorite,
     required this.onAddToTour,
   });
 
@@ -314,11 +349,13 @@ class _SearchResultsPanel extends StatelessWidget {
                   onRefresh: onRefresh,
                   child: _SearchResultsList(
                     state: state,
+                    favoritesState: favoritesState,
                     showAddToTour: showAddToTour,
                     onRetry: onRetry,
                     onLoadMore: onLoadMore,
                     onOpenListing: onOpenListing,
                     onSelectListing: onSelectListing,
+                    onToggleFavorite: onToggleFavorite,
                     onAddToTour: onAddToTour,
                   ),
                 ),
@@ -333,20 +370,24 @@ class _SearchResultsPanel extends StatelessWidget {
 
 class _SearchResultsList extends StatelessWidget {
   final SearchState state;
+  final FavoritesState favoritesState;
   final bool showAddToTour;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
   final ValueChanged<Listing> onOpenListing;
   final ValueChanged<Listing> onSelectListing;
+  final ValueChanged<Listing> onToggleFavorite;
   final ValueChanged<Listing> onAddToTour;
 
   const _SearchResultsList({
     required this.state,
+    required this.favoritesState,
     required this.showAddToTour,
     required this.onRetry,
     required this.onLoadMore,
     required this.onOpenListing,
     required this.onSelectListing,
+    required this.onToggleFavorite,
     required this.onAddToTour,
   });
 
@@ -411,9 +452,12 @@ class _SearchResultsList extends StatelessWidget {
         return _ListingCard(
           listing: listing,
           isSelected: state.mapViewport.selectedListingId == listing.id,
+          isFavorite: favoritesState.isFavorite(listing.id),
+          isFavoriteBusy: favoritesState.isPending(listing.id),
           showAddToTour: showAddToTour,
           onTap: () => onOpenListing(listing),
           onSelect: () => onSelectListing(listing),
+          onToggleFavorite: () => onToggleFavorite(listing),
           onAddToTour: () => onAddToTour(listing),
         );
       },
@@ -937,17 +981,23 @@ class _SearchStatus extends StatelessWidget {
 class _ListingCard extends StatelessWidget {
   final Listing listing;
   final bool isSelected;
+  final bool isFavorite;
+  final bool isFavoriteBusy;
   final bool showAddToTour;
   final VoidCallback onTap;
   final VoidCallback onSelect;
+  final VoidCallback onToggleFavorite;
   final VoidCallback onAddToTour;
 
   const _ListingCard({
     required this.listing,
     required this.isSelected,
+    required this.isFavorite,
+    required this.isFavoriteBusy,
     required this.showAddToTour,
     required this.onTap,
     required this.onSelect,
+    required this.onToggleFavorite,
     required this.onAddToTour,
   });
 
@@ -1025,6 +1075,12 @@ class _ListingCard extends StatelessWidget {
                   isSelected ? Icons.location_pin : Icons.location_on_outlined,
                 ),
                 onPressed: onSelect,
+              ),
+              FavoriteButton(
+                key: ValueKey('favorite-listing-${listing.id}'),
+                isFavorite: isFavorite,
+                isBusy: isFavoriteBusy,
+                onPressed: onToggleFavorite,
               ),
               if (showAddToTour) ...[
                 const SizedBox(width: 4),

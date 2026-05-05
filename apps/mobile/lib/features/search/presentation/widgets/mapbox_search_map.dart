@@ -25,6 +25,7 @@ class MapboxSearchMap extends StatefulWidget {
   final BorderRadius borderRadius;
   final List<Listing> listings;
   final String? selectedListingId;
+  final Set<String> favoritedListingIds;
   final ValueChanged<String>? onPinTap;
   final VoidCallback? onMapReady;
   final MapCameraChanged? onCameraChanged;
@@ -36,6 +37,7 @@ class MapboxSearchMap extends StatefulWidget {
     this.borderRadius = const BorderRadius.all(Radius.circular(8)),
     this.listings = const [],
     this.selectedListingId,
+    this.favoritedListingIds = const {},
     this.onPinTap,
     this.onMapReady,
     this.onCameraChanged,
@@ -60,7 +62,8 @@ class _MapboxSearchMapState extends State<MapboxSearchMap> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.listings != widget.listings ||
-        oldWidget.selectedListingId != widget.selectedListingId) {
+        oldWidget.selectedListingId != widget.selectedListingId ||
+        oldWidget.favoritedListingIds != widget.favoritedListingIds) {
       unawaited(_syncPricePins());
     }
 
@@ -174,10 +177,11 @@ class _MapboxSearchMapState extends State<MapboxSearchMap> {
     final pins = buildMapListingPins(
       widget.listings,
       selectedListingId: widget.selectedListingId,
+      favoritedListingIds: widget.favoritedListingIds,
     );
     final signature = pins
         .map((pin) =>
-            '${pin.listingId}:${pin.center.lat}:${pin.center.lng}:${pin.label}:${pin.isSelected}')
+            '${pin.listingId}:${pin.center.lat}:${pin.center.lng}:${pin.label}:${pin.isSelected}:${pin.isFavorited}')
         .join('|');
 
     if (signature == _annotationSignature) {
@@ -199,17 +203,22 @@ class _MapboxSearchMapState extends State<MapboxSearchMap> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final selected = pin.isSelected;
+    final favorited = pin.isFavorited;
 
     return mapbox.PointAnnotationOptions(
       geometry: mapbox.Point(
         coordinates: mapbox.Position(pin.center.lng, pin.center.lat),
       ),
-      textField: pin.label,
+      textField: favorited ? '♥ ${pin.label}' : pin.label,
       textAnchor: mapbox.TextAnchor.CENTER,
       textJustify: mapbox.TextJustify.CENTER,
       textSize: selected ? 16 : 14,
       textColor: _mapboxColor(
-        selected ? colorScheme.primary : colorScheme.onSurface,
+        selected
+            ? colorScheme.primary
+            : favorited
+                ? colorScheme.error
+                : colorScheme.onSurface,
       ),
       textHaloColor: _mapboxColor(
         selected ? colorScheme.primaryContainer : colorScheme.surface,
