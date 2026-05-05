@@ -5,6 +5,8 @@ import '../../../models/listing_search_response.dart';
 import '../../../providers/api_provider.dart';
 import '../../../services/api_client.dart';
 
+const _noChange = Object();
+
 class ListingSearchQuery {
   final String? q;
   final String? bbox;
@@ -60,61 +62,107 @@ class ListingSearchQuery {
     this.subtype,
   });
 
+  int get activeFilterCount {
+    var count = 0;
+    if (minPrice != null) count++;
+    if (maxPrice != null) count++;
+    if (beds != null) count++;
+    if (baths != null) count++;
+    if (_hasText(propertyType)) count++;
+    if (status != null && status!.isNotEmpty) count++;
+    if (minSqft != null) count++;
+    if (maxSqft != null) count++;
+    if (minYearBuilt != null) count++;
+    if (maxYearBuilt != null) count++;
+    if (maxDaysOnMarket != null) count++;
+    if (_hasText(keywords)) count++;
+    return count;
+  }
+
+  bool get hasActiveFilters => activeFilterCount > 0;
+
   ListingSearchQuery copyWith({
-    String? q,
-    String? bbox,
+    Object? q = _noChange,
+    Object? bbox = _noChange,
     int? page,
     int? limit,
-    int? minPrice,
-    int? maxPrice,
-    int? beds,
-    int? maxBeds,
-    int? baths,
-    int? maxBaths,
-    String? propertyType,
-    String? sort,
-    List<String>? status,
-    int? minSqft,
-    int? maxSqft,
-    int? minYearBuilt,
-    int? maxYearBuilt,
-    int? maxDaysOnMarket,
-    String? keywords,
-    List<String>? cities,
-    List<String>? postalCodes,
-    List<String>? counties,
-    List<String>? neighborhoods,
-    List<String>? features,
-    List<String>? subtype,
+    Object? minPrice = _noChange,
+    Object? maxPrice = _noChange,
+    Object? beds = _noChange,
+    Object? maxBeds = _noChange,
+    Object? baths = _noChange,
+    Object? maxBaths = _noChange,
+    Object? propertyType = _noChange,
+    Object? sort = _noChange,
+    Object? status = _noChange,
+    Object? minSqft = _noChange,
+    Object? maxSqft = _noChange,
+    Object? minYearBuilt = _noChange,
+    Object? maxYearBuilt = _noChange,
+    Object? maxDaysOnMarket = _noChange,
+    Object? keywords = _noChange,
+    Object? cities = _noChange,
+    Object? postalCodes = _noChange,
+    Object? counties = _noChange,
+    Object? neighborhoods = _noChange,
+    Object? features = _noChange,
+    Object? subtype = _noChange,
   }) {
     return ListingSearchQuery(
-      q: q ?? this.q,
-      bbox: bbox ?? this.bbox,
+      q: identical(q, _noChange) ? this.q : q as String?,
+      bbox: identical(bbox, _noChange) ? this.bbox : bbox as String?,
       page: page ?? this.page,
       limit: limit ?? this.limit,
-      minPrice: minPrice ?? this.minPrice,
-      maxPrice: maxPrice ?? this.maxPrice,
-      beds: beds ?? this.beds,
-      maxBeds: maxBeds ?? this.maxBeds,
-      baths: baths ?? this.baths,
-      maxBaths: maxBaths ?? this.maxBaths,
-      propertyType: propertyType ?? this.propertyType,
-      sort: sort ?? this.sort,
-      status: status ?? this.status,
-      minSqft: minSqft ?? this.minSqft,
-      maxSqft: maxSqft ?? this.maxSqft,
-      minYearBuilt: minYearBuilt ?? this.minYearBuilt,
-      maxYearBuilt: maxYearBuilt ?? this.maxYearBuilt,
-      maxDaysOnMarket: maxDaysOnMarket ?? this.maxDaysOnMarket,
-      keywords: keywords ?? this.keywords,
-      cities: cities ?? this.cities,
-      postalCodes: postalCodes ?? this.postalCodes,
-      counties: counties ?? this.counties,
-      neighborhoods: neighborhoods ?? this.neighborhoods,
-      features: features ?? this.features,
-      subtype: subtype ?? this.subtype,
+      minPrice:
+          identical(minPrice, _noChange) ? this.minPrice : minPrice as int?,
+      maxPrice:
+          identical(maxPrice, _noChange) ? this.maxPrice : maxPrice as int?,
+      beds: identical(beds, _noChange) ? this.beds : beds as int?,
+      maxBeds: identical(maxBeds, _noChange) ? this.maxBeds : maxBeds as int?,
+      baths: identical(baths, _noChange) ? this.baths : baths as int?,
+      maxBaths:
+          identical(maxBaths, _noChange) ? this.maxBaths : maxBaths as int?,
+      propertyType: identical(propertyType, _noChange)
+          ? this.propertyType
+          : propertyType as String?,
+      sort: identical(sort, _noChange) ? this.sort : sort as String?,
+      status:
+          identical(status, _noChange) ? this.status : status as List<String>?,
+      minSqft: identical(minSqft, _noChange) ? this.minSqft : minSqft as int?,
+      maxSqft: identical(maxSqft, _noChange) ? this.maxSqft : maxSqft as int?,
+      minYearBuilt: identical(minYearBuilt, _noChange)
+          ? this.minYearBuilt
+          : minYearBuilt as int?,
+      maxYearBuilt: identical(maxYearBuilt, _noChange)
+          ? this.maxYearBuilt
+          : maxYearBuilt as int?,
+      maxDaysOnMarket: identical(maxDaysOnMarket, _noChange)
+          ? this.maxDaysOnMarket
+          : maxDaysOnMarket as int?,
+      keywords:
+          identical(keywords, _noChange) ? this.keywords : keywords as String?,
+      cities:
+          identical(cities, _noChange) ? this.cities : cities as List<String>?,
+      postalCodes: identical(postalCodes, _noChange)
+          ? this.postalCodes
+          : postalCodes as List<String>?,
+      counties: identical(counties, _noChange)
+          ? this.counties
+          : counties as List<String>?,
+      neighborhoods: identical(neighborhoods, _noChange)
+          ? this.neighborhoods
+          : neighborhoods as List<String>?,
+      features: identical(features, _noChange)
+          ? this.features
+          : features as List<String>?,
+      subtype: identical(subtype, _noChange)
+          ? this.subtype
+          : subtype as List<String>?,
     );
   }
+
+  static bool _hasText(String? value) =>
+      value != null && value.trim().isNotEmpty;
 }
 
 abstract class ListingsRepository {
