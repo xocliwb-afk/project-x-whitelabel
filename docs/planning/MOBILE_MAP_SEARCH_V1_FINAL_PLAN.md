@@ -5,16 +5,36 @@
 **Project:** Project X White Label
 **Repo:** `https://github.com/xocliwb-afk/project-x-whitelabel`
 **Local path:** `/home/bwilcox/project-x-whitelabel`
-**Recommended epic label:** `Epic 17.5 — Mobile Map Search V1` or `Pre-Epic-18 Mobile Map Search`
+**Recommended epic label:** `Epic 17.5 — Mobile Map Search V1`
 **Mode:** Planning-first, contract-first, small PRs only.
 
 ---
 
-## 0. Codex Handoff Instruction
+## 0. Corrected Roadmap Truth
 
-Use this file as the final planning source for the mobile map-search epic.
+This document intentionally corrects prior stale or contradictory planning language.
 
-Before creating or editing files, Codex must re-verify current repo state because **current repo state beats this document**.
+Current operating truth:
+
+1. **Epic 16 is the last completed epic.**
+2. **Epic 17 has started planning only. Epic 17 is not complete.**
+3. **Epic 17.5 — Mobile Map Search V1 happens before Epic 17 implementation resumes.**
+4. After Epic 17.5 is complete, the project returns to complete **all of Epic 17**.
+5. Epic 18 / deployment planning remains later.
+
+Do **not** describe this work as `pre-Epic-18`.
+
+Do **not** claim Epic 17 foreground TTS, Android Auto, physical-audio validation, or any Epic 17 runtime work is complete unless the live repo and accepted PR history prove it.
+
+If live repo state appears to contradict this roadmap truth, stop and report the exact contradiction before editing implementation files.
+
+---
+
+## 1. Codex Handoff Instruction
+
+Use this file as the corrected final planning source for the mobile map-search epic.
+
+Before creating or editing files, Codex must re-verify current repo state because **current repo state beats old docs and stale assistant summaries**.
 
 Suggested first PR:
 
@@ -28,13 +48,25 @@ Do **not** begin SDK installation or implementation until the contract PR lands.
 
 ---
 
-## 1. Executive Summary
+## 2. Executive Summary
 
-The mobile app needs a real map-first property search experience before deployment planning. A list-only real estate mobile search is not credible. Buyers search spatially: neighborhood, proximity, price distribution, relative location, and listing density all matter. The current mobile search foundation is useful, but the final search experience must look and behave like a serious consumer property-search app.
+The mobile app needs a real map-first property search experience before returning to Epic 17. A list-only real estate mobile search is not credible. Buyers search spatially: neighborhood, proximity, price distribution, relative location, and listing density all matter.
 
-The target experience is a full-screen map-first `/search` surface with branded price pins, a synchronized listing bottom sheet, filters, sort, favorites, login prompts for saved actions, and manual **Search this area** behavior after pan or zoom.
+The current mobile search foundation is useful, but the final search experience must look and behave like a serious consumer property-search app.
 
-This should be treated as a **multi-PR mini-epic**, not a single implementation PR. The safest sequence is:
+The target experience is a full-screen map-first `/search` surface with:
+
+- branded price pins;
+- synchronized listing bottom sheet;
+- filters;
+- sort;
+- favorites;
+- login prompts for saved/favorite actions;
+- manual **Search this area** behavior after pan or zoom.
+
+This should be treated as a **multi-PR mini-epic**, not a single implementation PR.
+
+The safest sequence is:
 
 1. Contract/spec PR.
 2. Map SDK foundation PR.
@@ -49,9 +81,9 @@ Recommended primary SDK: **Mapbox Maps Flutter**, with a documented fallback rul
 
 ---
 
-## 2. Repo-Truth Assumptions To Re-Verify
+## 3. Repo-Truth Assumptions To Re-Verify
 
-The planning inputs indicated the following current state. Codex must re-run inspection before implementation.
+Codex must re-run inspection before implementation.
 
 ### Required inspection commands
 
@@ -62,22 +94,25 @@ git diff --stat
 git log --oneline -15
 ```
 
-### Expected recent repo state from planning inputs
+### Expected repo state to verify
 
 - Branch should be `main` or a clean working branch.
 - Working tree should be clean before starting.
-- Recent commits likely include Epic 17 foreground TTS PRs through PR #71.
-- Mobile currently has real Search, Listing Detail, Tour, Active Tour, and foreground TTS foundations.
+- Epic 16 should be the last completed epic.
+- Epic 17 should be planning-only / not fully implemented.
+- Mobile currently has real Search, Listing Detail, and Tour foundations from prior epics.
 - Mobile search is currently list-first, not map-first.
 - `apps/mobile/pubspec.yaml` does not yet include Mapbox, Google Maps, or `flutter_map`.
-- Mobile has no favorites feature files yet.
-- API favorites exist and mobile does not yet consume them.
-- `/api/listings` already supports bbox, filters, sort, paging, and listing coordinate fields.
-- CI already runs `flutter pub get`, `flutter analyze`, and `flutter test`.
+- Mobile has no full map-search implementation yet.
+- Mobile may not yet have favorites UI/state, even if API favorites exist.
+- `/api/listings` should already support bbox, filters, sort, paging, and listing coordinate fields.
+- CI should run `flutter pub get`, `flutter analyze`, and `flutter test`.
+
+If any of these are false, Codex must report the exact repo truth and adjust the plan before implementation.
 
 ---
 
-## 3. Product Goal
+## 4. Product Goal
 
 The mobile user should open the app into a serious, polished, map-first property discovery experience:
 
@@ -96,7 +131,7 @@ The result should feel app-native and comparable in product thinking to Zillow, 
 
 ---
 
-## 4. PR Classification
+## 5. PR Classification
 
 This is a **multi-PR mini-epic, contract-first**.
 
@@ -112,7 +147,7 @@ Reason: this touches a new mobile dependency, map rendering, mobile state, listi
 
 ---
 
-## 5. Frozen V1 Scope
+## 6. Frozen V1 Scope
 
 ### In scope
 
@@ -134,6 +169,7 @@ Reason: this touches a new mobile dependency, map rendering, mobile state, listi
 
 ### Hard non-scope
 
+- Epic 17 implementation.
 - Geofencing.
 - TTS/narration playback changes.
 - Android Auto.
@@ -169,7 +205,7 @@ Reason: this touches a new mobile dependency, map rendering, mobile state, listi
 
 ---
 
-## 6. Map SDK Decision
+## 7. Map SDK Decision
 
 ### Recommendation
 
@@ -226,7 +262,7 @@ Codex must verify exact current SDK requirements before implementation. The cont
 
 ---
 
-## 7. UX Specification
+## 8. UX Specification
 
 ### Route behavior
 
@@ -351,7 +387,7 @@ Log in to save this home.
 
 ---
 
-## 8. API/Search Contract
+## 9. API/Search Contract
 
 ### V1 endpoint
 
@@ -402,7 +438,7 @@ subtype
 ### Recommended initial limits
 
 - Initial map viewport query: `limit=50`.
-- Server appears to cap bbox queries at or below 100; Codex must verify current limit.
+- Server cap must be verified in current repo before implementation.
 - Render pins from page 1 only for V1.
 - Bottom sheet may paginate within the committed bbox.
 
@@ -447,7 +483,7 @@ Expected cases:
 
 ### Favorites API
 
-Use existing endpoints:
+Use existing endpoints, if present in the live repo:
 
 ```text
 GET /api/favorites/ids
@@ -463,6 +499,8 @@ Expected behavior:
 - mobile signs out -> local favorite state clears;
 - mobile signs in -> hydrate favorite IDs.
 
+If favorites API endpoints are missing or differ, stop and report the repo truth before implementing mobile favorites.
+
 ### Deferred API improvements
 
 Do not build in V1 unless performance evidence demands it:
@@ -476,7 +514,7 @@ Do not build in V1 unless performance evidence demands it:
 
 ---
 
-## 9. Mobile Technical Architecture
+## 10. Mobile Technical Architecture
 
 ### Do not broadly refactor state management
 
@@ -567,98 +605,73 @@ Round consistently enough to avoid excessive duplicate searches.
 
 ### Pin/list synchronization
 
-- `selectedListingId` drives pin visual state and card highlight.
-- Pin tap selects listing and opens/snap bottom sheet.
-- Card tap selects listing and opens detail or centers map depending action.
-- Avoid state loops by distinguishing user selection from programmatic camera movement.
+- `selectedListingId` drives selected pin and selected card.
+- Pin tap selects card and opens/snaps bottom sheet.
+- Card tap selects pin and can open detail.
+- Avoid infinite sync loops from programmatic camera/list movement.
 
-### Brand/theming
+### Favorites integration
 
-Use `Theme.of(context).colorScheme` and runtime `BrandConfig` tokens. Do not hardcode brand colors. Do not use unsafe dynamic Tailwind-style strings. The map itself can be neutral; pins and controls should carry brand identity.
+- Hydrate favorite IDs only when authenticated.
+- Clear favorite IDs on logout.
+- Optimistic POST/DELETE with rollback.
+- Signed-out favorite tap opens prompt, does not call API.
 
 ---
 
-## 10. PR Sequence
+## 11. PR Sequence
 
 ### PR 1 — Contract/spec
 
-```text
-Branch: docs/mobile-map-search-v1-contract
-Title: docs(mobile): freeze map search v1 contract
-Type: docs-only contract PR
-```
+**Branch:** `docs/mobile-map-search-v1-contract`
+**Title:** `docs(mobile): freeze map search v1 contract`
 
 Scope:
 
-- Add this plan under `docs/planning/`.
-- Freeze SDK decision and fallback rule.
+- Add/replace `docs/planning/MOBILE_MAP_SEARCH_V1_FINAL_PLAN.md`.
+- Freeze corrected roadmap truth: Epic 16 complete, Epic 17 planned/not complete, Epic 17.5 goes first.
+- Freeze SDK decision: Mapbox primary, fallback rule.
 - Freeze bbox format.
 - Freeze route behavior.
-- Freeze public browse/favorites auth behavior.
+- Freeze public browsing/favorites auth behavior.
+- Freeze test/QA matrix.
 - Freeze hard non-scope.
-- Freeze validation gates.
-
-Likely files:
-
-```text
-docs/planning/MOBILE_MAP_SEARCH_V1_FINAL_PLAN.md
-docs/planning/PROJECT_X_WHITE_LABEL_FEATURE_MATRIX.md
-docs/planning/PROJECT_X_WHITE_LABEL_MASTER_PR_TRACKER.md
-docs/planning/PROJECT_X_WHITE_LABEL_MOBILE_ARCHITECTURE.md
-```
 
 Acceptance:
 
 - No implementation code.
-- Contract table exists.
-- Non-scope explicit.
-- SDK fallback rule explicit.
+- Explicit contract table.
+- Explicit non-scope.
+- Explicit SDK fallback rule.
 - Validation commands listed.
+- No claim that Epic 17 is complete.
 
 Validation:
 
 ```bash
-git status --short
-pnpm --filter @project-x/shared-types build
+git diff --check
 ```
-
----
 
 ### PR 2 — Mapbox SDK foundation
 
-```text
-Branch: feature/mobile-mapbox-foundation
-Title: feat(mobile): add Mapbox map search foundation
-```
+**Branch:** `feature/mobile-mapbox-foundation`
+**Title:** `feat(mobile): add Mapbox map search foundation`
 
 Scope:
 
 - Add `mapbox_maps_flutter`.
-- Add `MAPBOX_ACCESS_TOKEN` app config via `--dart-define` or SDK-required config.
+- Add `MAPBOX_ACCESS_TOKEN` app config via `--dart-define`.
 - Add Mapbox initialization/wrapper.
-- Render empty/default map centered from brand defaults/fallback.
-- Do not render listing pins yet.
-
-Likely files:
-
-```text
-apps/mobile/pubspec.yaml
-apps/mobile/pubspec.lock
-apps/mobile/lib/core/config/app_config.dart
-apps/mobile/lib/features/search/presentation/widgets/property_map.dart
-apps/mobile/android/** only if SDK requires
-apps/mobile/ios/** only if SDK requires
-```
+- Render an empty map centered from brand defaults/fallback.
+- Keep old list screen behind temporary feature fallback if necessary.
 
 Acceptance:
 
-- `flutter pub get` passes.
-- `flutter analyze` passes.
-- `flutter test` passes.
+- Flutter analyze/test pass.
 - Debug Android build passes.
 - Map renders on emulator with token.
-- Missing token fails clearly or map degrades safely.
-- No secrets printed.
+- Missing token fails clearly, no secret printed.
+- No pins or listing API work yet.
 
 Validation:
 
@@ -672,35 +685,20 @@ flutter build apk --debug
 
 Stop condition:
 
-- If Mapbox cannot pass validation without unacceptable SDK/platform churn, stop and present fallback choice.
-
----
+- If Mapbox cannot pass Flutter analyze/test/debug build without unacceptable SDK/platform churn, stop and present fallback choice: Google Maps vs flutter_map.
 
 ### PR 3 — Map search state + bbox contract
 
-```text
-Branch: feature/mobile-map-search-state
-Title: feat(mobile): add map viewport and bbox search state
-```
+**Branch:** `feature/mobile-map-search-state`
+**Title:** `feat(mobile): add map viewport and bbox search state`
 
 Scope:
 
 - Add viewport/camera state.
 - Track draft vs committed bbox.
 - Add cancellation/generation guard.
-- Add `searchByBbox` behavior.
-- Preserve existing list behavior while state is introduced.
-
-Likely files:
-
-```text
-apps/mobile/lib/features/search/application/map_search_controller.dart
-apps/mobile/lib/features/search/application/map_viewport_state.dart
-apps/mobile/lib/features/search/application/listing_search_controller.dart
-apps/mobile/lib/features/search/data/listings_repository.dart
-apps/mobile/lib/services/api_client.dart
-apps/mobile/test/features/search/*
-```
+- Add `searchByBbox`.
+- Preserve existing list-first UI if needed.
 
 Acceptance:
 
@@ -718,14 +716,10 @@ flutter analyze
 flutter test
 ```
 
----
-
 ### PR 4 — Map-first `/search` shell
 
-```text
-Branch: feature/mobile-map-search-shell
-Title: feat(mobile): make search screen map-first
-```
+**Branch:** `feature/mobile-map-search-shell`
+**Title:** `feat(mobile): make search screen map-first`
 
 Scope:
 
@@ -735,20 +729,10 @@ Scope:
 - Show loading/empty/error states.
 - Preserve detail navigation.
 
-Likely files:
-
-```text
-apps/mobile/lib/features/search/presentation/screens/search_screen.dart
-apps/mobile/lib/features/search/presentation/widgets/property_map.dart
-apps/mobile/lib/features/search/presentation/widgets/map_listing_sheet.dart
-apps/mobile/lib/features/search/presentation/widgets/search_area_button.dart
-apps/mobile/test/features/search/*
-```
-
 Acceptance:
 
 - `/search` opens full-screen map shell.
-- Bottom sheet renders listing cards from provider state.
+- Bottom sheet renders listing cards from current provider state.
 - Existing listing detail route still works.
 - No favorites yet.
 
@@ -760,19 +744,15 @@ flutter analyze
 flutter test
 ```
 
----
-
 ### PR 5 — Pins + list sync + Search this area
 
-```text
-Branch: feature/mobile-map-pins-list-sync
-Title: feat(mobile): add price pins and synchronized listing sheet
-```
+**Branch:** `feature/mobile-map-pins-list-sync`
+**Title:** `feat(mobile): add price pins and synchronized listing sheet`
 
 Scope:
 
 - Render price pins from first page of results.
-- Add selected pin/card state.
+- Selected pin/card state.
 - Pin tap snaps sheet/highlights card.
 - Card tap selects pin and opens detail.
 - Manual Search-this-area flow.
@@ -793,14 +773,10 @@ flutter analyze
 flutter test
 ```
 
----
-
 ### PR 6 — Filters and sort
 
-```text
-Branch: feature/mobile-map-filters-sort
-Title: feat(mobile): add filters and sort to map search
-```
+**Branch:** `feature/mobile-map-filters-sort`
+**Title:** `feat(mobile): add filters and sort to map search`
 
 Scope:
 
@@ -814,7 +790,7 @@ Acceptance:
 - Price/beds/baths/property type/status work.
 - Sort values match API.
 - Filters apply to committed bbox.
-- Empty state distinguishes no homes vs too many filters.
+- Empty state distinguishes `no homes` vs `too many filters`.
 
 Validation:
 
@@ -825,21 +801,17 @@ flutter analyze
 flutter test
 ```
 
----
-
 ### PR 7 — Favorites + login prompt
 
-```text
-Branch: feature/mobile-map-favorites-login
-Title: feat(mobile): add favorites and login prompt to map search
-```
+**Branch:** `feature/mobile-map-favorites-login`
+**Title:** `feat(mobile): add favorites and login prompt to map search`
 
 Scope:
 
 - Favorites repository/controller.
 - API client methods for favorites.
 - Heart buttons on map cards/preview/detail where appropriate.
-- Signed-out login prompt.
+- Signed-out prompt.
 - Signed-in optimistic toggle.
 
 Acceptance:
@@ -859,14 +831,10 @@ flutter analyze
 flutter test
 ```
 
----
-
 ### PR 8 — QA/stabilization/docs
 
-```text
-Branch: qa/mobile-map-search-v1
-Title: qa(mobile): validate map search v1 on Android
-```
+**Branch:** `qa/mobile-map-search-v1`
+**Title:** `qa(mobile): validate map search v1 on Android`
 
 Scope:
 
@@ -884,7 +852,7 @@ Acceptance:
 - Pin/card/detail handoff works.
 - Filters/sort work.
 - Signed-out favorite prompt works.
-- Signed-in favorite toggle works if credentials are available.
+- Signed-in favorite toggle works if credentials available.
 - No geofence/TTS/Android Auto invoked.
 - No production claim unless physical-device QA is done.
 
@@ -907,17 +875,17 @@ flutter build apk --debug
 
 ---
 
-## 11. QA Matrix
+## 12. QA Matrix
 
 | Area | Required proof |
 |---|---|
 | App boot | Valid tenant/env loads map screen |
 | Map render | Mapbox map visible on Android emulator |
 | Initial results | `/api/listings?bbox=...` returns and pins/cards appear |
-| Pan/zoom | Search-this-area appears only after meaningful movement |
+| Pan/zoom | Button appears only after meaningful movement |
 | Search this area | Commits current bbox and refreshes pins/cards |
 | Pin selection | Pin highlights and bottom sheet syncs |
-| Card selection | Card highlights or opens detail |
+| Card selection | Card highlights/opens detail |
 | Detail handoff | `/listing/:id` opens with preview/fetch behavior intact |
 | Filters | Price/beds/baths/type/status map to API params |
 | Sort | newest/price/dom sort maps to API |
@@ -927,60 +895,8 @@ flutter build apk --debug
 | Signed-in favorite | Optimistic toggle + persisted server call |
 | Logout | Favorite IDs clear |
 | Performance | No request storm during map drag |
-| Regression | Existing tour/TTS tests still green |
+| Regression | Existing tour/mobile tests still green |
 | Non-scope | No GPS/geofence/TTS/Android Auto side effects |
-
----
-
-## 12. Validation Commands
-
-### API/shared/web full gate
-
-```bash
-pnpm --filter @project-x/shared-types build
-pnpm --filter @project-x/api typecheck
-pnpm --filter @project-x/api build
-pnpm --filter @project-x/api test
-pnpm --filter web build
-pnpm --filter web lint
-```
-
-### Mobile gate
-
-```bash
-cd apps/mobile
-flutter pub get
-flutter analyze
-flutter test
-```
-
-### Mobile codegen only if generated models change
-
-```bash
-cd apps/mobile
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-### Android debug build for SDK/runtime PRs
-
-```bash
-cd apps/mobile
-flutter build apk --debug
-```
-
-### Android emulator runtime QA pattern
-
-Do not print secrets.
-
-```bash
-cd apps/mobile
-flutter run -d emulator-5554 \
-  --dart-define=API_BASE_URL=http://10.0.2.2:3002 \
-  --dart-define=SUPABASE_URL=<redacted> \
-  --dart-define=SUPABASE_ANON_KEY=<redacted> \
-  --dart-define=TENANT_ID=<redacted> \
-  --dart-define=MAPBOX_ACCESS_TOKEN=<redacted>
-```
 
 ---
 
@@ -989,26 +905,26 @@ flutter run -d emulator-5554 \
 | Risk | Severity | Mitigation |
 |---|---:|---|
 | Mapbox dependency fails current Flutter/Android build | High | Isolate in PR 2; stop and fallback if debug APK cannot build |
-| Mapbox token/licensing ambiguity | High | Freeze token policy in PR 1; never commit token |
-| Plugin/native artifacts pollute PR | Medium | Follow generated artifact guardrails; inspect `git status` after tooling |
+| Mapbox token/licensing ambiguity | High | Freeze `MAPBOX_ACCESS_TOKEN` policy in PR 1; never commit token |
+| Plugin/native artifacts pollute PR | Medium | Follow generated artifact guardrails; inspect `git status` after `flutter pub get/build` |
 | API request storm on map movement | High | Manual Search-this-area + debounce + CancelToken |
 | Race condition between stale bbox requests | High | generation ID + active committed bbox |
-| Too many pins jank map | High | cap page-1 pins; defer clustering/slim endpoint |
+| Too many pins jank map | High | cap first-page pins; use Mapbox layers/GeoJSON if needed; no V1 clustering rewrite |
 | Favorites auth leaks protected behavior | High | UI prompt only; API remains auth-required |
 | Tenant mismatch/missing tenant | High | keep tenant centralized in ApiClient; no UI-passed tenant |
-| Existing tests assume list-first search | Medium | update tests only in focused shell PR |
+| Existing tests assume list-first search | Medium | update tests in shell PR only |
 | Bottom sheet/map gesture conflict | Medium | snap points, drag handle, accessibility escape |
-| Brand colors fail contrast | Medium | use theme foreground pairs; test light/dark |
+| Brand colors fail contrast | Medium | use theme foreground pairs; test dark/light brand variants |
 | Scope creep into navigation/location/TTS | High | repeat hard non-scope in every PR body |
-| Web parity overreach | Medium | copy product concepts only, not web implementation |
+| Web parity overreach | Medium | copy concepts only, not web lens UI |
 | Emulator map works but physical device not tested | Medium | QA doc must distinguish emulator vs physical |
 | API payload too heavy for map | Medium | measure first; defer slim `/pins` endpoint |
 
 ---
 
-## 14. Local Inspection Checklist Before Implementation
+## 14. Local Inspection Checklist Before PR 1
 
-Codex must inspect:
+Codex should inspect:
 
 ```text
 git branch --show-current
@@ -1061,43 +977,29 @@ docs/planning/EPIC_IMPLEMENTATION_GUARDRAILS.md
 
 ---
 
-## 15. Stop Conditions
-
-Stop and report before implementation continues if:
-
-- Mapbox SDK cannot pass mobile validation.
-- SDK setup requires broad native changes beyond accepted scope.
-- token policy is unclear.
-- auth/favorites tenant behavior is ambiguous.
-- `/api/listings` bbox behavior differs from this plan.
-- CI mobile validation fails for reasons related to the SDK PR.
-- implementation starts touching geofence/TTS/Android Auto/navigation/location code.
-- source files outside the PR’s intended scope are pulled into the diff.
-
----
-
-## 16. Final Recommendation
+## 15. Final Recommendation
 
 Start with:
 
 ```text
-docs(mobile): freeze map search v1 contract
+PR 1 — docs(mobile): freeze map search v1 contract
 ```
 
-Do **not** install the map SDK before the contract lands.
+Freeze:
 
-Freeze these decisions first:
+- corrected roadmap truth: Epic 16 complete, Epic 17 planned/not complete, Epic 17.5 first;
+- `/search` becomes map-first;
+- Mapbox Maps Flutter is primary SDK;
+- fallback rule if Mapbox fails validation;
+- `/api/listings` remains V1 endpoint;
+- bbox format is `minLng,minLat,maxLng,maxLat`;
+- public browse remains allowed;
+- unauthenticated `/` should redirect to `/search`, not `/login`, unless product owner says otherwise;
+- favorites are auth-gated and tenant-scoped;
+- manual **Search this area** is the only pan/zoom fetch trigger;
+- no geofence/TTS/Android Auto/native navigation/GPS/location;
+- validation gates and Android emulator QA.
 
-- `/search` becomes map-first.
-- Mapbox Maps Flutter is primary SDK.
-- fallback rule if Mapbox fails validation.
-- `/api/listings` remains the V1 search endpoint.
-- bbox format is `minLng,minLat,maxLng,maxLat`.
-- public browse remains allowed.
-- unauthenticated `/` should redirect to `/search`, not `/login`.
-- favorites are auth-gated and tenant-scoped.
-- manual **Search this area** is the only pan/zoom fetch trigger.
-- no geofence/TTS/Android Auto/native navigation/GPS/location.
-- validation gates and Android emulator QA are required.
+Then proceed with SDK foundation. Do **not** install the map SDK before the contract lands.
 
-Then land the SDK foundation PR and prove the map can render before touching pins, filters, or favorites.
+After Epic 17.5 is complete, return to Epic 17 and complete the full Epic 17 scope in its own contract/implementation sequence.
