@@ -1,6 +1,6 @@
 # Project X White Label — Master PR Tracker
 
-**Last Updated:** 2026-05-03
+**Last Updated:** 2026-05-05
 
 ---
 
@@ -232,6 +232,51 @@
 
 ---
 
+### Epic 16: Mobile Native Foundation ✅ COMPLETE
+
+**Status:** Complete.
+
+**Roadmap note:** Epic 16 is the last completed epic before Epic 17 planning and Epic 17.5 Mobile Map Search V1.
+
+---
+
+### Epic 17: Foreground TTS / Android Auto Runtime ⚠️ PLANNING ONLY; NOT COMPLETE
+
+**Status:** Planning started only.
+
+**Roadmap note:** Epic 17 is not complete. After Epic 17.5 closeout, implementation work returns to Epic 17. Do not claim Epic 17 production readiness from Epic 17.5 map-search work.
+
+---
+
+### Epic 17.5: Mobile Map Search V1 ✅ IMPLEMENTATION COMPLETE; PARTIAL ANDROID QA CLOSEOUT
+
+**Branches / PRs:**
+- `docs/epic-17-5-mobile-map-search-contract` — PR #74
+- `feature/mobile-mapbox-foundation` — PR #75
+- `feature/mobile-map-search-state` — PR #76
+- `feature/mobile-map-first-search-shell` — PR #77
+- `feature/mobile-map-pins-list-sync` — PR #78
+- `feature/mobile-map-filters-sort` — PR #79
+- `feature/mobile-map-favorites-login` — PR #80
+- `qa/mobile-map-search-v1-closeout` — PR 8 QA/docs closeout
+
+**Goal:** Deliver a mobile map-first property search experience before returning to Epic 17.
+
+**What was done:**
+- Frozen Epic 17.5 contract/spec and corrected roadmap truth
+- Mapbox Maps Flutter SDK foundation and `MAPBOX_ACCESS_TOKEN` config
+- Map viewport, bbox, cancellation, and stale-response state
+- Map-first `/search` shell with top controls and bottom results panel
+- Price pin helpers, card selection, and Search-this-area behavior
+- Filter bottom sheet and sort integration using existing `/api/listings` params
+- Favorites API client/repository/controller, search card hearts, signed-in optimistic toggle, and signed-out prompt path
+
+**QA closeout:** Android emulator smoke on 2026-05-05 was PARTIAL PASS. Automated API and Flutter validation passed; app launch, map-first shell, listing cards, detail handoff, filters, sort, card selection, and partial signed-in favorite toggle were validated. `MAPBOX_ACCESS_TOKEN` was not present, so real Mapbox rendering, native pins, pin taps, and camera-driven Search-this-area were not runtime-validated. The AVD had an existing signed-in session, so signed-out favorite prompt runtime QA remains a clean-session follow-up.
+
+**Next:** Return to Epic 17. Epic 18/deployment planning stays later.
+
+---
+
 ## Dependency Graph
 
 ```
@@ -250,6 +295,9 @@ Epic 10 (Repo Truth Reconciliation) ✅
   └── depends on all Epics 0-9
 Epic 15 (Mobile Search, Listing Detail, and Tour Screens) ✅
   └── Pre-Epic-16 hardening PRs #37-#41 ✅
+      └── Epic 16 ✅
+          └── Epic 17.5 Mobile Map Search V1 ✅
+              └── Return to Epic 17 ⚠️
 ```
 
 ## Anti-Absorption Rules

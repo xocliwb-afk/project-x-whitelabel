@@ -79,6 +79,32 @@ The safest sequence is:
 
 Recommended primary SDK: **Mapbox Maps Flutter**, with a documented fallback rule if Mapbox fails the SDK foundation validation gate.
 
+### Closeout status - 2026-05-05
+
+Epic 17.5 implementation PRs #74-#80 are merged:
+
+| PR | Title | Status |
+|---:|---|---|
+| #74 | `docs(mobile): freeze map search v1 contract` | Complete |
+| #75 | `feat(mobile): add Mapbox map search foundation` | Complete |
+| #76 | `feat(mobile): add map viewport and bbox search state` | Complete |
+| #77 | `feat(mobile): add map-first search shell` | Complete |
+| #78 | `feat(mobile): add map price pins and list sync` | Complete |
+| #79 | `feat(mobile): add map search filters and sort` | Complete |
+| #80 | `feat(mobile): add favorites and login prompt to map search` | Complete |
+
+PR 8 is the QA/docs closeout on branch `qa/mobile-map-search-v1-closeout`.
+
+Android emulator QA on 2026-05-05 produced an honest PARTIAL PASS:
+
+- automated API and Flutter validation passed;
+- the Android Studio AVD `Pixel_6_API_35` cold-booted with `-no-snapshot-load`;
+- app launch, map-first shell, listing cards, listing detail handoff, filters, sort, card selection, and a partial signed-in favorite toggle were validated;
+- `MAPBOX_ACCESS_TOKEN` was not present, so real Mapbox rendering, native price pins, pin taps, and camera-driven Search-this-area were not runtime-validated;
+- the AVD had an existing signed-in app session, so the signed-out favorite prompt was not runtime-validated.
+
+Epic 17.5 is complete as an implementation epic with those QA limitations recorded. Before production deployment, run a token-backed Android smoke with a clean signed-out session. Epic 17 is still not complete; after this closeout, work returns to Epic 17.
+
 ---
 
 ## 3. Repo-Truth Assumptions To Re-Verify
@@ -833,8 +859,8 @@ flutter test
 
 ### PR 8 — QA/stabilization/docs
 
-**Branch:** `qa/mobile-map-search-v1`
-**Title:** `qa(mobile): validate map search v1 on Android`
+**Branch:** `qa/mobile-map-search-v1-closeout`
+**Title:** `qa(mobile): close out map search v1 Android smoke`
 
 Scope:
 
@@ -842,17 +868,17 @@ Scope:
 - Docs update.
 - Feature matrix/tracker update.
 - Known gaps explicitly recorded.
-- Optional feature flag flip if QA passes.
 
 Acceptance:
 
-- Search map renders.
-- Initial bbox results load.
-- Pan/zoom Search-this-area works.
-- Pin/card/detail handoff works.
+- Search map renders if `MAPBOX_ACCESS_TOKEN` is present.
+- Missing-token placeholder is safe if `MAPBOX_ACCESS_TOKEN` is absent.
+- Initial search results load.
+- Pan/zoom Search-this-area works if a real Mapbox surface is available.
+- Card/detail handoff works.
 - Filters/sort work.
-- Signed-out favorite prompt works.
-- Signed-in favorite toggle works if credentials available.
+- Signed-out favorite prompt works if a clean signed-out session is available.
+- Signed-in favorite toggle works if credentials or an existing safe session are available.
 - No geofence/TTS/Android Auto invoked.
 - No production claim unless physical-device QA is done.
 
