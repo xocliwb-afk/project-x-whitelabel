@@ -1,6 +1,6 @@
 # Project X White Label — Feature Matrix
 
-**Last Updated:** 2026-05-03
+**Last Updated:** 2026-05-05
 
 ---
 
@@ -81,8 +81,10 @@
 | Dart models | ✅ Built | NOW | Mirrors shared-types: Listing, Tour, Brand, Lead, Narration |
 | Narration service | ✅ Built | NOW | Fetch narrations, TtsEngine interface |
 | Proximity service | ⚠️ Stub | DESIGN NOW | Interface defined, simulate methods for testing |
-| Search UI | ✅ Built | NOW | Epic 15 list-first public search screen |
-| Map integration | ❌ Deferred | LATER (COMMITTED) | Embedded map SDK and web map/list parity are post-Epic 15 |
+| Search UI | ✅ Built | NOW | Epic 17.5 map-first public search shell with listing results panel, filters, sort, detail handoff, and Search-this-area state |
+| Map integration | ✅ Built | NOW | Mapbox Maps Flutter foundation with `MAPBOX_ACCESS_TOKEN`; missing-token placeholder is safe; token-backed Android rendering still needs production-env smoke |
+| Map price pins/list sync | ✅ Built | NOW | Price pin helpers, selected listing state, card selection, and Search-this-area behavior added in Epic 17.5 |
+| Mobile search favorites | ✅ Built | NOW | Search card hearts, favorites controller, signed-in optimistic toggle, signed-out prompt path; signed-out runtime prompt still needs clean-session QA |
 | PDP | ✅ Built | NOW | Epic 15 public Listing Detail screen with preview fallback |
 | Tour Engine UI | ✅ Built | NOW | Epic 15 local draft/current-tour planner; persisted actions auth-gated |
 | Route polylines/navigation handoff | ❌ Deferred | LATER (COMMITTED) | Out of Epic 15 scope |
