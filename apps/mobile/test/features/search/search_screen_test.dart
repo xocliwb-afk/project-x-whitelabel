@@ -304,6 +304,12 @@ void main() {
     final shellSize = tester.getSize(
       find.byKey(const ValueKey('map-first-search-shell')),
     );
+    final topOverlaySize = tester.getSize(
+      find.byKey(const ValueKey('search-top-overlay')),
+    );
+    expect(topOverlaySize.height, lessThanOrEqualTo(220));
+    expect(topOverlaySize.height, lessThan(shellSize.height * 0.35));
+
     final mapSize =
         tester.getSize(find.byKey(const ValueKey('mapbox-search-shell')));
     expect(mapSize.width, shellSize.width);
