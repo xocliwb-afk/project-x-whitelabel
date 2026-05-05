@@ -1,21 +1,21 @@
 # Project X Mobile
 
-This Flutter app lives under `apps/mobile` and currently contains the Dart source,
-tests, and generated local Flutter tool artifacts only. The Android platform
-folder is not committed in this repo.
+This Flutter app lives under `apps/mobile` and contains the Dart source, tests,
+and committed Android platform folder needed for local debug builds.
 
 This document covers local Android SDK and emulator setup needed before full
 mobile device/emulator QA. It does not implement Android Auto, geofencing, TTS
-playback, native Android services, platform channels, embedded maps, route
-polylines, or navigation handoff.
+playback, native Android services, platform channels, route polylines,
+navigation handoff, listing pins, map/list synchronization, filters, sort, or
+favorites.
 
 ## Current Repo Reality
 
 - Flutter app source is under `apps/mobile/lib`.
 - Flutter tests are under `apps/mobile/test`.
-- `apps/mobile/android` is not currently committed.
+- `apps/mobile/android` is committed.
 - Do not run `flutter create --platforms=android .` in this repo unless a
-  separate PR explicitly approves generated platform files.
+  separate PR explicitly approves generated platform-file regeneration.
 - CI intentionally runs Flutter analyze/test only. It does not run Android
   emulator checks, APK builds, or AAB builds.
 
@@ -63,7 +63,7 @@ polylines, or navigation handoff.
    flutter devices
    ```
 
-6. Validate the mobile project without generating platform folders:
+6. Validate the mobile project:
 
    ```bash
    cd apps/mobile
@@ -71,6 +71,27 @@ polylines, or navigation handoff.
    flutter analyze
    flutter test
    ```
+
+## Mapbox Access Token
+
+The mobile map foundation reads a public Mapbox token from
+`MAPBOX_ACCESS_TOKEN` through `--dart-define`. Do not commit the token or print
+it in logs.
+
+Example Android emulator run shape:
+
+```bash
+cd apps/mobile
+flutter run -d emulator-5554 \
+  --dart-define=API_BASE_URL="$API_BASE_URL" \
+  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+  --dart-define=TENANT_ID="$TENANT_ID" \
+  --dart-define=MAPBOX_ACCESS_TOKEN="$MAPBOX_ACCESS_TOKEN"
+```
+
+If `MAPBOX_ACCESS_TOKEN` is missing, the Search screen shows a non-secret map
+placeholder instead of constructing the Mapbox map.
 
 ## Linux Host Notes
 
@@ -94,7 +115,9 @@ virtualization and shell environment setup differ by OS.
 - [ ] `cd apps/mobile && flutter pub get` succeeds.
 - [ ] `flutter analyze` succeeds.
 - [ ] `flutter test` succeeds.
-- [ ] No generated platform folders, such as `apps/mobile/android`, are committed.
+- [ ] No unexpected generated platform drift appears in `git status`.
+- [ ] `MAPBOX_ACCESS_TOKEN` is supplied when manually validating the map on an
+   emulator or device.
 
 ## Out Of Scope
 
@@ -103,9 +126,9 @@ virtualization and shell environment setup differ by OS.
 - TTS playback
 - Native Android services
 - Platform channels
-- Embedded maps
 - Route polylines
 - Navigation handoff
-- Generated Android platform folder
+- Listing pins, map/list synchronization, filters, sort, and favorites
+- Unrelated generated platform churn
 - APK/AAB builds
 - CI emulator setup
