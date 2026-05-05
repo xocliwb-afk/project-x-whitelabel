@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/listing_search_response.dart';
@@ -117,7 +118,10 @@ class ListingSearchQuery {
 }
 
 abstract class ListingsRepository {
-  Future<ListingSearchResponse> searchListings(ListingSearchQuery query);
+  Future<ListingSearchResponse> searchListings(
+    ListingSearchQuery query, {
+    CancelToken? cancelToken,
+  });
 }
 
 class ApiListingsRepository implements ListingsRepository {
@@ -126,7 +130,10 @@ class ApiListingsRepository implements ListingsRepository {
   const ApiListingsRepository(this._apiClient);
 
   @override
-  Future<ListingSearchResponse> searchListings(ListingSearchQuery query) {
+  Future<ListingSearchResponse> searchListings(
+    ListingSearchQuery query, {
+    CancelToken? cancelToken,
+  }) {
     return _apiClient.searchListings(
       q: query.q,
       bbox: query.bbox,
@@ -153,6 +160,7 @@ class ApiListingsRepository implements ListingsRepository {
       neighborhoods: query.neighborhoods,
       features: query.features,
       subtype: query.subtype,
+      cancelToken: cancelToken,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,7 +45,10 @@ class FakeAuthNotifier extends StateNotifier<AuthState>
 
 class FakeListingsRepository implements ListingsRepository {
   @override
-  Future<ListingSearchResponse> searchListings(ListingSearchQuery query) async {
+  Future<ListingSearchResponse> searchListings(
+    ListingSearchQuery query, {
+    CancelToken? cancelToken,
+  }) async {
     return const ListingSearchResponse(
       results: [],
       pagination: SearchPagination(
