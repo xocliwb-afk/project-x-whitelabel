@@ -86,100 +86,145 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final tourEnabled = brand?.features?.tourEngine == true;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search'),
+      body: Stack(
+        key: const ValueKey('map-first-search-shell'),
+        children: [
+          Positioned.fill(
+            child: MapboxSearchMap(
+              brand: brand,
+              height: null,
+              borderRadius: BorderRadius.zero,
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _SearchTopOverlay(
+                child: _SearchControls(
+                  controller: _searchController,
+                  selectedSort: _selectedSort,
+                  onSortChanged: (value) {
+                    setState(() => _selectedSort = value);
+                    _submitSearch();
+                  },
+                  onSubmit: _submitSearch,
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _SearchResultsPanel(
+              state: state,
+              showAddToTour: tourEnabled,
+              onRefresh: () =>
+                  ref.read(listingSearchControllerProvider.notifier).refresh(),
+              onRetry: _retry,
+              onLoadMore: () =>
+                  ref.read(listingSearchControllerProvider.notifier).loadMore(),
+              onOpenListing: _openListing,
+              onAddToTour: _addToTour,
+            ),
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(listingSearchControllerProvider.notifier).refresh(),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: MapboxSearchMap(brand: brand),
+    );
+  }
+}
+
+class _SearchTopOverlay extends StatelessWidget {
+  final Widget child;
+
+  const _SearchTopOverlay({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      key: const ValueKey('search-top-overlay'),
+      color: theme.colorScheme.surface,
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _SearchResultsPanel extends StatelessWidget {
+  final SearchState state;
+  final bool showAddToTour;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onRetry;
+  final VoidCallback onLoadMore;
+  final ValueChanged<Listing> onOpenListing;
+  final ValueChanged<Listing> onAddToTour;
+
+  const _SearchResultsPanel({
+    required this.state,
+    required this.showAddToTour,
+    required this.onRefresh,
+    required this.onRetry,
+    required this.onLoadMore,
+    required this.onOpenListing,
+    required this.onAddToTour,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final panelHeight = (screenHeight * 0.46).clamp(320.0, 460.0);
+
+    return Material(
+      key: const ValueKey('search-results-panel'),
+      color: colorScheme.surface,
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.18),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: panelHeight,
+          width: double.infinity,
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: _SearchControls(
-                    controller: _searchController,
-                    selectedSort: _selectedSort,
-                    onSortChanged: (value) {
-                      setState(() => _selectedSort = value);
-                      _submitSearch();
-                    },
-                    onSubmit: _submitSearch,
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: _SearchStatus(state: state),
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: _SearchStatus(state: state),
               ),
               if (state.error != null && state.results.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: _InlineError(
-                      message: state.error!,
-                      onRetry: _retry,
-                    ),
-                  ),
-                ),
-              if (state.isLoading && state.results.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _LoadingState(),
-                )
-              else if (state.error != null && state.results.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _ErrorState(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: _InlineError(
                     message: state.error!,
-                    onRetry: _retry,
+                    onRetry: onRetry,
                   ),
-                )
-              else if (state.hasLoaded && state.results.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _EmptyState(),
-                )
-              else
-                SliverList.separated(
-                  itemCount: state.results.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final listing = state.results[index];
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        index == 0 ? 4 : 0,
-                        16,
-                        index == state.results.length - 1 ? 12 : 0,
-                      ),
-                      child: _ListingCard(
-                        listing: listing,
-                        showAddToTour: tourEnabled,
-                        onTap: () => _openListing(listing),
-                        onAddToTour: () => _addToTour(listing),
-                      ),
-                    );
-                  },
                 ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  child: _LoadMoreButton(
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: onRefresh,
+                  child: _SearchResultsList(
                     state: state,
-                    onPressed: () => ref
-                        .read(listingSearchControllerProvider.notifier)
-                        .loadMore(),
+                    showAddToTour: showAddToTour,
+                    onRetry: onRetry,
+                    onLoadMore: onLoadMore,
+                    onOpenListing: onOpenListing,
+                    onAddToTour: onAddToTour,
                   ),
                 ),
               ),
@@ -187,6 +232,92 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SearchResultsList extends StatelessWidget {
+  final SearchState state;
+  final bool showAddToTour;
+  final VoidCallback onRetry;
+  final VoidCallback onLoadMore;
+  final ValueChanged<Listing> onOpenListing;
+  final ValueChanged<Listing> onAddToTour;
+
+  const _SearchResultsList({
+    required this.state,
+    required this.showAddToTour,
+    required this.onRetry,
+    required this.onLoadMore,
+    required this.onOpenListing,
+    required this.onAddToTour,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.isLoading && state.results.isEmpty) {
+      return ListView(
+        key: const ValueKey('search-results-scroll'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 220, child: _LoadingState()),
+        ],
+      );
+    }
+
+    if (state.error != null && state.results.isEmpty) {
+      return ListView(
+        key: const ValueKey('search-results-scroll'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: 240,
+            child: _ErrorState(
+              message: state.error!,
+              onRetry: onRetry,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (state.hasLoaded && state.results.isEmpty) {
+      return ListView(
+        key: const ValueKey('search-results-scroll'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 220, child: _EmptyState()),
+        ],
+      );
+    }
+
+    return ListView.separated(
+      key: const ValueKey('search-results-scroll'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      itemCount: state.results.length + 1,
+      separatorBuilder: (_, index) => index < state.results.length - 1
+          ? const SizedBox(height: 8)
+          : const SizedBox.shrink(),
+      itemBuilder: (context, index) {
+        if (index == state.results.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _LoadMoreButton(
+              state: state,
+              onPressed: onLoadMore,
+            ),
+          );
+        }
+
+        final listing = state.results[index];
+        return _ListingCard(
+          listing: listing,
+          showAddToTour: showAddToTour,
+          onTap: () => onOpenListing(listing),
+          onAddToTour: () => onAddToTour(listing),
+        );
+      },
     );
   }
 }

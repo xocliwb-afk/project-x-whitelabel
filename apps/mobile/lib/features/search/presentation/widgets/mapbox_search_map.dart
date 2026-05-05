@@ -9,12 +9,14 @@ const _fallbackZoom = 11.0;
 
 class MapboxSearchMap extends StatefulWidget {
   final BrandConfig? brand;
-  final double height;
+  final double? height;
+  final BorderRadius borderRadius;
 
   const MapboxSearchMap({
     super.key,
     this.brand,
     this.height = 220,
+    this.borderRadius = const BorderRadius.all(Radius.circular(8)),
   });
 
   @override
@@ -30,20 +32,29 @@ class _MapboxSearchMapState extends State<MapboxSearchMap> {
     final center = widget.brand?.search?.defaultCenter ?? _fallbackCenter;
     final zoom = widget.brand?.search?.defaultZoom?.toDouble() ?? _fallbackZoom;
 
+    final mapContent = ClipRRect(
+      borderRadius: widget.borderRadius,
+      child: token == null
+          ? const _MissingTokenMapPlaceholder()
+          : _buildMap(
+              token: token,
+              center: center,
+              zoom: zoom,
+            ),
+    );
+
+    if (widget.height == null) {
+      return SizedBox.expand(
+        key: const ValueKey('mapbox-search-shell'),
+        child: mapContent,
+      );
+    }
+
     return SizedBox(
       key: const ValueKey('mapbox-search-shell'),
       height: widget.height,
       width: double.infinity,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: token == null
-            ? const _MissingTokenMapPlaceholder()
-            : _buildMap(
-                token: token,
-                center: center,
-                zoom: zoom,
-              ),
-      ),
+      child: mapContent,
     );
   }
 
