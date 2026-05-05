@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:project_x_mobile/features/search/application/listing_search_controller.dart';
+import 'package:project_x_mobile/features/search/application/map_viewport_state.dart';
 import 'package:project_x_mobile/features/search/data/listings_repository.dart';
 import 'package:project_x_mobile/features/search/presentation/screens/search_screen.dart';
 import 'package:project_x_mobile/features/tour/application/tour_draft_controller.dart';
@@ -124,10 +126,12 @@ BrandConfig brandConfig({bool tourEngine = false}) {
 
 class PumpedSearchScreen {
   final GoRouter router;
+  final ListingSearchController searchController;
   final TourDraftController tourController;
 
   const PumpedSearchScreen({
     required this.router,
+    required this.searchController,
     required this.tourController,
   });
 }
@@ -137,6 +141,7 @@ Future<PumpedSearchScreen> pumpSearchScreen(
   FakeListingsRepository repository, {
   bool tourEngine = false,
 }) async {
+  final searchController = ListingSearchController(repository);
   final tourController = TourDraftController(FakeTourRepository());
   final router = GoRouter(
     initialLocation: '/search',
@@ -170,6 +175,9 @@ Future<PumpedSearchScreen> pumpSearchScreen(
     ProviderScope(
       overrides: [
         listingsRepositoryProvider.overrideWithValue(repository),
+        listingSearchControllerProvider.overrideWith((ref) {
+          return searchController;
+        }),
         brandConfigProvider.overrideWith((ref) async {
           return brandConfig(tourEngine: tourEngine);
         }),
@@ -183,6 +191,7 @@ Future<PumpedSearchScreen> pumpSearchScreen(
 
   return PumpedSearchScreen(
     router: router,
+    searchController: searchController,
     tourController: tourController,
   );
 }
@@ -265,14 +274,77 @@ void main() {
       searchResponse(ids: ['listing-1']),
     ]);
 
-    await pumpSearchScreen(tester, repository);
+    final harness = await pumpSearchScreen(tester, repository);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('listing-card-listing-1')));
+    expect(
+      harness.searchController.state.mapViewport.selectedListingId,
+      'listing-1',
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Listing detail listing-1 preview listing-1'),
         findsOneWidget);
+  });
+
+  testWidgets('selects a listing card for map/list sync', (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+    ]);
+
+    final harness = await pumpSearchScreen(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('select-listing-listing-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.searchController.state.mapViewport.selectedListingId,
+      'listing-1',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('select-listing-listing-1')),
+        matching: find.byIcon(Icons.location_pin),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('commits draft bbox from Search this area', (tester) async {
+    final repository = FakeListingsRepository([
+      searchResponse(ids: ['listing-1']),
+      searchResponse(ids: ['listing-2']),
+    ]);
+    final bbox = MapSearchBbox(
+      minLng: -83.2,
+      minLat: 42.2,
+      maxLng: -83.1,
+      maxLat: 42.3,
+    );
+
+    final harness = await pumpSearchScreen(tester, repository);
+    await tester.pumpAndSettle();
+
+    harness.searchController.updateMapCamera(
+      center: const LatLng(lat: 42.25, lng: -83.15),
+      zoom: 12,
+      visibleBbox: bbox,
+      source: MapCameraChangeSource.user,
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('search-this-area')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('search-this-area')));
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.last.bbox, bbox.toQueryParam());
+    expect(
+      harness.searchController.state.mapViewport.hasPendingSearchArea,
+      isFalse,
+    );
   });
 
   testWidgets('shows add-to-tour only when tour engine is enabled',
