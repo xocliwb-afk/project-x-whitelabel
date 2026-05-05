@@ -293,6 +293,13 @@ void main() {
     expect(find.byKey(const ValueKey('mapbox-token-missing')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-top-overlay')), findsOneWidget);
     expect(find.byKey(const ValueKey('search-results-panel')), findsOneWidget);
+    final resultsSheet = tester.widget<DraggableScrollableSheet>(
+      find.byKey(const ValueKey('search-results-sheet')),
+    );
+    expect(resultsSheet.initialChildSize, lessThanOrEqualTo(0.30));
+    expect(resultsSheet.minChildSize, lessThanOrEqualTo(0.22));
+    expect(resultsSheet.maxChildSize, greaterThanOrEqualTo(0.60));
+    expect(resultsSheet.expand, isFalse);
     expect(find.byKey(const ValueKey('search-input')), findsOneWidget);
     expect(find.byKey(const ValueKey('sort-select')), findsOneWidget);
     expect(find.text('Search listings'), findsWidgets);
